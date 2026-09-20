@@ -43,7 +43,7 @@ all_users = Atlas.collect(atlas.users, status: "active")
 ```ruby
 Atlas::Client.new(
   "sk_live_...",
-  api_url: "https://api.atlasauth.net", # default: https://api.atlas.dev
+  api_url: "https://api.atlasauth.net", # default: https://api.atlasauth.net
   open_timeout: 30,
   read_timeout: 30,
 )

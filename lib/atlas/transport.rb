@@ -8,7 +8,7 @@ require_relative "error"
 
 module Atlas
   # The default BAPI origin, overridable per instance via +api_url+.
-  DEFAULT_API_URL = "https://api.atlas.dev"
+  DEFAULT_API_URL = "https://api.atlasauth.net"
 
   # The shared HTTP core every resource namespace calls.
   #

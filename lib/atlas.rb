@@ -13,7 +13,7 @@
 #   Atlas.paginate(atlas.organizations).each { |org| puts org["name"] }
 #
 #   backend = Atlas::Backend.new(
-#     jwks_url: "https://api.atlas.dev/v1/jwks",
+#     jwks_url: "https://api.atlasauth.net/v1/jwks",
 #     issuer:   "https://your-instance.atlas.dev",
 #   )
 #   result = backend.verify(session_jwt)
