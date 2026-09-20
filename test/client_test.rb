@@ -23,7 +23,7 @@ class ClientTest < Minitest::Test
 
     req = @http.last
     assert_equal "GET", req.method
-    assert_equal "https://api.atlas.dev/v1/users", req.url
+    assert_equal "https://api.atlasauth.net/v1/users", req.url
     assert_equal "Bearer sk_test_123", req.headers["authorization"]
     assert_nil req.body
     assert_equal "user_1", result["data"][0]["id"]
@@ -32,7 +32,7 @@ class ClientTest < Minitest::Test
   def test_users_get_encodes_the_id_in_the_path
     @http.enqueue(body: { "id" => "user_abc" })
     @client.users.get("user_abc")
-    assert_equal "https://api.atlas.dev/v1/users/user_abc", @http.last.url
+    assert_equal "https://api.atlasauth.net/v1/users/user_abc", @http.last.url
   end
 
   def test_users_create_posts_json_with_optional_idempotency_key
@@ -41,7 +41,7 @@ class ClientTest < Minitest::Test
 
     req = @http.last
     assert_equal "POST", req.method
-    assert_equal "https://api.atlas.dev/v1/users", req.url
+    assert_equal "https://api.atlasauth.net/v1/users", req.url
     assert_equal "application/json", req.headers["content-type"]
     assert_equal "idem_1", req.headers["idempotency-key"]
     assert_equal({ "email_address" => "ada@example.com" }, JSON.parse(req.body))
@@ -62,15 +62,15 @@ class ClientTest < Minitest::Test
   def test_sessions_organizations_roles_reach_their_paths
     @http.enqueue(body: { "id" => "sess_1" })
     @client.sessions.get("sess_1")
-    assert_equal "https://api.atlas.dev/v1/sessions/sess_1", @http.last.url
+    assert_equal "https://api.atlasauth.net/v1/sessions/sess_1", @http.last.url
 
     @http.enqueue(body: { "id" => "org_1" })
     @client.organizations.get("org_1")
-    assert_equal "https://api.atlas.dev/v1/organizations/org_1", @http.last.url
+    assert_equal "https://api.atlasauth.net/v1/organizations/org_1", @http.last.url
 
     @http.enqueue(body: { "object" => "list", "data" => [] })
     @client.roles.list
-    assert_equal "https://api.atlas.dev/v1/roles", @http.last.url
+    assert_equal "https://api.atlasauth.net/v1/roles", @http.last.url
   end
 
   def test_non_2xx_raises_a_typed_api_error_carrying_status_and_code
