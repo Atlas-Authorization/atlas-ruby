@@ -33,4 +33,9 @@ Gem::Specification.new do |spec|
 
   spec.add_development_dependency "minitest", "~> 5.0"
   spec.add_development_dependency "rake", "~> 13.0"
+  # The Rails-native layer (lib/atlas/rails.rb) is optional at runtime — the base
+  # gem never requires Rails — so Rails is a dev/test dependency only, exercised
+  # by the integration tests. rack-test drives the middleware in those tests.
+  spec.add_development_dependency "rails", ">= 6.1"
+  spec.add_development_dependency "rack-test", ">= 1.1"
 end
