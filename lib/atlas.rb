@@ -3,7 +3,7 @@
 # atlas-auth — the official Ruby backend SDK for Atlas.
 #
 # A typed client over the +sk_+ Backend API (BAPI), the Ruby peer of the
-# TypeScript +@atlas/backend+ and Python +atlas-backend+ SDKs, plus §7.3 local
+# TypeScript +@atlasauth/backend+ and Python +atlas-backend+ SDKs, plus §7.3 local
 # session-token verification.
 #
 #   require "atlas"
@@ -14,7 +14,7 @@
 #
 #   backend = Atlas::Backend.new(
 #     jwks_url: "https://api.atlasauth.net/v1/jwks",
-#     issuer:   "https://your-instance.atlas.dev",
+#     issuer:   "https://your-instance.atlasauth.net",
 #   )
 #   result = backend.verify(session_jwt)
 #   result.protect(permission: "org:billing:manage") if result.ok?

@@ -1,6 +1,6 @@
 # Atlas Ruby SDK
 
-The official **Ruby backend SDK** for [Atlas](https://atlasauth.net) — a typed client over the `sk_` Backend API (BAPI), plus local session-token verification. It is the Ruby peer of the TypeScript `@atlas/backend` and Python `atlas-backend` SDKs and covers the full management surface (all 45 resource namespaces).
+The official **Ruby backend SDK** for [Atlas](https://atlasauth.net) — a typed client over the `sk_` Backend API (BAPI), plus local session-token verification. It is the Ruby peer of the TypeScript `@atlasauth/backend` and Python `atlas-backend` SDKs and covers the full management surface (all 45 resource namespaces).
 
 > This is a **server-side** SDK. It uses your instance **secret key** (`sk_...`) and must never ship to a browser or mobile app. For client-side sign-in flows use the JS, Swift, Kotlin, or Flutter SDKs.
 

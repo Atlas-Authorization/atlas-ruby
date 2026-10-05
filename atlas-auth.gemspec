@@ -11,7 +11,7 @@ Gem::Specification.new do |spec|
   spec.summary     = "Official Ruby backend SDK for Atlas — the sk_ Backend API plus local session-token verification."
   spec.description = <<~DESC
     A typed Ruby client over the Atlas Backend API (BAPI), the Ruby peer of the
-    TypeScript @atlas/backend and Python atlas-backend SDKs. Covers the full
+    TypeScript @atlasauth/backend and Python atlas-backend SDKs. Covers the full
     management surface (users, organizations, roles, SSO, SCIM, FGA, webhooks,
     and more) and ships local RS256 session-token verification with an
     in-process JWKS cache.
@@ -21,7 +21,7 @@ Gem::Specification.new do |spec|
   spec.required_ruby_version = ">= 3.0"
 
   spec.metadata["homepage_uri"]      = spec.homepage
-  spec.metadata["source_code_uri"]   = "https://github.com/atlas-auth/atlas-ruby"
+  spec.metadata["source_code_uri"]   = "https://github.com/alphajew420/ssoly/tree/main/sdks/ruby"
   spec.metadata["documentation_uri"] = "https://atlasauth.net/docs/sdks/ruby"
   spec.metadata["rubygems_mfa_required"] = "true"
 
