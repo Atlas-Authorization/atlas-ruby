@@ -228,6 +228,44 @@ BACKEND = Atlas::Backend.new(
 
 Then verify in a `before_action` and branch on `BACKEND.authenticate_request(request.headers)`.
 
+## API key spend caps
+
+Give an end-user API key caps in your own units, then meter what your API consumed against them. A refused debit records nothing and is not an error, so you enforce it inside your own transaction:
+
+```ruby
+key = atlas.api_keys.create({
+  subject_type: "user", subject_id: "user_123", name: "CI",
+  limits: [
+    { unit: "requests", amount: 10_000, period: "day" },   # day/month are UTC calendar windows
+    { unit: "usd_cents", amount: 500, period: "request" }  # caps a single debit; "total" never resets
+  ],
+})
+
+debit = atlas.api_keys.record_usage(key["id"], amount: 1, unit: "requests", idempotency_key: request_id)
+unless debit["allowed"]                     # debit["code"] == Atlas::ErrorCode::LIMIT_EXCEEDED
+  halt 429, "quota exceeded (resets #{debit['exceeded'][0]['resets_at']})"
+end
+
+atlas.api_keys.get_usage(key["id"])         # caps with used/remaining/resets_at + raw counters
+atlas.api_keys.update(key["id"], { limits: nil })  # remove every cap
+```
+
+Reusing an `idempotency_key` replays the first outcome (`idempotent_replay: true`) without counting again; reusing it with a different unit or amount raises `Atlas::ConflictError` with `IDEMPOTENCY_CONFLICT`. `api_keys.verify` also returns the key's `name`, `scopes`, `constraints`, `limits` and `usage`. Subscribe to the `api_key.created`, `api_key.updated` and `api_key.limit_reached` webhooks to mirror keys and react to a filled cap.
+
+## Session keep-alive
+
+If your app loads Atlas on only some pages, keep the session's inactivity window moving from your backend:
+
+```ruby
+session = atlas.sessions.touch(session_id)
+session["extended"]         # false when a touch within the last minute already moved it
+session["idle_expires_at"]  # epoch ms the session ends from inactivity
+```
+
+It never extends past the absolute expiry and never revives an ended session (`Atlas::ConflictError` with `SESSION_REVOKED`, `SESSION_IDLE_EXPIRED` or `SESSION_EXPIRED`). Calling it on every request is safe.
+
+`users.create` and `import_export.import_users` accept `notify: false` (the default), which guarantees the user is sent no email, SMS or push as a consequence of the create.
+
 ## Resources
 
 Every Backend API operation is available on the client: `users`, `sessions`, `organizations` (with `memberships`, `invitations`, `domains`, `group_roles`, `audit_streams`, `end_users`, `reader_domain`, settings, design and branding), `roles`, `permissions`, `oauth_clients`, `resource_servers`, `sso_connections`, `scim_tokens`, `scim_provisioning`, `domains`, `waitlist`, `allowlist`, `blocklist`, `attack_protection`, `actor_tokens`, `invitations`, `webhooks`, `sign_in_tokens`, `audit_logs`, `audit_events`, `jwt_templates`, `api_keys`, `oauth_providers`, `sso_onboarding`, `fga`, `openfga`, `rate_limit_policy`, `risk_based_mfa`, `bot_signals`, `network_acls`, `managed_waf`, `log_streams`, `branding`, `design`, `email_templates`, `sms_templates`, `localizations`, `actions`, `billing`, `messaging`, `import_export`, `data_subject_requests`, `radius_clients`, `lti_platforms`, `instance` (incl. `preflight` and cookie consent), `instance_security`, `tokens`, `email_addresses`, `organization_settings_schema`, `entitlement_overrides`, `machines` (incl. enrolment tokens), `connectors`, `directory`, `diagnostics`, `config_changelog`, `events`, `usage`, `legacy_auth_connection`, `mcp`, `mcp_connector`, `notifications` (with `categories` and `templates`), `org_ldap_connections`, `pca`, `redirect_urls`, `session_exchange_apps`, `tickets`, `captcha`, `testing` (development-instance helpers), and `platform` (`apps`, `atlas_id_apps`, `design_assets`; needs a platform key).

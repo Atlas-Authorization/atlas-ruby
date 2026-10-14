@@ -92,7 +92,14 @@ module Atlas
     VALIDATION_FAILED = "VALIDATION_FAILED"
     RATE_LIMITED = "RATE_LIMITED"
     SCOPE_MISSING = "SCOPE_MISSING"
+    # An idempotency key was reused with a different request (e.g. another unit or amount).
     IDEMPOTENCY_CONFLICT = "IDEMPOTENCY_CONFLICT"
+    # A usage debit would exceed one of the API key's spend caps (the +code+ of a refused debit).
+    LIMIT_EXCEEDED = "LIMIT_EXCEEDED"
+    # The session was revoked, timed out from inactivity, or passed its absolute expiry.
+    SESSION_REVOKED = "SESSION_REVOKED"
+    SESSION_IDLE_EXPIRED = "SESSION_IDLE_EXPIRED"
+    SESSION_EXPIRED = "SESSION_EXPIRED"
   end
 
   module ErrorFactory

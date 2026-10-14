@@ -25,6 +25,16 @@ module Atlas
         request(method: :post, path: "/v1/sessions/#{enc(id)}/revoke")
       end
 
+      # +POST /v1/sessions/:id/touch+ — keep a session alive from your backend:
+      # slides its inactivity window as if the user had just loaded a page, never
+      # past the absolute expiry. Returns the session plus +extended+ (false when a
+      # touch within the last minute already moved it, so calling it on every
+      # request is safe). An ended session raises a 409 (+SESSION_REVOKED+,
+      # +SESSION_IDLE_EXPIRED+ or +SESSION_EXPIRED+).
+      def touch(id)
+        request(method: :post, path: "/v1/sessions/#{enc(id)}/touch")
+      end
+
       # +POST /v1/sessions/:id/tokens/:template+ — mint a token from a named JWT template for a session.
       def create_token(id, template)
         request(method: :post, path: "/v1/sessions/#{enc(id)}/tokens/#{enc(template)}")

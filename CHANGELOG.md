@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.4.0
+
+### Added
+
+- `sessions.touch(id)` — `POST /v1/sessions/{id}/touch`, backend session keep-alive. Returns the session plus `extended` (boolean). Session objects now carry `idle_expires_at` (epoch ms).
+- API key spend caps: `api_keys.create` and `api_keys.update` document `limits` (array of `{ unit, amount, period: "request" | "day" | "month" | "total" }`, or `nil` to clear). API key objects carry `limits` and `usage` (`[{ unit, period, amount, used, remaining, window_start, resets_at }]`).
+- `api_keys.record_usage(id, amount:, unit:, idempotency_key: nil)` — `POST /v1/api_keys/{id}/usage`, returns an `api_key_usage_debit` (`key_id`, `unit`, `amount`, `allowed`, `code`, `exceeded`, `usage`, `counters`, `idempotent_replay`).
+- `api_keys.get_usage(id)` — `GET /v1/api_keys/{id}/usage`, returns an `api_key_usage` (`key_id`, `limits`, `usage`, `counters`).
+- `api_keys.verify` valid results carry `name`, `scopes`, `constraints`, `limits` and `usage`.
+- `notify` (boolean) documented on `users.create` and `import_export.import_users`.
+- Webhook events `api_key.created`, `api_key.updated` and `api_key.limit_reached`; the `api_key` payload carries `name`, `claims`, `scopes`, `constraints`, `limits`, `max_token_lifetime_seconds`, `expires_at`, `created_at` and `updated_at`.
+- `Atlas::ErrorCode::LIMIT_EXCEEDED`, `SESSION_REVOKED`, `SESSION_IDLE_EXPIRED`, `SESSION_EXPIRED`.
+
 ## 0.3.0
 
 ### Added

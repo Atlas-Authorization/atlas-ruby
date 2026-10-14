@@ -7,7 +7,8 @@ module Atlas
     # +/v1/user_imports+, +/v1/user_exports+, +/v1/jobs+ — bulk user import/export
     # jobs (the Auth0 +jobs+ parity surface).
     class ImportExport < Base
-      # Import users through the same per-row path sign-up uses.
+      # Import users through the same per-row path sign-up uses. +notify: false+
+      # (the default) guarantees the imported users are sent nothing.
       def import_users(body, idempotency_key: nil)
         request(method: :post, path: "/v1/user_imports", body: body, idempotency_key: idempotency_key)
       end

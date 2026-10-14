@@ -16,6 +16,8 @@ module Atlas
         request(method: :get, path: "/v1/users/#{enc(id)}")
       end
 
+      # +notify: false+ (the default) guarantees no email, SMS or push is sent to
+      # the user as a consequence of the create.
       def create(body, idempotency_key: nil)
         request(method: :post, path: "/v1/users", body: body, idempotency_key: idempotency_key)
       end
