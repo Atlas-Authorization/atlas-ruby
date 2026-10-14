@@ -1,6 +1,6 @@
 # Atlas Ruby SDK
 
-The official **Ruby backend SDK** for [Atlas](https://atlasauth.net) — a typed client over the `sk_` Backend API (BAPI), plus local session-token verification. It is the Ruby peer of the TypeScript `@atlasauth/backend` and Python `atlas-backend` SDKs and covers the full management surface (all 45 resource namespaces).
+The official **Ruby backend SDK** for [Atlas](https://atlasauth.net) — a typed client over the `sk_` Backend API (BAPI), plus local session-token verification. It is the Ruby peer of the TypeScript `@atlasauth/backend` and Python `atlas-backend` SDKs and covers the whole Backend API and the platform-key API.
 
 > This is a **server-side** SDK. It uses your instance **secret key** (`sk_...`) and must never ship to a browser or mobile app. For client-side sign-in flows use the JS, Swift, Kotlin, or Flutter SDKs.
 
@@ -59,6 +59,23 @@ Write operations accept an `idempotency_key:` so a retried request is applied at
 atlas.users.create({ email_address: "ada@example.com" }, idempotency_key: "signup-42")
 ```
 
+### Strict request bodies
+
+By default a write that includes a field the endpoint does not accept still succeeds; the field is ignored and named in the `Atlas-Unknown-Fields` response header. Turn on strict bodies to have such a write refused instead (422 `UNKNOWN_FIELD`, with `param` naming the field), and/or get told about ignored fields:
+
+```ruby
+atlas = Atlas::Client.new(
+  ENV.fetch("ATLAS_SECRET_KEY"),
+  strict: true,                                                  # sends Atlas-Strict: true on every write
+  on_unknown_fields: ->(w) { Rails.logger.warn("Atlas ignored #{w.fields.join(', ')} on #{w.method} #{w.path}") },
+)
+
+# Override for one call (or a block of calls):
+atlas.with_options(strict: false).users.update("user_123", { legacy_field: "x" })
+```
+
+`strict: false` sends `Atlas-Strict: false`, which opts a request out of an instance-wide strict default.
+
 ## Errors
 
 Any non-2xx response raises a typed `Atlas::APIError` carrying the HTTP status and the full `{ errors: [...] }` envelope. Status codes map to subclasses so you can rescue precisely:
@@ -76,9 +93,104 @@ rescue Atlas::APIError => e
 end
 ```
 
+`Atlas::ErrorCode` names the codes most worth branching on: `UNKNOWN_FIELD`, `EMAIL_DELIVERY_NOT_CONFIGURED`, `EMAIL_PROVIDER_REQUIRED`, `PLAN_IN_USE`, `WRONG_KEY_SURFACE`, `INVALID_KEY` and more:
+
+```ruby
+rescue Atlas::UnprocessableEntityError => e
+  notify_admin if e.has_code?(Atlas::ErrorCode::EMAIL_DELIVERY_NOT_CONFIGURED)
+```
+
+## Check your setup
+
+```ruby
+report = atlas.instance.preflight
+unless report["ok"]
+  report["findings"].each do |f|
+    puts "#{f['severity']} #{f['code']}: #{f['message']}\n  fix: #{f['fix']}"
+  end
+end
+```
+
+## Sign-in page design
+
+```ruby
+# Upload an image (PNG, JPEG, GIF or WebP; the type is detected from the bytes)
+asset = atlas.design.upload_asset(File.binread("hero.jpg"), kind: "background")
+
+atlas.design.update(
+  preset: "glass",
+  palette: { primary: "#4f46e5" },
+  background: { image: { assetId: asset["asset_id"], fit: "cover" } },
+)
+atlas.design.preview({ preset: "midnight" })        # compile without saving
+atlas.organizations.update_design("org_123", { palette: { primary: "#0f766e" } })
+atlas.design.catalog                                 # presets, fonts, CSS variables
+```
+
+`Atlas::Resources::Design` documents every design section and its allowed values.
+
+## Cookie consent
+
+```ruby
+atlas.instance.set_cookie_consent(script_url: "https://cmp.example.com/loader.js", site_id: "abc123")
+atlas.instance.get_cookie_consent
+atlas.instance.delete_cookie_consent
+```
+
+## Platform API: Sign in with Atlas apps
+
+Construct the client with a **platform key** (`psk_...`) to manage apps for your account:
+
+```ruby
+platform = Atlas::Client.new(ENV.fetch("ATLAS_PLATFORM_KEY")).platform
+
+app = platform.atlas_id_apps.create(
+  name: "Acme",
+  redirect_uris: ["https://acme.com/auth/callback"],
+  post_logout_redirect_uris: ["https://acme.com/"],
+  backchannel_logout_uri: "https://acme.com/auth/backchannel-logout",
+  branding: { theme: "auto", accent_color: "#4f46e5", copy: { sign_in_title: "Sign in to {app}" } },
+)
+app["client_secret"]                                 # shown once (confidential apps)
+
+platform.atlas_id_apps.rotate_secret(app["id"])
+asset = platform.design_assets.upload(File.binread("logo.png"), kind: "logo")
+platform.atlas_id_apps.update(app["id"], { branding: { design: { logo: { assetId: asset["asset_id"] } } } })
+platform.apps.list                                   # apps (instances) your platform provisions
+```
+
+## Back-channel logout
+
+When a user signs out, Atlas POSTs a signed `logout_token` to your app's `backchannel_logout_uri` (Sign in with Atlas apps and session-exchange apps). Verify it, end the matching local sessions, and answer 200:
+
+```ruby
+LOGOUT = Atlas::BackchannelLogout.new(
+  issuer:    "https://atlasauth.net",                       # your instance's frontend API origin for session-exchange apps
+  jwks_url:  "https://atlasauth.net/.well-known/jwks.json",
+  client_id: ENV.fetch("ATLAS_CLIENT_ID"),                  # the token's audience
+  jti_store: Atlas::MemoryJtiStore.new,                     # optional: refuse replays (use a shared store with several processes)
+)
+
+# Any Rack app (Rails, Sinatra, Roda, ...): POST /auth/backchannel-logout
+def backchannel_logout(env)
+  request = Rack::Request.new(env)
+  claims = LOGOUT.verify(request.POST["logout_token"])
+  if claims.sid
+    Session.where(atlas_sid: claims.sid).destroy_all       # one session
+  else
+    Session.where(atlas_user_id: claims.sub).destroy_all   # every session of the user
+  end
+  [200, { "cache-control" => "no-store" }, []]
+rescue Atlas::InvalidLogoutTokenError
+  [400, { "cache-control" => "no-store" }, []]
+end
+```
+
+The verifier checks the RS256 signature, `iss`, `aud`, `iat`, `exp`, `jti`, the back-channel logout `events` claim, that `sid` or `sub` is present, that there is no `nonce`, and the `logout+jwt` type. To refuse replays across processes, pass any object with `add?(jti, ttl_seconds)` that returns `false` for a `jti` it has seen (for example Redis `SET key 1 NX EX ttl`).
+
 ## Session-token verification
 
-Verify Atlas session JWTs **locally** — no round trip per request. The JWKS is cached in-process with kid-miss refetch throttled to once per minute (§7.3).
+Verify Atlas session JWTs **locally** — no round trip per request. The JWKS is cached in-process with kid-miss refetch throttled to once per minute.
 
 ```ruby
 backend = Atlas::Backend.new(
@@ -118,7 +230,9 @@ Then verify in a `before_action` and branch on `BACKEND.authenticate_request(req
 
 ## Resources
 
-All 45 namespaces are available on the client: `users`, `sessions`, `organizations`, `roles`, `permissions`, `oauth_clients`, `resource_servers`, `sso_connections`, `scim_tokens`, `scim_provisioning`, `domains`, `waitlist`, `allowlist`, `blocklist`, `attack_protection`, `actor_tokens`, `invitations`, `webhooks`, `sign_in_tokens`, `audit_logs`, `jwt_templates`, `api_keys`, `oauth_providers`, `sso_onboarding`, `fga`, `rate_limit_policy`, `risk_based_mfa`, `bot_signals`, `network_acls`, `managed_waf`, `log_streams`, `branding`, `email_templates`, `sms_templates`, `localizations`, `actions`, `billing`, `messaging`, `import_export`, `data_subject_requests`, `radius_clients`, `lti_platforms`, `instance`, `instance_security`, `tokens`.
+Every Backend API operation is available on the client: `users`, `sessions`, `organizations` (with `memberships`, `invitations`, `domains`, `group_roles`, `audit_streams`, `end_users`, `reader_domain`, settings, design and branding), `roles`, `permissions`, `oauth_clients`, `resource_servers`, `sso_connections`, `scim_tokens`, `scim_provisioning`, `domains`, `waitlist`, `allowlist`, `blocklist`, `attack_protection`, `actor_tokens`, `invitations`, `webhooks`, `sign_in_tokens`, `audit_logs`, `audit_events`, `jwt_templates`, `api_keys`, `oauth_providers`, `sso_onboarding`, `fga`, `openfga`, `rate_limit_policy`, `risk_based_mfa`, `bot_signals`, `network_acls`, `managed_waf`, `log_streams`, `branding`, `design`, `email_templates`, `sms_templates`, `localizations`, `actions`, `billing`, `messaging`, `import_export`, `data_subject_requests`, `radius_clients`, `lti_platforms`, `instance` (incl. `preflight` and cookie consent), `instance_security`, `tokens`, `email_addresses`, `organization_settings_schema`, `entitlement_overrides`, `machines` (incl. enrolment tokens), `connectors`, `directory`, `diagnostics`, `config_changelog`, `events`, `usage`, `legacy_auth_connection`, `mcp`, `mcp_connector`, `notifications` (with `categories` and `templates`), `org_ldap_connections`, `pca`, `redirect_urls`, `session_exchange_apps`, `tickets`, `captcha`, `testing` (development-instance helpers), and `platform` (`apps`, `atlas_id_apps`, `design_assets`; needs a platform key).
+
+Anything not wrapped yet can be called directly: `atlas.transport.request(method: :get, path: "/v1/...")`.
 
 ## Development
 

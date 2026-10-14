@@ -71,6 +71,30 @@ module Atlas
   # 5xx — an Atlas-side failure.
   class ServerError < APIError; end
 
+  # Stable error codes worth branching on, for +APIError#code+ / +#has_code?+:
+  #
+  #   rescue Atlas::UnprocessableEntityError => e
+  #     raise unless e.has_code?(Atlas::ErrorCode::UNKNOWN_FIELD)
+  module ErrorCode
+    # A request field the endpoint does not accept (strict bodies). +param+ names it.
+    UNKNOWN_FIELD = "UNKNOWN_FIELD"
+    # A flow would send an email but the instance has no way to deliver it.
+    EMAIL_DELIVERY_NOT_CONFIGURED = "EMAIL_DELIVERY_NOT_CONFIGURED"
+    # An email-based sign-in method cannot be turned on without an email provider.
+    EMAIL_PROVIDER_REQUIRED = "EMAIL_PROVIDER_REQUIRED"
+    # A billing plan that subscriptions still use cannot be deleted.
+    PLAN_IN_USE = "PLAN_IN_USE"
+    # The key is valid but for a different API surface (e.g. a platform key on an instance route).
+    WRONG_KEY_SURFACE = "WRONG_KEY_SURFACE"
+    # The key is missing, malformed, revoked or unknown.
+    INVALID_KEY = "INVALID_KEY"
+    NOT_FOUND = "NOT_FOUND"
+    VALIDATION_FAILED = "VALIDATION_FAILED"
+    RATE_LIMITED = "RATE_LIMITED"
+    SCOPE_MISSING = "SCOPE_MISSING"
+    IDEMPOTENCY_CONFLICT = "IDEMPOTENCY_CONFLICT"
+  end
+
   module ErrorFactory
     # Map an HTTP status onto the most specific error class.
     STATUS_MAP = {

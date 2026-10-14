@@ -24,6 +24,11 @@ module Atlas
       def revoke(id)
         request(method: :post, path: "/v1/sessions/#{enc(id)}/revoke")
       end
+
+      # +POST /v1/sessions/:id/tokens/:template+ — mint a token from a named JWT template for a session.
+      def create_token(id, template)
+        request(method: :post, path: "/v1/sessions/#{enc(id)}/tokens/#{enc(template)}")
+      end
     end
   end
 end

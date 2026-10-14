@@ -21,11 +21,11 @@ Gem::Specification.new do |spec|
   spec.required_ruby_version = ">= 3.0"
 
   spec.metadata["homepage_uri"]      = spec.homepage
-  spec.metadata["source_code_uri"]   = "https://github.com/Atlas-Authorization/atlas-ruby"
+  spec.metadata["source_code_uri"]   = "https://github.com/alphajew420/ssoly/tree/main/sdks/ruby"
   spec.metadata["documentation_uri"] = "https://atlasauth.net/docs/sdks/ruby"
   spec.metadata["rubygems_mfa_required"] = "true"
 
-  spec.files = Dir.glob("lib/**/*.rb") + %w[README.md LICENSE]
+  spec.files = Dir.glob("lib/**/*.rb") + %w[README.md CHANGELOG.md LICENSE]
   spec.require_paths = ["lib"]
 
   # JWT verification (verifier.rb / jwks_cache.rb). Everything else is stdlib.

@@ -17,6 +17,11 @@ module Atlas
       def revoke(id)
         request(method: :post, path: "/v1/invitations/#{enc(id)}/revoke")
       end
+
+      # +POST /v1/invitations/bulk+ — create up to 100 invitations; returns created entries and per-entry errors.
+      def bulk_create(invitations)
+        request(method: :post, path: "/v1/invitations/bulk", body: { invitations: invitations })
+      end
     end
   end
 end

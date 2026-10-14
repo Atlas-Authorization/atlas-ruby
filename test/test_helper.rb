@@ -13,7 +13,7 @@ module Atlas
     # answered from a FIFO queue of canned responses.
     class StubRequester
       Request  = Struct.new(:method, :url, :headers, :body, keyword_init: true)
-      Response = Struct.new(:status, :text, keyword_init: true)
+      Response = Struct.new(:status, :text, :headers, keyword_init: true)
 
       attr_reader :requests
 
@@ -23,9 +23,9 @@ module Atlas
       end
 
       # Queue a response. +body+ may be a Hash/Array (JSON-encoded) or a String.
-      def enqueue(status: 200, body: nil)
+      def enqueue(status: 200, body: nil, headers: nil)
         text = body.nil? ? "" : (body.is_a?(String) ? body : JSON.generate(body))
-        @responses << Response.new(status: status, text: text)
+        @responses << Response.new(status: status, text: text, headers: headers)
         self
       end
 
@@ -37,7 +37,7 @@ module Atlas
         response = @responses.shift
         raise "StubRequester: no queued response for #{method} #{url}" if response.nil?
 
-        [response.status, response.text]
+        [response.status, response.text, response.headers]
       end
     end
   end

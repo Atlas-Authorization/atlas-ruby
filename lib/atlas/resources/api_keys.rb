@@ -33,6 +33,16 @@ module Atlas
       def delete(id)
         request(method: :delete, path: "/v1/api_keys/#{enc(id)}")
       end
+
+      # +GET /v1/api_keys/revoked+ — keys revoked since a cursor (since:), for deny-listing revoked key ids.
+      def list_revoked(params = {})
+        request(method: :get, path: "/v1/api_keys/revoked", query: params)
+      end
+
+      # +POST /v1/api_keys/token+ — mint a short-lived access JWT for an API key (secret, ttl_seconds, audience).
+      def mint_token(body)
+        request(method: :post, path: "/v1/api_keys/token", body: body)
+      end
     end
   end
 end

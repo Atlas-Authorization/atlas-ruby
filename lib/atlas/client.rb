@@ -45,6 +45,31 @@ require_relative "resources/lti_platforms"
 require_relative "resources/instance"
 require_relative "resources/instance_security"
 require_relative "resources/tokens"
+require_relative "resources/email_addresses"
+require_relative "resources/organization_settings_schema"
+require_relative "resources/design"
+require_relative "resources/audit_events"
+require_relative "resources/captcha"
+require_relative "resources/config_changelog"
+require_relative "resources/connectors"
+require_relative "resources/directory"
+require_relative "resources/diagnostics"
+require_relative "resources/entitlement_overrides"
+require_relative "resources/events"
+require_relative "resources/legacy_auth_connection"
+require_relative "resources/machines"
+require_relative "resources/mcp"
+require_relative "resources/mcp_connector"
+require_relative "resources/notifications"
+require_relative "resources/openfga"
+require_relative "resources/org_ldap_connections"
+require_relative "resources/pca"
+require_relative "resources/redirect_urls"
+require_relative "resources/session_exchange_apps"
+require_relative "resources/testing"
+require_relative "resources/tickets"
+require_relative "resources/usage"
+require_relative "resources/platform"
 
 module Atlas
   # The typed management client for the Atlas Backend API — the secret-key
@@ -64,16 +89,38 @@ module Atlas
     # @param http [#call, nil] injectable requester (tests, custom transport).
     # @param open_timeout [Numeric] connect timeout, seconds.
     # @param read_timeout [Numeric] read timeout, seconds.
+    # @param strict [Boolean, nil] strict request bodies. +true+ sends
+    #   +Atlas-Strict: true+ on every write, so a body field the endpoint does
+    #   not accept is refused with 422 +UNKNOWN_FIELD+ instead of being ignored.
+    #   +false+ sends +Atlas-Strict: false+ (opting out of an instance-wide
+    #   strict default). +nil+ (the default) sends nothing.
+    # @param on_unknown_fields [#call, nil] called with an {Atlas::UnknownFields}
+    #   (+fields+, +method+, +path+) whenever a successful write reports body
+    #   fields the endpoint ignored (the +Atlas-Unknown-Fields+ response header).
+    #   Handy for logging typos: +->(w) { logger.warn("ignored: #{w.fields}") }+.
     def initialize(secret_key, api_url: DEFAULT_API_URL, http: nil,
-                   open_timeout: 30, read_timeout: 30)
+                   open_timeout: 30, read_timeout: 30, strict: nil, on_unknown_fields: nil)
       @transport = Transport.new(
         secret_key: secret_key, api_url: api_url, http: http,
-        open_timeout: open_timeout, read_timeout: read_timeout
+        open_timeout: open_timeout, read_timeout: read_timeout,
+        strict: strict, on_unknown_fields: on_unknown_fields
       )
     end
 
     # @return [Atlas::Transport] the underlying config-bound transport.
     attr_reader :transport
+
+    # A client sharing this one's key and connection settings but with some
+    # options replaced — the per-call override for strict bodies:
+    #
+    #   atlas.with_options(strict: false).users.update("user_1", { legacy_field: 1 })
+    #
+    # @return [Atlas::Client]
+    def with_options(strict: Transport::INHERIT, on_unknown_fields: Transport::INHERIT)
+      copy = self.class.allocate
+      copy.instance_variable_set(:@transport, @transport.with(strict: strict, on_unknown_fields: on_unknown_fields))
+      copy
+    end
 
     def users            = @users ||= Resources::Users.new(@transport)
     def sessions         = @sessions ||= Resources::Sessions.new(@transport)
@@ -120,5 +167,31 @@ module Atlas
     def instance          = @instance ||= Resources::Instance.new(@transport)
     def instance_security = @instance_security ||= Resources::InstanceSecurity.new(@transport)
     def tokens            = @tokens ||= Resources::Tokens.new(@transport)
+    def email_addresses   = @email_addresses ||= Resources::EmailAddresses.new(@transport)
+    def organization_settings_schema = @organization_settings_schema ||= Resources::OrganizationSettingsSchema.new(@transport)
+    def design            = @design ||= Resources::Design.new(@transport)
+    def audit_events      = @audit_events ||= Resources::AuditEvents.new(@transport)
+    def captcha           = @captcha ||= Resources::Captcha.new(@transport)
+    def config_changelog  = @config_changelog ||= Resources::ConfigChangelog.new(@transport)
+    def connectors        = @connectors ||= Resources::Connectors.new(@transport)
+    def directory         = @directory ||= Resources::Directory.new(@transport)
+    def diagnostics       = @diagnostics ||= Resources::Diagnostics.new(@transport)
+    def entitlement_overrides = @entitlement_overrides ||= Resources::EntitlementOverrides.new(@transport)
+    def events            = @events ||= Resources::Events.new(@transport)
+    def legacy_auth_connection = @legacy_auth_connection ||= Resources::LegacyAuthConnection.new(@transport)
+    def machines          = @machines ||= Resources::Machines.new(@transport)
+    def mcp               = @mcp ||= Resources::Mcp.new(@transport)
+    def mcp_connector     = @mcp_connector ||= Resources::McpConnector.new(@transport)
+    def notifications     = @notifications ||= Resources::Notifications.new(@transport)
+    def openfga           = @openfga ||= Resources::OpenFga.new(@transport)
+    def org_ldap_connections = @org_ldap_connections ||= Resources::OrgLdapConnections.new(@transport)
+    def pca               = @pca ||= Resources::Pca.new(@transport)
+    def redirect_urls     = @redirect_urls ||= Resources::RedirectUrls.new(@transport)
+    def session_exchange_apps = @session_exchange_apps ||= Resources::SessionExchangeApps.new(@transport)
+    def testing           = @testing ||= Resources::Testing.new(@transport)
+    def tickets           = @tickets ||= Resources::Tickets.new(@transport)
+    def usage             = @usage ||= Resources::Usage.new(@transport)
+    # Platform-key surface: construct the client with a +psk_+ key to use it.
+    def platform          = @platform ||= Resources::Platform.new(@transport)
   end
 end

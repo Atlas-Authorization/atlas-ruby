@@ -12,6 +12,11 @@ module Atlas
       def create(body, idempotency_key: nil)
         request(method: :post, path: "/v1/sign_in_tokens", body: body, idempotency_key: idempotency_key)
       end
+
+      # +POST /v1/sign_in_tokens/:id/revoke+ — revoke an unused sign-in token (deprecated surface; prefer sessions.create).
+      def revoke(id)
+        request(method: :post, path: "/v1/sign_in_tokens/#{enc(id)}/revoke")
+      end
     end
   end
 end

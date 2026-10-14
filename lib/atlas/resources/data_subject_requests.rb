@@ -23,6 +23,16 @@ module Atlas
       def reject(id, body = {}, idempotency_key: nil)
         request(method: :post, path: "/v1/data_subject_requests/#{enc(id)}/reject", body: body, idempotency_key: idempotency_key)
       end
+
+      # +POST /v1/data_subject_requests+ — open an export or erasure request for a user (by user_id or subject_email).
+      def create(body, idempotency_key: nil)
+        request(method: :post, path: "/v1/data_subject_requests", body: body, idempotency_key: idempotency_key)
+      end
+
+      # +POST /v1/data_subject_requests/:id/cancel+ — cancel a scheduled erasure within its grace window.
+      def cancel(id, idempotency_key: nil)
+        request(method: :post, path: "/v1/data_subject_requests/#{enc(id)}/cancel", idempotency_key: idempotency_key)
+      end
     end
   end
 end

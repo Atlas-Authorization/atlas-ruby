@@ -50,6 +50,16 @@ module Atlas
           request(method: :delete, path: "/v1/oauth_clients/#{enc(client_id)}/grants/#{enc(grant_id)}")
         end
       end
+
+      # +POST /v1/oauth_clients/import+ — bulk-import OAuth clients for a migration (idempotent per client_id).
+      def import(clients, idempotency_key: nil)
+        request(
+          method: :post,
+          path: "/v1/oauth_clients/import",
+          body: { clients: clients },
+          idempotency_key: idempotency_key
+        )
+      end
     end
   end
 end
