@@ -138,4 +138,27 @@ class LogoutConsentMessagingTest < Minitest::Test
     assert_nil second["last_active_organization_id"]
     assert_nil second["impersonated_by"]
   end
+
+  def test_captcha_secret_is_bring_your_own_keys
+    @http.enqueue(body: { "object" => "captcha_secret", "provider" => "turnstile", "set" => true })
+    @client.instance_security.set_captcha_secret(secret: "s3cret", provider: "turnstile")
+    assert_equal "PUT", @http.last.method
+    assert_equal({ "secret" => "s3cret", "provider" => "turnstile" }, JSON.parse(@http.last.body))
+
+    @http.enqueue(body: { "object" => "captcha_secret", "provider" => "hcaptcha", "deleted" => true, "flows_turned_off" => ["signUp"] })
+    result = @client.instance_security.delete_captcha_secret(provider: "hcaptcha", force: true)
+    assert_equal "https://api.atlasauth.net/v1/instance/captcha_secret?provider=hcaptcha&force=true", @http.last.url
+    assert_equal ["signUp"], result["flows_turned_off"]
+
+    @http.enqueue(body: { "object" => "captcha_secret", "provider" => "hcaptcha", "deleted" => true })
+    @client.instance_security.delete_captcha_secret
+    assert_equal "https://api.atlasauth.net/v1/instance/captcha_secret", @http.last.url
+  end
+
+  def test_captcha_in_use_is_a_conflict
+    @http.enqueue(status: 409, body: { "errors" => [{ "code" => "CAPTCHA_IN_USE", "message" => "in use", "meta" => { "flows" => ["signUp"] } }] })
+    err = assert_raises(Atlas::ConflictError) { @client.instance_security.delete_captcha_secret }
+    assert err.has_code?(Atlas::ErrorCode::CAPTCHA_IN_USE)
+    assert_equal "CAPTCHA_KEYS_REQUIRED", Atlas::ErrorCode::CAPTCHA_KEYS_REQUIRED
+  end
 end

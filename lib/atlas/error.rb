@@ -85,6 +85,12 @@ module Atlas
     # The email provider cannot be removed while email-dependent features are on
     # (+meta["features"]+ lists them); +messaging.delete_channel("email", force: true)+ removes it anyway.
     EMAIL_PROVIDER_IN_USE = "EMAIL_PROVIDER_IN_USE"
+    # Captcha is bring-your-own-keys: turning it on (or switching provider) needs that
+    # provider's site key and secret stored first.
+    CAPTCHA_KEYS_REQUIRED = "CAPTCHA_KEYS_REQUIRED"
+    # A captcha key a live flow uses cannot be removed (+meta["flows"]+);
+    # +instance_security.delete_captcha_secret(force: true)+ removes it anyway.
+    CAPTCHA_IN_USE = "CAPTCHA_IN_USE"
     # A billing plan that subscriptions still use cannot be deleted.
     PLAN_IN_USE = "PLAN_IN_USE"
     # The key is valid but for a different API surface (e.g. a platform key on an instance route).

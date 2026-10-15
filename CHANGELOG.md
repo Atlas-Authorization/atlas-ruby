@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.1
+
+- **Captcha is bring-your-own-keys.** `Atlas::ErrorCode::CAPTCHA_KEYS_REQUIRED` (422) and `CAPTCHA_IN_USE` (409, `meta["flows"]`).
+- `instance_security.set_captcha_secret` documents `provider:` so the secret can be stored before captcha is turned on.
+- `instance_security.delete_captcha_secret(provider:, force:)` — `force: true` removes a secret a flow uses and turns those flows off (`flows_turned_off`).
+
 ## 0.5.0
 
 All changes are backward compatible: every new field and parameter is optional.
