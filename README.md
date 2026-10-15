@@ -93,7 +93,7 @@ rescue Atlas::APIError => e
 end
 ```
 
-`Atlas::ErrorCode` names the codes most worth branching on: `UNKNOWN_FIELD`, `EMAIL_DELIVERY_NOT_CONFIGURED`, `EMAIL_PROVIDER_REQUIRED`, `PLAN_IN_USE`, `WRONG_KEY_SURFACE`, `INVALID_KEY` and more:
+`Atlas::ErrorCode` names the codes most worth branching on: `UNKNOWN_FIELD`, `EMAIL_DELIVERY_NOT_CONFIGURED`, `EMAIL_PROVIDER_REQUIRED`, `EMAIL_PROVIDER_IN_USE`, `PLAN_IN_USE`, `WRONG_KEY_SURFACE`, `INVALID_KEY` and more:
 
 ```ruby
 rescue Atlas::UnprocessableEntityError => e
@@ -135,6 +135,38 @@ atlas.design.catalog                                 # presets, fonts, CSS varia
 atlas.instance.set_cookie_consent(script_url: "https://cmp.example.com/loader.js", site_id: "abc123")
 atlas.instance.get_cookie_consent
 atlas.instance.delete_cookie_consent
+```
+
+Add a "Cookie settings" link to the hosted pages with `settings_link` (`nil` or omitted means no link). It needs a `preset` (`Atlas::Resources::Instance::COOKIE_CONSENT_PRESETS`: `cookiemunch`, `cookiebot`, `onetrust`, `custom`) or at least one attribute:
+
+```ruby
+consent = atlas.instance.set_cookie_consent(
+  script_url: "https://consent.cookiebot.com/uc.js",
+  settings_link: { label: "Cookie settings", preset: "cookiebot", attributes: { "class" => "footer-link" } }
+)
+consent["settings_link"]["rendered_attributes"]  # your attributes plus the preset's trigger
+```
+
+## Messaging providers
+
+Removing the email provider is refused (`Atlas::ConflictError` with `EMAIL_PROVIDER_IN_USE`) while email-dependent features are on and nothing else would deliver email; `meta["features"]` lists them. Pass `force: true` to remove it anyway:
+
+```ruby
+begin
+  atlas.messaging.delete_channel("email")
+rescue Atlas::ConflictError => e
+  raise unless e.has_code?(Atlas::ErrorCode::EMAIL_PROVIDER_IN_USE)
+  e.errors.first["meta"]["features"]  # => ["emailCode", "passwordReset"]
+  atlas.messaging.delete_channel("email", force: true)
+end
+```
+
+## OAuth clients
+
+For a first-party client, `skip_logout_confirmation: true` lets RP-initiated logout with an exactly registered `post_logout_redirect_uri` end the session and redirect straight back, without the confirmation page:
+
+```ruby
+atlas.oauth_clients.update("oc_123", { skip_logout_confirmation: true })
 ```
 
 ## Platform API: Sign in with Atlas apps

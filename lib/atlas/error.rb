@@ -82,6 +82,9 @@ module Atlas
     EMAIL_DELIVERY_NOT_CONFIGURED = "EMAIL_DELIVERY_NOT_CONFIGURED"
     # An email-based sign-in method cannot be turned on without an email provider.
     EMAIL_PROVIDER_REQUIRED = "EMAIL_PROVIDER_REQUIRED"
+    # The email provider cannot be removed while email-dependent features are on
+    # (+meta["features"]+ lists them); +messaging.delete_channel("email", force: true)+ removes it anyway.
+    EMAIL_PROVIDER_IN_USE = "EMAIL_PROVIDER_IN_USE"
     # A billing plan that subscriptions still use cannot be deleted.
     PLAN_IN_USE = "PLAN_IN_USE"
     # The key is valid but for a different API surface (e.g. a platform key on an instance route).

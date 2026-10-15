@@ -4,7 +4,9 @@ require_relative "base"
 
 module Atlas
   module Resources
-    # +/v1/sessions+ — mint, list, inspect, and revoke sessions.
+    # +/v1/sessions+ — mint, list, inspect, and revoke sessions. Every session
+    # object carries +idle_expires_at+ (epoch ms the session ends from
+    # inactivity; same value as +abandon_at+).
     class Sessions < Base
       # +POST /v1/sessions+ — mint a session for a user without the sign-in flow.
       # Returns the bearer jwt + refresh token in-body. Refused for a banned user.

@@ -6,6 +6,11 @@ module Atlas
   module Resources
     # +/v1/instance+ — instance configuration (origins, auth config).
     class Instance < Base
+      # Known +settings_link.preset+ values for {#set_cookie_consent}. A
+      # response's +preset+ stays a plain String, so a value added later still
+      # reads fine.
+      COOKIE_CONSENT_PRESETS = %w[cookiemunch cookiebot onetrust custom].freeze
+
       def get
         request(method: :get, path: "/v1/instance")
       end
@@ -30,6 +35,13 @@ module Atlas
       end
 
       # +GET /v1/instance/cookie_consent+ — the cookie-consent script injected into the hosted pages (enabled: false when none).
+      #
+      # The setting (also returned by {#set_cookie_consent} and
+      # {#delete_cookie_consent}) carries +"settings_link"+: nil when there is
+      # no link, else a Hash with +"label"+, +"preset"+ (String or nil),
+      # +"attributes"+ (Hash of String => String) and +"rendered_attributes"+
+      # (the attributes the rendered link carries: yours plus the preset's
+      # trigger).
       def get_cookie_consent
         request(method: :get, path: "/v1/instance/cookie_consent")
       end
@@ -38,7 +50,19 @@ module Atlas
       #
       # @param body [Hash] +script_url+ (https, required), and optional
       #   +script_id+, +site_id+, +blocking_mode+ and +extra_origins+ (https
-      #   origins the script loads from; added to the page's CSP).
+      #   origins the script loads from; added to the page's CSP), and
+      #   +settings_link+: a "Cookie settings" link on the hosted pages, or nil
+      #   (nil or omitted = no link). A link is a Hash with +label+ (required,
+      #   1-60 chars), optional +preset+ (one of {COOKIE_CONSENT_PRESETS}, or
+      #   nil) and optional +attributes+ (Hash of String => String; names
+      #   +data-*+, +aria-*+, +id+, +class+ or +href+ (https or a +#fragment+);
+      #   at most 10; values up to 200 chars). A link needs a preset or at
+      #   least one attribute (400 otherwise).
+      #
+      #   atlas.instance.set_cookie_consent(
+      #     script_url: "https://consent.cookiebot.com/uc.js",
+      #     settings_link: { label: "Cookie settings", preset: "cookiebot" }
+      #   )
       def set_cookie_consent(body)
         request(method: :put, path: "/v1/instance/cookie_consent", body: body)
       end

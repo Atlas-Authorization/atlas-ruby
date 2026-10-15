@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.5.0
+
+All changes are backward compatible: every new field and parameter is optional.
+
+### Added
+
+- OAuth clients: `skip_logout_confirmation` (boolean) documented on `oauth_clients.create` and `oauth_clients.update`; client objects carry it (default `false`). First-party clients only (422 `VALIDATION_FAILED`, param `skip_logout_confirmation`, on a third-party client). When true, RP-initiated logout with this client and an exactly registered `post_logout_redirect_uri` ends the session and redirects straight back with `state`, without the confirmation page.
+- Cookie consent: `instance.set_cookie_consent` accepts `settings_link` (`{ label, preset, attributes }`, or `nil` for no link). `label` is required (1-60 chars); `preset` is one of `"cookiemunch"`, `"cookiebot"`, `"onetrust"`, `"custom"` or `nil`; `attributes` is a Hash of String => String (`data-*`, `aria-*`, `id`, `class`, `href`; at most 10, values up to 200 chars). The cookie-consent setting returned by `get_cookie_consent`, `set_cookie_consent` and `delete_cookie_consent` carries `settings_link` (`nil`, or `{ label, preset, attributes, rendered_attributes }`).
+- `Atlas::Resources::Instance::COOKIE_CONSENT_PRESETS` — the known settings-link presets (a response's `preset` stays a String, so new values still read fine).
+- `messaging.delete_channel(channel, force: false)` — `force: true` sends `?force=true` and removes the email provider even while email-dependent features are on.
+- `Atlas::ErrorCode::EMAIL_PROVIDER_IN_USE` — removing the email provider is refused with a 409 while email-dependent features are on and nothing else would deliver email; the error's `meta["features"]` lists them (e.g. `emailCode`, `emailLink`, `emailVerification`, `passwordReset`).
+- Sessions: `idle_expires_at` (epoch ms, same value as `abandon_at`) documented on every session object, including `users.list_sessions` items, which also carry `last_active_organization_id` and `impersonated_by` (String or `nil`).
+
 ## 0.4.0
 
 ### Added

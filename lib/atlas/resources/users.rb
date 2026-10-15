@@ -59,6 +59,10 @@ module Atlas
         request(method: :delete, path: "/v1/users/#{enc(id)}/mfa/#{enc(factor_id)}")
       end
 
+      # +GET /v1/users/:id/sessions+ — the user's sessions. Each item carries
+      # +last_active_organization_id+ and +impersonated_by+ (String or nil) and
+      # +idle_expires_at+ (epoch ms the session ends from inactivity; same value
+      # as +abandon_at+).
       def list_sessions(id)
         request(method: :get, path: "/v1/users/#{enc(id)}/sessions")
       end

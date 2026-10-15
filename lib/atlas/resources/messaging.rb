@@ -81,8 +81,19 @@ module Atlas
         request(method: :put, path: "/v1/messaging_providers/sms", body: body)
       end
 
-      def delete_channel(channel)
-        request(method: :delete, path: "/v1/messaging_providers/#{enc(channel)}")
+      # +DELETE /v1/messaging_providers/:channel+ — remove the channel's provider.
+      #
+      # Removing the email provider is refused with a 409
+      # +EMAIL_PROVIDER_IN_USE+ while email-dependent features are on and nothing
+      # else would deliver email; the error's +meta["features"]+ lists them
+      # (e.g. +"emailCode"+, +"emailLink"+, +"emailVerification"+,
+      # +"passwordReset"+). Pass +force: true+ to remove it anyway.
+      #
+      # @param channel [String] +"email"+ or +"sms"+.
+      # @param force [Boolean] send +?force=true+ (only sent when true).
+      # @return [Hash] +{ "object" => "messaging_provider", "channel", "deleted" => true }+.
+      def delete_channel(channel, force: false)
+        request(method: :delete, path: "/v1/messaging_providers/#{enc(channel)}", query: force ? { force: true } : nil)
       end
 
       # Send a fixed, clearly-marked test message through the channel's provider.
