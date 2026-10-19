@@ -208,7 +208,40 @@ class OperationsTest < Minitest::Test
     ["POST", "/v1/platform/atlas_id_apps/id_1/rotate_secret", nil, false, ->(c) { c.platform.atlas_id_apps.rotate_secret("id_1") }],
     ["POST", "/v1/platform/atlas_id_apps/design/preview", { "design" => { "k" => "v" } }, false, ->(c) { c.platform.atlas_id_apps.preview_design({ "k" => "v" }) }],
     ["GET", "/v1/platform/design/assets", nil, false, ->(c) { c.platform.design_assets.list() }],
-    ["DELETE", "/v1/platform/design/assets/asset_id_1", nil, false, ->(c) { c.platform.design_assets.delete("asset_id_1") }]
+    ["DELETE", "/v1/platform/design/assets/asset_id_1", nil, false, ->(c) { c.platform.design_assets.delete("asset_id_1") }],
+    ["POST", "/v1/instance/move_origin", { "from" => "https://a.example.com", "to" => "https://b.example.com" }, false, ->(c) { c.instance.move_origin({ "from" => "https://a.example.com", "to" => "https://b.example.com" }) }],
+    ["GET", "/v1/instance/connections", nil, false, ->(c) { c.instance.connections }],
+    ["GET", "/v1/instance/integrations/chatly", nil, false, ->(c) { c.instance.get_chatly_integration }],
+    ["PUT", "/v1/instance/integrations/chatly", { "channel" => "support" }, false, ->(c) { c.instance.set_chatly_integration({ "channel" => "support" }) }],
+    ["DELETE", "/v1/instance/integrations/chatly", nil, false, ->(c) { c.instance.delete_chatly_integration }],
+    ["GET", "/v1/instance/integrations/forumulate", nil, false, ->(c) { c.instance.get_forumulate_integration }],
+    ["PUT", "/v1/instance/integrations/forumulate", { "org_id" => "o", "spaces" => ["s"] }, false, ->(c) { c.instance.set_forumulate_integration({ "org_id" => "o", "spaces" => ["s"] }) }],
+    ["DELETE", "/v1/instance/integrations/forumulate", nil, false, ->(c) { c.instance.delete_forumulate_integration }],
+    ["GET", "/v1/logout_notify_endpoints", nil, false, ->(c) { c.logout_notify_endpoints.list }],
+    ["POST", "/v1/logout_notify_endpoints", { "url" => "https://h.example.com" }, true, ->(c) { c.logout_notify_endpoints.create({ "url" => "https://h.example.com" }, idempotency_key: "idem_1") }],
+    ["GET", "/v1/logout_notify_endpoints/id_1", nil, false, ->(c) { c.logout_notify_endpoints.get("id_1") }],
+    ["PATCH", "/v1/logout_notify_endpoints/id_1", { "x" => 1 }, true, ->(c) { c.logout_notify_endpoints.update("id_1", { "x" => 1 }, idempotency_key: "idem_1") }],
+    ["DELETE", "/v1/logout_notify_endpoints/id_1", nil, true, ->(c) { c.logout_notify_endpoints.delete("id_1", idempotency_key: "idem_1") }],
+    ["GET", "/v1/logout_notify_endpoints/id_1/deliveries?limit=5", nil, false, ->(c) { c.logout_notify_endpoints.list_deliveries("id_1", { limit: 5 }) }],
+    ["GET", "/v1/messaging_providers/email/managed", nil, false, ->(c) { c.messaging.get_managed_email }],
+    ["POST", "/v1/messaging_providers/email/managed", { "from_address" => "a@example.com" }, false, ->(c) { c.messaging.create_managed_email({ "from_address" => "a@example.com" }) }],
+    ["POST", "/v1/messaging_providers/email/managed/verify", nil, false, ->(c) { c.messaging.verify_managed_email }],
+    ["DELETE", "/v1/messaging_providers/email/managed?force=true", nil, false, ->(c) { c.messaging.delete_managed_email(force: true) }],
+    ["GET", "/v1/oauth_clients/id_1/backchannel_deliveries?limit=5", nil, false, ->(c) { c.oauth_clients.list_backchannel_deliveries("id_1", { limit: 5 }) }],
+    ["POST", "/v1/oauth_clients/id_1/backchannel_logout/test", nil, false, ->(c) { c.oauth_clients.test_backchannel_logout("id_1") }],
+    ["GET", "/v1/platform/atlas_id_apps/id_1/backchannel_deliveries", nil, false, ->(c) { c.platform.atlas_id_apps.list_backchannel_deliveries("id_1") }],
+    ["POST", "/v1/platform/atlas_id_apps/id_1/backchannel_logout/test", nil, false, ->(c) { c.platform.atlas_id_apps.test_backchannel_logout("id_1") }],
+    ["GET", "/v1/platform/atlas_id_apps/id_1/preflight", nil, false, ->(c) { c.platform.atlas_id_apps.preflight("id_1") }],
+    ["GET", "/v1/platform/atlas_id_apps/id_1/users?email=a%40example.com", nil, false, ->(c) { c.platform.atlas_id_apps.find_users("id_1", "a@example.com") }],
+    ["DELETE", "/v1/platform/atlas_id_apps/id_1/grants/grant_id_1", nil, false, ->(c) { c.platform.atlas_id_apps.revoke_grant("id_1", "grant_id_1") }],
+    ["POST", "/v1/platform/atlas_id_apps/id_1/move_origin", { "from" => "https://a.example.com", "to" => "https://b.example.com", "dry_run" => true }, false, ->(c) { c.platform.atlas_id_apps.move_origin("id_1", { "from" => "https://a.example.com", "to" => "https://b.example.com", "dry_run" => true }) }],
+    ["POST", "/v1/platform/atlas_id_apps/id_1/webhook/rotate_secret", nil, false, ->(c) { c.platform.atlas_id_apps.rotate_webhook_secret("id_1") }],
+    ["GET", "/v1/platform/atlas_id_publisher", nil, false, ->(c) { c.platform.atlas_id_publisher.get }],
+    ["PUT", "/v1/platform/atlas_id_publisher", { "name" => "Acme", "domain" => "example.com" }, false, ->(c) { c.platform.atlas_id_publisher.set({ "name" => "Acme", "domain" => "example.com" }) }],
+    ["PATCH", "/v1/platform/atlas_id_publisher", { "skip_consent" => true }, false, ->(c) { c.platform.atlas_id_publisher.update(skip_consent: true) }],
+    ["DELETE", "/v1/platform/atlas_id_publisher", nil, false, ->(c) { c.platform.atlas_id_publisher.delete }],
+    ["POST", "/v1/platform/atlas_id_publisher/verify", nil, false, ->(c) { c.platform.atlas_id_publisher.verify }],
+    ["GET", "/v1/platform/config_changelog?limit=5", nil, false, ->(c) { c.platform.config_changelog({ limit: 5 }) }]
   ].freeze
 
   def test_every_added_operation_hits_its_route
@@ -233,6 +266,6 @@ class OperationsTest < Minitest::Test
         refute req.headers.key?("idempotency-key")
       end
     end
-    assert_equal 202, OPERATIONS.length
+    assert_equal 235, OPERATIONS.length
   end
 end

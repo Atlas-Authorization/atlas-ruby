@@ -31,6 +31,7 @@ require_relative "resources/bot_signals"
 require_relative "resources/network_acls"
 require_relative "resources/managed_waf"
 require_relative "resources/log_streams"
+require_relative "resources/logout_notify_endpoints"
 require_relative "resources/branding"
 require_relative "resources/email_templates"
 require_relative "resources/sms_templates"
@@ -153,6 +154,7 @@ module Atlas
     def network_acls      = @network_acls ||= Resources::NetworkAcls.new(@transport)
     def managed_waf       = @managed_waf ||= Resources::ManagedWaf.new(@transport)
     def log_streams       = @log_streams ||= Resources::LogStreams.new(@transport)
+    def logout_notify_endpoints = @logout_notify_endpoints ||= Resources::LogoutNotifyEndpoints.new(@transport)
     def branding          = @branding ||= Resources::Branding.new(@transport)
     def email_templates   = @email_templates ||= Resources::EmailTemplates.new(@transport)
     def sms_templates     = @sms_templates ||= Resources::SmsTemplates.new(@transport)

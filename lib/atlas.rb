@@ -30,6 +30,7 @@ require_relative "atlas/jwks_cache"
 require_relative "atlas/verifier"
 require_relative "atlas/backchannel_logout"
 require_relative "atlas/handshake"
+require_relative "atlas/webhook"
 require_relative "atlas/client"
 
 module Atlas

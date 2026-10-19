@@ -191,6 +191,25 @@ platform.atlas_id_apps.update(app["id"], { branding: { design: { logo: { assetId
 platform.apps.list                                   # apps (instances) your platform provisions
 ```
 
+## Domain moves, logout fan-out and managed email
+
+```ruby
+# Move every URL from the old origin to the new one. dry_run first shows the diff.
+preview = atlas.instance.move_origin({ from: "https://old.example.com", to: "https://example.com", dry_run: true })
+preview["changes"].each { |c| puts "#{c['object']} #{c['field']}: #{c['before']} -> #{c['after']}" }
+
+# Send the same logout_token your OIDC apps get to another service.
+atlas.logout_notify_endpoints.create({ url: "https://api.example.com/atlas/logout" })
+
+# Send email from your own domain through Atlas, then publish the returned DNS records.
+managed = atlas.messaging.create_managed_email({ from_address: "Acme <no-reply@example.com>" })
+puts managed["records"]
+```
+
+With a platform key, `platform.atlas_id_apps.find_users(id, email)` answers a privacy request for one app,
+`revoke_grant(id, grant_id)` revokes one person's approval, and `platform.atlas_id_publisher` claims and verifies
+the publisher name shown on consent screens.
+
 ## Back-channel logout
 
 When a user signs out, Atlas POSTs a signed `logout_token` to your app's `backchannel_logout_uri` (Sign in with Atlas apps and session-exchange apps). Verify it, end the matching local sessions, and answer 200:

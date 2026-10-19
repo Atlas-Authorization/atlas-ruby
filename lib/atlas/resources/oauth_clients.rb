@@ -44,6 +44,21 @@ module Atlas
         request(method: :delete, path: "/v1/oauth_clients/#{enc(id)}")
       end
 
+      # +GET /v1/oauth_clients/:id/backchannel_deliveries+ — the client's
+      # back-channel logout delivery log, newest first (+limit:+,
+      # +starting_after:+). Each delivery has +status+, +http_status+,
+      # +latency_ms+, +error+, +location+ (a 3xx is never followed) and +test+.
+      def list_backchannel_deliveries(id, params = {})
+        request(method: :get, path: "/v1/oauth_clients/#{enc(id)}/backchannel_deliveries", query: params)
+      end
+
+      # +POST /v1/oauth_clients/:id/backchannel_logout/test+ — send a test
+      # back-channel logout now (+ok+, +status+, +latency_ms+, +error+,
+      # +location+, +blocked_reason+, +body_excerpt+).
+      def test_backchannel_logout(id)
+        request(method: :post, path: "/v1/oauth_clients/#{enc(id)}/backchannel_logout/test")
+      end
+
       # +oauth_clients.grants+ — resource-server grants for a client.
       def grants
         @grants ||= Grants.new(@transport)

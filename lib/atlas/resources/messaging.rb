@@ -97,6 +97,36 @@ module Atlas
       end
 
       # Send a fixed, clearly-marked test message through the channel's provider.
+      # +GET /v1/messaging_providers/email/managed+ — the Atlas-managed sending
+      # domain: +status+, +verified+, the DNS +records+ to publish, +limits+ and
+      # +usage+. 404 when none is configured.
+      def get_managed_email
+        request(method: :get, path: "/v1/messaging_providers/email/managed")
+      end
+
+      # +POST /v1/messaging_providers/email/managed+ — send from your own domain
+      # through Atlas's email account.
+      #
+      # @param body [Hash] +from_address+ (required; its domain is the sending
+      #   domain), optional +region+ and +dns+ (+{ provider: "cloudflare",
+      #   api_token:, overwrite: }+: Atlas writes the records; the token is
+      #   write-only).
+      def create_managed_email(body)
+        request(method: :post, path: "/v1/messaging_providers/email/managed", body: body)
+      end
+
+      # +POST /v1/messaging_providers/email/managed/verify+ — re-check the DNS records now.
+      def verify_managed_email
+        request(method: :post, path: "/v1/messaging_providers/email/managed/verify")
+      end
+
+      # +DELETE /v1/messaging_providers/email/managed+ — stop using managed email
+      # (DNS records stay). Refused with 409 +EMAIL_PROVIDER_IN_USE+ while it is
+      # the only way to send email; pass +force: true+ to remove it anyway.
+      def delete_managed_email(force: false)
+        request(method: :delete, path: "/v1/messaging_providers/email/managed", query: force ? { force: true } : nil)
+      end
+
       def test(channel, body)
         request(method: :post, path: "/v1/messaging_providers/#{enc(channel)}/test", body: body)
       end

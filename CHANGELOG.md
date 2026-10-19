@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.6.0
+
+- **Back-channel logout, retryable failures.** `Atlas::InvalidLogoutTokenError#retryable?` is true for `:no_keys`: the issuer's keys could not be fetched (a network error, a JWKS outage, or a just-rotated key whose refetch failed). Answer `503` with `Retry-After` then, so Atlas retries the delivery, and `400` otherwise. A token whose `kid` is unknown after a failed JWKS refetch is now `:no_keys` (was `:invalid_signature`).
+- **Webhook verification.** `Atlas::Webhook.verify(body:, headers:, secret:, now_ms: nil)` returns a
+  `Result` (`verified?`, `reason`, `event`, `delivery_id`, `timestamp`). `delivery_id` is the signed
+  `atlas-id` header, the same on every retry of one event: deduplicate on it. Accepts plain or Rack-style
+  (`HTTP_ATLAS_ID`) headers.
+- **Domain moves.** `instance.move_origin(from:, to:, dry_run:)` (a Hash body) rewrites every URL on one origin to another; `platform.atlas_id_apps.move_origin(id, body)` does it for one app.
+- **Connections and integrations.** `instance.connections`, and `instance.get_ / set_ / delete_chatly_integration` and `..._forumulate_integration`.
+- **Logout fan-out.** New `logout_notify_endpoints` namespace: `list`, `create`, `get`, `update`, `delete`, `list_deliveries`.
+- **Managed email.** `messaging.get_managed_email`, `create_managed_email`, `verify_managed_email`, `delete_managed_email(force:)`.
+- **Back-channel logout logs.** `oauth_clients.list_backchannel_deliveries` / `test_backchannel_logout` and the same on `platform.atlas_id_apps`.
+- **Sign in with Atlas apps.** `platform.atlas_id_apps.preflight`, `find_users(id, email)`, `revoke_grant(id, grant_id)`, `rotate_webhook_secret(id)`; app responses carry `webhook_url`, `webhook_events`, `webhook_active` (and `webhook_secret` once).
+- **Publisher.** `platform.atlas_id_publisher.get / set / update(skip_consent:) / delete / verify`, and `platform.config_changelog(params)`.
+- Responses now also carry `version` on users, `culture` and `declared_cookies` on cookie consent, `sdk_versions_seen` on preflight, `error` and `location` on webhook deliveries, and `event_catalog` on the webhook endpoint list.
+
 ## 0.5.1
 
 - **Captcha is bring-your-own-keys.** `Atlas::ErrorCode::CAPTCHA_KEYS_REQUIRED` (422) and `CAPTCHA_IN_USE` (409, `meta["flows"]`).

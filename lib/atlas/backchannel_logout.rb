@@ -5,7 +5,8 @@ require_relative "jwks_cache"
 
 module Atlas
   # Raised by {Atlas::BackchannelLogout#verify} for any logout token that must
-  # be refused. Answer the request with 400.
+  # be refused. Answer the request with 400, or with 503 and +Retry-After+ when
+  # {#retryable?} is true (Atlas then retries the delivery; it never retries a 400).
   class InvalidLogoutTokenError < Error
     # @return [Symbol] a coarse reason (+:malformed+, +:invalid_signature+,
     #   +:wrong_type+, +:missing_claim+, +:nonce_present+, +:replayed+, ...).
@@ -14,6 +15,13 @@ module Atlas
     def initialize(reason, message = nil)
       @reason = reason
       super(message || "Invalid logout token (#{reason}).")
+    end
+
+    # True when the failure is temporary and on your side: +:no_keys+, the
+    # issuer's keys could not be fetched (a network error or a JWKS outage).
+    # @return [Boolean]
+    def retryable?
+      reason == :no_keys
     end
   end
 
@@ -69,7 +77,12 @@ module Atlas
   #     client_id: ENV.fetch("ATLAS_CLIENT_ID"),
   #     jti_store: Atlas::MemoryJtiStore.new                   # optional replay protection
   #   )
-  #   claims = logout.verify(params[:logout_token])            # raises Atlas::InvalidLogoutTokenError
+  #   begin
+  #     claims = logout.verify(params[:logout_token])
+  #   rescue Atlas::InvalidLogoutTokenError => e
+  #     # 503 + Retry-After makes Atlas retry (keys unreachable); 400 is final.
+  #     e.retryable? ? head(:service_unavailable, "Retry-After" => "30") : head(:bad_request)
+  #   end
   class BackchannelLogout
     EVENT = "http://schemas.openid.net/event/backchannel-logout"
     # How far in the future an +iat+ may be (clock skew), and how old a token
@@ -109,8 +122,11 @@ module Atlas
       token = logout_token.to_s
       fail!(:malformed) if token.split(".").length != 3
 
-      keys = @jwks.get(Atlas.read_kid(token))
+      kid = Atlas.read_kid(token)
+      keys = @jwks.get(kid)
       fail!(:no_keys) if keys.nil? || keys["keys"].nil? || keys["keys"].empty?
+      # A key Atlas just rotated to, whose refetch failed: temporary.
+      fail!(:no_keys) if kid && @jwks.last_outcome == :failed && keys["keys"].none? { |k| k["kid"] == kid }
 
       payload, header = decode(token, keys)
       check_header(header)

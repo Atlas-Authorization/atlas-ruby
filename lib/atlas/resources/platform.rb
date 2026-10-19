@@ -22,6 +22,17 @@ module Atlas
         @design_assets ||= DesignAssets.new(@transport)
       end
 
+      def atlas_id_publisher
+        @atlas_id_publisher ||= AtlasIdPublisher.new(@transport)
+      end
+
+      # +GET /v1/platform/config_changelog+ — config change history for the
+      # account's Sign in with Atlas apps (+action:+, +limit:+,
+      # +starting_after:+, +since:+). Same entry shape as +config_changelog.list+.
+      def config_changelog(params = {})
+        request(method: :get, path: "/v1/platform/config_changelog", query: params)
+      end
+
       # +/v1/platform/apps+ — apps (instances) your platform provisions and owns.
       class Apps < Base
         # +GET /v1/platform/apps+ — the apps this platform owns (include_archived:, archived:, tag:).
@@ -189,9 +200,80 @@ module Atlas
           request(method: :post, path: "/v1/platform/atlas_id_apps/#{enc(id)}/rotate_secret")
         end
 
+        # +GET /v1/platform/atlas_id_apps/:id/backchannel_deliveries+ — the app's back-channel logout delivery log.
+        def list_backchannel_deliveries(id, params = {})
+          request(method: :get, path: "/v1/platform/atlas_id_apps/#{enc(id)}/backchannel_deliveries", query: params)
+        end
+
+        # +POST /v1/platform/atlas_id_apps/:id/backchannel_logout/test+ — send a test back-channel logout to the app now.
+        def test_backchannel_logout(id)
+          request(method: :post, path: "/v1/platform/atlas_id_apps/#{enc(id)}/backchannel_logout/test")
+        end
+
+        # +GET /v1/platform/atlas_id_apps/:id/preflight+ — check one app's setup (+ok+, +user_count+, +findings+).
+        def preflight(id)
+          request(method: :get, path: "/v1/platform/atlas_id_apps/#{enc(id)}/preflight")
+        end
+
+        # +GET /v1/platform/atlas_id_apps/:id/users?email=+ — privacy requests: is
+        # this person one of the app's users? Exact match on a verified email;
+        # returns +{ "data" => [{ "sub", "grant_id", "scopes", "granted_at" }] }+,
+        # or an empty list for anyone else.
+        def find_users(id, email)
+          request(method: :get, path: "/v1/platform/atlas_id_apps/#{enc(id)}/users", query: { email: email })
+        end
+
+        # +DELETE /v1/platform/atlas_id_apps/:id/grants/:grant_id+ — revoke one
+        # user's grant; the next sign-in shows the consent screen again.
+        def revoke_grant(id, grant_id)
+          request(method: :delete, path: "/v1/platform/atlas_id_apps/#{enc(id)}/grants/#{enc(grant_id)}")
+        end
+
+        # +POST /v1/platform/atlas_id_apps/:id/move_origin+ — move the app's URLs
+        # from one origin to another (+from:+, +to:+, +dry_run:+).
+        def move_origin(id, body)
+          request(method: :post, path: "/v1/platform/atlas_id_apps/#{enc(id)}/move_origin", body: body)
+        end
+
+        # +POST /v1/platform/atlas_id_apps/:id/webhook/rotate_secret+ — rotate the
+        # app's webhook signing secret (+webhook_secret+, returned once).
+        def rotate_webhook_secret(id)
+          request(method: :post, path: "/v1/platform/atlas_id_apps/#{enc(id)}/webhook/rotate_secret")
+        end
+
         # +POST /v1/platform/atlas_id_apps/design/preview+ — preview a Sign in with Atlas app design without saving it.
         def preview_design(design)
           request(method: :post, path: "/v1/platform/atlas_id_apps/design/preview", body: { design: design })
+        end
+      end
+
+      # +/v1/platform/atlas_id_publisher+ — the account's Sign in with Atlas
+      # publisher name and DNS-verified domain.
+      class AtlasIdPublisher < Base
+        # +GET /v1/platform/atlas_id_publisher+ — the publisher (404 until claimed).
+        def get
+          request(method: :get, path: "/v1/platform/atlas_id_publisher")
+        end
+
+        # +PUT /v1/platform/atlas_id_publisher+ — claim a publisher +name+ and
+        # +domain+ (optional +skip_consent+); returns the TXT +verification+ record.
+        def set(body)
+          request(method: :put, path: "/v1/platform/atlas_id_publisher", body: body)
+        end
+
+        # +PATCH /v1/platform/atlas_id_publisher+ — turn publisher-wide consent on or off.
+        def update(skip_consent:)
+          request(method: :patch, path: "/v1/platform/atlas_id_publisher", body: { skip_consent: skip_consent })
+        end
+
+        # +DELETE /v1/platform/atlas_id_publisher+ — remove the publisher claim.
+        def delete
+          request(method: :delete, path: "/v1/platform/atlas_id_publisher")
+        end
+
+        # +POST /v1/platform/atlas_id_publisher/verify+ — look up the TXT record now (+record_found+).
+        def verify
+          request(method: :post, path: "/v1/platform/atlas_id_publisher/verify")
         end
       end
 

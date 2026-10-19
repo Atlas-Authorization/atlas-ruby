@@ -119,4 +119,24 @@ class BackchannelLogoutTest < Minitest::Test
     verifier(jti_store: store).verify(token)
     assert_rejected token, :replayed, jti_store: store
   end
+
+  def test_unreachable_jwks_is_no_keys_and_retryable
+    @fetch = ->(_url) { raise Errno::ECONNREFUSED }
+    error = assert_raises(Atlas::InvalidLogoutTokenError) { verifier.verify(sign(claims)) }
+    assert_equal :no_keys, error.reason
+    assert error.retryable?
+  end
+
+  def test_jwks_5xx_is_retryable
+    @fetch = ->(_url) { [503, "down"] }
+    error = assert_raises(Atlas::InvalidLogoutTokenError) { verifier.verify(sign(claims)) }
+    assert error.retryable?
+  end
+
+  def test_a_bad_token_is_not_retryable
+    error = assert_raises(Atlas::InvalidLogoutTokenError) { verifier.verify(sign(claims("aud" => "other"))) }
+    refute error.retryable?
+    error = assert_raises(Atlas::InvalidLogoutTokenError) { verifier.verify("not-a-jwt") }
+    refute error.retryable?
+  end
 end

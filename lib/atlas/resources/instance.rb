@@ -34,6 +34,58 @@ module Atlas
         request(method: :get, path: "/v1/instance/preflight")
       end
 
+      # +POST /v1/instance/move_origin+ — move every URL that points at one
+      # origin to another (a domain move), across the instance, its OAuth
+      # clients, webhooks, redirect URLs and Sign in with Atlas apps.
+      #
+      # @param body [Hash] +from+ and +to+ (+scheme://host[:port]+), optional
+      #   +dry_run+ (true writes nothing).
+      # @return [Hash] +{ "object" => "origin_move", "from", "to", "dry_run",
+      #   "applied", "changes" => [{ "object", "id", "field", "before", "after" }],
+      #   "problems" }+. A repeated run returns no changes.
+      def move_origin(body)
+        request(method: :post, path: "/v1/instance/move_origin", body: body)
+      end
+
+      # +GET /v1/instance/connections+ — the instance's links to other platforms
+      # and their health (+ok+, +checked_at+, +data+ rows with +kind+, +check+,
+      # +ok+, +severity+, +subject+, +fix_hint+, +last_checked_at+, +details+).
+      def connections
+        request(method: :get, path: "/v1/instance/connections")
+      end
+
+      # +GET /v1/instance/integrations/chatly+ — the Chatly connection (enabled: false when none).
+      def get_chatly_integration
+        request(method: :get, path: "/v1/instance/integrations/chatly")
+      end
+
+      # +PUT /v1/instance/integrations/chatly+ — connect a Chatly channel (+{ channel: }+).
+      def set_chatly_integration(body)
+        request(method: :put, path: "/v1/instance/integrations/chatly", body: body)
+      end
+
+      # +DELETE /v1/instance/integrations/chatly+ — remove the Chatly connection.
+      def delete_chatly_integration
+        request(method: :delete, path: "/v1/instance/integrations/chatly")
+      end
+
+      # +GET /v1/instance/integrations/forumulate+ — the Forumulate connection (enabled: false when none).
+      def get_forumulate_integration
+        request(method: :get, path: "/v1/instance/integrations/forumulate")
+      end
+
+      # +PUT /v1/instance/integrations/forumulate+ — connect Forumulate spaces
+      # (+org_id+, +spaces+: ids or +{ id:, redeem_url: }+, optional +audience+).
+      # Replaces the whole connection.
+      def set_forumulate_integration(body)
+        request(method: :put, path: "/v1/instance/integrations/forumulate", body: body)
+      end
+
+      # +DELETE /v1/instance/integrations/forumulate+ — remove the Forumulate connection.
+      def delete_forumulate_integration
+        request(method: :delete, path: "/v1/instance/integrations/forumulate")
+      end
+
       # +GET /v1/instance/cookie_consent+ — the cookie-consent script injected into the hosted pages (enabled: false when none).
       #
       # The setting (also returned by {#set_cookie_consent} and
@@ -41,7 +93,11 @@ module Atlas
       # no link, else a Hash with +"label"+, +"preset"+ (String or nil),
       # +"attributes"+ (Hash of String => String) and +"rendered_attributes"+
       # (the attributes the rendered link carries: yours plus the preset's
-      # trigger).
+      # trigger), +"culture"+ (+"page"+ or +"browser"+) and
+      # +"declared_cookies"+: every cookie and browser-storage key Atlas
+      # writes for the instance (+name+, +pattern+, +store+, +domain+,
+      # +lifetime_seconds+, +lifetime+, +http_only+, +category+, +purpose+,
+      # +written_when+, +set_by+), for your cookie policy.
       def get_cookie_consent
         request(method: :get, path: "/v1/instance/cookie_consent")
       end
@@ -57,7 +113,8 @@ module Atlas
       #   nil) and optional +attributes+ (Hash of String => String; names
       #   +data-*+, +aria-*+, +id+, +class+ or +href+ (https or a +#fragment+);
       #   at most 10; values up to 200 chars). A link needs a preset or at
-      #   least one attribute (400 otherwise).
+      #   least one attribute (400 otherwise). Optional +culture+: +"page"+
+      #   (default; the script tag carries the page language) or +"browser"+.
       #
       #   atlas.instance.set_cookie_consent(
       #     script_url: "https://consent.cookiebot.com/uc.js",
