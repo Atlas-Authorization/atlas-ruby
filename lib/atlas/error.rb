@@ -78,6 +78,9 @@ module Atlas
   module ErrorCode
     # A request field the endpoint does not accept (strict bodies). +param+ names it.
     UNKNOWN_FIELD = "UNKNOWN_FIELD"
+    # The body set a field that is not writable on this endpoint (+param+ names
+    # it; the message names the call that changes it).
+    READ_ONLY_FIELD = "READ_ONLY_FIELD"
     # A flow would send an email but the instance has no way to deliver it.
     EMAIL_DELIVERY_NOT_CONFIGURED = "EMAIL_DELIVERY_NOT_CONFIGURED"
     # An email-based sign-in method cannot be turned on without an email provider.
@@ -91,6 +94,15 @@ module Atlas
     # A captcha key a live flow uses cannot be removed (+meta["flows"]+);
     # +instance_security.delete_captcha_secret(force: true)+ removes it anyway.
     CAPTCHA_IN_USE = "CAPTCHA_IN_USE"
+    # The development email sender is not available on a production instance (409).
+    DEVELOPMENT_EMAIL_NOT_ALLOWED = "DEVELOPMENT_EMAIL_NOT_ALLOWED"
+    # The development email sender is not available on this deployment (503).
+    DEVELOPMENT_EMAIL_UNAVAILABLE = "DEVELOPMENT_EMAIL_UNAVAILABLE"
+    # The development sender's daily or per-recipient hourly cap is spent (429;
+    # +meta["window"]+, +meta["retry_after_seconds"]+).
+    DEVELOPMENT_EMAIL_LIMIT_REACHED = "DEVELOPMENT_EMAIL_LIMIT_REACHED"
+    # The development sender sends only Atlas's own sign-in emails (422).
+    DEVELOPMENT_EMAIL_TEMPLATE_NOT_ALLOWED = "DEVELOPMENT_EMAIL_TEMPLATE_NOT_ALLOWED"
     # A billing plan that subscriptions still use cannot be deleted.
     PLAN_IN_USE = "PLAN_IN_USE"
     # The key is valid but for a different API surface (e.g. a platform key on an instance route).

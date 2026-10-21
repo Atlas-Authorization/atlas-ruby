@@ -51,6 +51,10 @@ module Atlas
         end
 
         # +PATCH /v1/platform/apps/:id+ — update an owned app's name, allowed_origins or tags.
+        # An +allowed_origins+ entry is an origin String or +{ origin:, integration: }+
+        # (+"redirect"+ | +"embedded"+ | +"auto"+), as on +instance.update+. App objects
+        # carry +frontend_api_host+, +issuer+, +discovery_url+, +jwks_uri+ and
+        # +allowed_origin_integrations+.
         def update(id, body)
           request(method: :patch, path: "/v1/platform/apps/#{enc(id)}", body: body)
         end

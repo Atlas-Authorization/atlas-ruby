@@ -36,8 +36,16 @@ module Atlas
         request(method: :patch, path: "/v1/oauth_clients/#{enc(id)}", body: body)
       end
 
-      def rotate_secret(id)
-        request(method: :post, path: "/v1/oauth_clients/#{enc(id)}/rotate_secret")
+      # Mint a new secret, revealed exactly once. The previous secret keeps
+      # working for +overlap_seconds+ (default 86400 = 24 hours, at most 604800
+      # = 7 days; +0+ revokes it now, e.g. after a leak). The response carries
+      # +client_secret+, +overlap_seconds+ and +previous_secret_expires_at+
+      # (epoch ms, or +nil+ when the old secret already stopped working); every
+      # client object carries +previous_secret_expires_at+ too.
+      #
+      #   atlas.oauth_clients.rotate_secret("oc_123", { overlap_seconds: 3600 })
+      def rotate_secret(id, body = Atlas::Transport::OMIT, idempotency_key: nil)
+        request(method: :post, path: "/v1/oauth_clients/#{enc(id)}/rotate_secret", body: body, idempotency_key: idempotency_key)
       end
 
       def delete(id)

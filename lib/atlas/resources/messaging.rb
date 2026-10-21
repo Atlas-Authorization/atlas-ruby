@@ -65,8 +65,10 @@ module Atlas
       # Configure (or update) the email provider.
       #
       # @param body [Hash] +transport+ (one of {EMAIL_TRANSPORTS}), optional
-      #   +from_address+, and +config+ with that transport's keys.
-      # @return [Hash] the provider: +channel+, +transport+, +from_address+,
+      #   +from_address+, optional +mode+ (+"standard"+ | +"development"+), and
+      #   +config+ with that transport's keys.
+      # @return [Hash] the provider: +id+, +channel+, +mode+ (+"standard"+ |
+      #   +"development"+ | +"managed_domain"+), +transport+, +from_address+,
       #   +status+, +config+ (non-secret values), +secrets_set+, +updated_at+.
       def set_email(body)
         request(method: :put, path: "/v1/messaging_providers/email", body: body)
@@ -97,20 +99,24 @@ module Atlas
       end
 
       # Send a fixed, clearly-marked test message through the channel's provider.
-      # +GET /v1/messaging_providers/email/managed+ — the Atlas-managed sending
-      # domain: +status+, +verified+, the DNS +records+ to publish, +limits+ and
-      # +usage+. 404 when none is configured.
+      # +GET /v1/messaging_providers/email/managed+ — the managed sending domain:
+      # +status+, +verified+, the DNS +records+ to publish and +usage+
+      # (+limits+ is +nil+: your provider account's own limits apply). Also
+      # +backend+, +provider_id+ and, on create, +feedback_webhook+. 404 when
+      # none is configured.
       def get_managed_email
         request(method: :get, path: "/v1/messaging_providers/email/managed")
       end
 
-      # +POST /v1/messaging_providers/email/managed+ — send from your own domain
-      # through Atlas's email account.
+      # +POST /v1/messaging_providers/email/managed+ — Atlas sets your sending
+      # domain up on YOUR OWN Resend or Brevo account and sends through your key.
       #
       # @param body [Hash] +from_address+ (required; its domain is the sending
-      #   domain), optional +region+ and +dns+ (+{ provider: "cloudflare",
-      #   api_token:, overwrite: }+: Atlas writes the records; the token is
-      #   write-only).
+      #   domain), and +transport+ (+"resend"+ | +"brevo"+) with
+      #   +config: { api_key: }+ (write-only), or +provider_id+ of your
+      #   configured Resend or Brevo provider. Optional +region+ (Resend) and
+      #   +dns+ (+{ provider: "cloudflare", api_token:, overwrite: }+: Atlas
+      #   writes the records; the token is write-only).
       def create_managed_email(body)
         request(method: :post, path: "/v1/messaging_providers/email/managed", body: body)
       end
@@ -125,6 +131,31 @@ module Atlas
       # the only way to send email; pass +force: true+ to remove it anyway.
       def delete_managed_email(force: false)
         request(method: :delete, path: "/v1/messaging_providers/email/managed", query: force ? { force: true } : nil)
+      end
+
+      # +GET /v1/messaging_providers/email/development+ — your email provider in
+      # development mode: +provider_id+, +active+, +transport+, +from_address+,
+      # +subject_prefix+, +footer+, +templates+ and +limits+ (+daily+,
+      # +per_recipient_hourly+). 404 when it is not in development mode.
+      def get_development_email
+        request(method: :get, path: "/v1/messaging_providers/email/development")
+      end
+
+      # +POST /v1/messaging_providers/email/development+ — put your own email
+      # provider in development mode, so a development instance sends Atlas's
+      # sign-in emails without a verified domain (+[Atlas test] + subjects,
+      # capped). 409 +DEVELOPMENT_EMAIL_NOT_ALLOWED+ on a production instance.
+      #
+      # @param body [Hash] +provider_id+, or +transport+ + +config+ (+
+      #   +from_address+) exactly as {#set_email} takes them.
+      def enable_development_email(body)
+        request(method: :post, path: "/v1/messaging_providers/email/development", body: body)
+      end
+
+      # +DELETE /v1/messaging_providers/email/development+ — back to standard
+      # mode (the provider and its key stay).
+      def disable_development_email
+        request(method: :delete, path: "/v1/messaging_providers/email/development")
       end
 
       def test(channel, body)

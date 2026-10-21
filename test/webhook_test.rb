@@ -42,4 +42,18 @@ class WebhookTest < Minitest::Test
     bad = headers.merge("Atlas-Signature" => "v2,abc")
     assert_equal :malformed_signature, Atlas::Webhook.verify(body: BODY, headers: bad, secret: SECRET, now_ms: NOW).reason
   end
+
+  def test_several_signatures_verify_when_one_matches
+    headers = sign("evt_1", NOW, BODY)
+    fresh = headers["Atlas-Signature"]
+    stale = sign("evt_1", NOW, BODY, "whsec_old_secret")["Atlas-Signature"]
+    ["#{stale} #{fresh}", "#{fresh} #{stale}", "v2,abc #{fresh}"].each do |value|
+      result = Atlas::Webhook.verify(body: BODY, headers: headers.merge("Atlas-Signature" => value), secret: SECRET, now_ms: NOW)
+      assert result.verified?, value
+    end
+    only_stale = headers.merge("Atlas-Signature" => "#{stale} #{stale}")
+    assert_equal :signature_mismatch, Atlas::Webhook.verify(body: BODY, headers: only_stale, secret: SECRET, now_ms: NOW).reason
+    no_v1 = headers.merge("Atlas-Signature" => "v2,abc v0,def")
+    assert_equal :malformed_signature, Atlas::Webhook.verify(body: BODY, headers: no_v1, secret: SECRET, now_ms: NOW).reason
+  end
 end

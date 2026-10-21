@@ -11,10 +11,22 @@ module Atlas
       # reads fine.
       COOKIE_CONSENT_PRESETS = %w[cookiemunch cookiebot onetrust custom].freeze
 
+      # The instance, including +issuer+, +discovery_url+ and +jwks_uri+ (they
+      # change when a custom domain goes active, so read them rather than
+      # hard-coding them) and +allowed_origin_integrations+ (origin =>
+      # +"redirect"+ | +"embedded"+).
       def get
         request(method: :get, path: "/v1/instance")
       end
 
+      # An +allowed_origins+ entry is an origin String, or
+      # +{ origin:, integration: }+ where +integration+ is +"redirect"+
+      # (hosted-redirect OIDC), +"embedded"+ (the sign-in components run on the
+      # origin) or +"auto"+ / +nil+ (clear the hint). +auth_config+ also takes
+      # +strictRequestBodies+, +dangerouslyReportSkippedEmailsAsVerified+ and
+      # +branding: { audiences: }+.
+      #
+      #   atlas.instance.update({ allowed_origins: ["https://a.example", { origin: "https://app.example", integration: "redirect" }] })
       def update(body)
         request(method: :patch, path: "/v1/instance", body: body)
       end

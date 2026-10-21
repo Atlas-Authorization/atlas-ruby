@@ -41,8 +41,8 @@ module Atlas
       signature = header(headers, "atlas-signature")
       return failure(:missing_headers) if blank?(id) || blank?(ts_raw) || blank?(signature)
 
-      version, provided = signature.split(",", 2)
-      return failure(:malformed_signature) unless version == "v1" && !blank?(provided)
+      provided = signatures(signature)
+      return failure(:malformed_signature) if provided.empty?
 
       timestamp = Integer(ts_raw.strip, 10) rescue nil
       return failure(:stale_timestamp) if timestamp.nil?
@@ -52,7 +52,9 @@ module Atlas
 
       mac = OpenSSL::HMAC.digest("SHA256", secret, "#{id}.#{timestamp}.#{raw}")
       expected = Base64.strict_encode64(mac)
-      return failure(:signature_mismatch) unless secure_compare(expected, provided)
+      # Compare every entry (no early exit), each in constant time.
+      matched = provided.map { |candidate| secure_compare(expected, candidate) }.any?
+      return failure(:signature_mismatch) unless matched
 
       event = begin
         parsed = JSON.parse(raw)
@@ -61,6 +63,16 @@ module Atlas
         nil
       end
       Result.new(verified: true, reason: nil, event: event, delivery_id: id, timestamp: timestamp)
+    end
+
+    # The +v1+ signatures in an +atlas-signature+ header: one +v1,<base64>+
+    # entry, or several separated by spaces (while an endpoint secret rotates,
+    # Atlas signs with the old and the new secret). Other versions are skipped.
+    def signatures(header)
+      header.split.filter_map do |entry|
+        version, value = entry.split(",", 2)
+        value if version == "v1" && !blank?(value)
+      end
     end
 
     def failure(reason)

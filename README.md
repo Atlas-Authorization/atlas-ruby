@@ -169,6 +169,14 @@ For a first-party client, `skip_logout_confirmation: true` lets RP-initiated log
 atlas.oauth_clients.update("oc_123", { skip_logout_confirmation: true })
 ```
 
+Rotating a client secret keeps the previous one working for `overlap_seconds` (default 24 hours, at most 7 days), so you can deploy the new secret without downtime. Pass `0` to revoke the old one now, for example after a leak:
+
+```ruby
+rotated = atlas.oauth_clients.rotate_secret("oc_123", { overlap_seconds: 3600 })
+rotated["client_secret"]               # shown once
+rotated["previous_secret_expires_at"]  # epoch ms, or nil when the old secret already stopped
+```
+
 ## Platform API: Sign in with Atlas apps
 
 Construct the client with a **platform key** (`psk_...`) to manage apps for your account:
@@ -201,14 +209,22 @@ preview["changes"].each { |c| puts "#{c['object']} #{c['field']}: #{c['before']}
 # Send the same logout_token your OIDC apps get to another service.
 atlas.logout_notify_endpoints.create({ url: "https://api.example.com/atlas/logout" })
 
-# Send email from your own domain through Atlas, then publish the returned DNS records.
-managed = atlas.messaging.create_managed_email({ from_address: "Acme <no-reply@example.com>" })
+# Set your domain up on your own Resend or Brevo account, then publish the returned DNS records.
+managed = atlas.messaging.create_managed_email({ from_address: "Acme <no-reply@example.com>", transport: "resend", config: { api_key: ENV.fetch("RESEND_API_KEY") } })
 puts managed["records"]
+
+# A development instance can send sign-in emails through your provider without a verified domain.
+atlas.messaging.enable_development_email({ provider_id: "mp_123" })
+atlas.messaging.disable_development_email
 ```
 
 With a platform key, `platform.atlas_id_apps.find_users(id, email)` answers a privacy request for one app,
 `revoke_grant(id, grant_id)` revokes one person's approval, and `platform.atlas_id_publisher` claims and verifies
 the publisher name shown on consent screens.
+
+## Webhooks
+
+`Atlas::Webhook.verify` accepts an `atlas-signature` header that carries several signatures separated by spaces (`v1,<sig> v1,<sig>`). While an endpoint secret rotates, Atlas may sign each delivery with the old and the new secret; the delivery verifies when any one signature matches.
 
 ## Back-channel logout
 

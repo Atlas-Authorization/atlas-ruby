@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.7.0
+
+- **OAuth client secret rotation with overlap.** `oauth_clients.rotate_secret(id, body = OMIT, idempotency_key: nil)` takes `{ overlap_seconds: }` (default 86400, `0` revokes the old secret now, at most 604800). The response carries `client_secret`, `overlap_seconds` and `previous_secret_expires_at`; client objects carry `previous_secret_expires_at`.
+- **Development email sender.** `messaging.get_development_email`, `enable_development_email(body)` (`provider_id`, or `transport` + `config`) and `disable_development_email`.
+- **Managed email on your own provider account.** `messaging.create_managed_email` takes `transport` (`resend` | `brevo`) with `config: { api_key: }`, or `provider_id`. Responses carry `backend`, `provider_id` and `feedback_webhook`; `limits` is now `nil` and `reputation` is `your_provider_account`.
+- **Provider mode.** `messaging.set_email` accepts `mode` (`standard` | `development`); providers carry `id` and `mode`.
+- **Allowed origins with an integration.** `instance.update` and the platform app, instance and accountless-app bodies accept `allowed_origins` entries `{ origin:, integration: }` (`redirect` | `embedded` | `auto` | `nil`). Instance and platform app objects carry `allowed_origin_integrations`, `issuer`, `discovery_url` and `jwks_uri` (and `frontend_api_host` on platform apps).
+- Responses also carry `integration` and `checks[].applies` on login readiness, `verification` (`status`, `strategy`) on email addresses, and `audiences` on branding.
+- **Error codes.** `Atlas::ErrorCode` adds `READ_ONLY_FIELD`, `DEVELOPMENT_EMAIL_NOT_ALLOWED`, `DEVELOPMENT_EMAIL_UNAVAILABLE`, `DEVELOPMENT_EMAIL_LIMIT_REACHED` and `DEVELOPMENT_EMAIL_TEMPLATE_NOT_ALLOWED`.
+- **Webhooks, several signatures.** `Atlas::Webhook.verify` accepts an `atlas-signature` header with several space-separated `v1,<signature>` entries and verifies when any one matches (each compared in constant time). A single signature works as before.
+
 ## 0.6.0
 
 - **Back-channel logout, retryable failures.** `Atlas::InvalidLogoutTokenError#retryable?` is true for `:no_keys`: the issuer's keys could not be fetched (a network error, a JWKS outage, or a just-rotated key whose refetch failed). Answer `503` with `Retry-After` then, so Atlas retries the delivery, and `400` otherwise. A token whose `kid` is unknown after a failed JWKS refetch is now `:no_keys` (was `:invalid_signature`).
