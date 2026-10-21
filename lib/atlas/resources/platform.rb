@@ -94,11 +94,15 @@ module Atlas
           request(method: :get, path: "/v1/platform/apps/#{enc(id)}/instances")
         end
 
-        # +POST /v1/platform/apps/:id/instances/:instanceId/rotate_secret+ — rotate one instance's secret key (no overlap). The new secret is returned once.
-        def rotate_instance_secret(id, instance_id, idempotency_key: nil)
+        # +POST /v1/platform/apps/:id/instances/:instanceId/rotate_secret+ — rotate one instance's secret key. The new
+        # secret is returned once; the prior keys stay valid for +overlap_seconds+ (default 259200 = 72 hours, at most
+        # 604800; +0+ revokes them now). The response carries +app_id+, +instance_id+, +overlap_seconds+ and
+        # +previous_keys_expire_at+.
+        def rotate_instance_secret(id, instance_id, body = Atlas::Transport::OMIT, idempotency_key: nil)
           request(
             method: :post,
             path: "/v1/platform/apps/#{enc(id)}/instances/#{enc(instance_id)}/rotate_secret",
+            body: body,
             idempotency_key: idempotency_key
           )
         end
@@ -199,9 +203,11 @@ module Atlas
           request(method: :delete, path: "/v1/platform/atlas_id_apps/#{enc(id)}")
         end
 
-        # +POST /v1/platform/atlas_id_apps/:id/rotate_secret+ — rotate a confidential app's client_secret. The new secret is returned once; the old one works for 24 hours.
-        def rotate_secret(id)
-          request(method: :post, path: "/v1/platform/atlas_id_apps/#{enc(id)}/rotate_secret")
+        # +POST /v1/platform/atlas_id_apps/:id/rotate_secret+ — rotate a confidential app's client_secret. The new secret
+        # is returned once; the old one keeps working for +overlap_seconds+ (default 86400 = 24 hours; +0+ revokes it
+        # now) until +previous_secret_expires_at+.
+        def rotate_secret(id, body = Atlas::Transport::OMIT)
+          request(method: :post, path: "/v1/platform/atlas_id_apps/#{enc(id)}/rotate_secret", body: body)
         end
 
         # +GET /v1/platform/atlas_id_apps/:id/backchannel_deliveries+ — the app's back-channel logout delivery log.
@@ -240,9 +246,11 @@ module Atlas
         end
 
         # +POST /v1/platform/atlas_id_apps/:id/webhook/rotate_secret+ — rotate the
-        # app's webhook signing secret (+webhook_secret+, returned once).
-        def rotate_webhook_secret(id)
-          request(method: :post, path: "/v1/platform/atlas_id_apps/#{enc(id)}/webhook/rotate_secret")
+        # app's webhook signing secret (+webhook_secret+, returned once). By default
+        # the old secret stops signing at once; with +{ overlap_seconds: }+ it signs
+        # each delivery too until +webhook_previous_secret_expires_at+.
+        def rotate_webhook_secret(id, body = Atlas::Transport::OMIT)
+          request(method: :post, path: "/v1/platform/atlas_id_apps/#{enc(id)}/webhook/rotate_secret", body: body)
         end
 
         # +POST /v1/platform/atlas_id_apps/design/preview+ — preview a Sign in with Atlas app design without saving it.

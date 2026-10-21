@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.8.0
+
+- **Trusted reverse proxy secret.** `instance_security.get_proxy_secret`, `create_proxy_secret(body = OMIT)` (`{ overlap_seconds: }` on a rotation: default 86400, `0` stops the old secret now, at most 604800; the response carries `secret`, shown once, and `rotated`) and `delete_proxy_secret`. The view carries `set`, `created_at`, `previous_expires_at`, `secret_header` and `client_ip_header`.
+- **Webhook secret rotation with an overlap.** `webhooks.endpoints.rotate_secret(id, body = OMIT)` takes `{ overlap_seconds: }` (default 0, at most 604800). The response carries `overlap_seconds` and `previous_secret_expires_at`; endpoint objects carry `previous_secret_expires_at` while an overlap is open.
+- **Per-instance platform rotation with an overlap.** `platform.apps.rotate_instance_secret(id, instance_id, body = OMIT, idempotency_key: nil)` takes `{ overlap_seconds: }` (default 259200, `0` revokes the prior keys now). The response carries `app_id`, `instance_id`, `overlap_seconds` and `previous_keys_expire_at`. Without a body the server now keeps the prior keys for 72 hours; pass `{ overlap_seconds: 0 }` for the old behaviour.
+- **Sign in with Atlas apps.** `platform.atlas_id_apps.rotate_secret(id, body = OMIT)` (default 24 hours) and `rotate_webhook_secret(id, body = OMIT)` (default 0) take `{ overlap_seconds: }`. App objects carry `previous_secret_expires_at`, `secret_issued_at` and `webhook_previous_secret_expires_at`.
+- Compatible: every existing call keeps its signature.
+
 ## 0.7.0
 
 - **OAuth client secret rotation with overlap.** `oauth_clients.rotate_secret(id, body = OMIT, idempotency_key: nil)` takes `{ overlap_seconds: }` (default 86400, `0` revokes the old secret now, at most 604800). The response carries `client_secret`, `overlap_seconds` and `previous_secret_expires_at`; client objects carry `previous_secret_expires_at`.

@@ -42,6 +42,28 @@ module Atlas
         request(method: :delete, path: "/v1/instance/kerberos_secret")
       end
 
+      # +GET /v1/instance/proxy_secret+ — whether a trusted reverse proxy secret is
+      # set: +set+, +created_at+, +previous_expires_at+, +secret_header+,
+      # +client_ip_header+. Never the secret.
+      def get_proxy_secret
+        request(method: :get, path: "/v1/instance/proxy_secret")
+      end
+
+      # +POST /v1/instance/proxy_secret+ — create, or rotate, the trusted reverse
+      # proxy secret. The response carries +secret+ (shown once) and +rotated+. On a
+      # rotation the replaced secret keeps working for +overlap_seconds+ (default
+      # 86400, +0+ stops it now, at most 604800).
+      #
+      #   atlas.instance_security.create_proxy_secret({ overlap_seconds: 3600 })
+      def create_proxy_secret(body = Atlas::Transport::OMIT)
+        request(method: :post, path: "/v1/instance/proxy_secret", body: body)
+      end
+
+      # +DELETE /v1/instance/proxy_secret+ — remove the proxy secret: X-Atlas-Client-IP is ignored again.
+      def delete_proxy_secret
+        request(method: :delete, path: "/v1/instance/proxy_secret")
+      end
+
       # Store an LDAP connection's service-account bind password.
       def set_ldap_bind_password(connection_id, body)
         request(method: :put, path: "/v1/instance/ldap_connections/#{enc(connection_id)}/bind_password", body: body)

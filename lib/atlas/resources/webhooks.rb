@@ -41,8 +41,11 @@ module Atlas
         end
 
         # +POST /v1/webhook_endpoints/:id/rotate_secret+ — rotate the signing secret. The new secret is shown once.
-        def rotate_secret(id)
-          request(method: :post, path: "/v1/webhook_endpoints/#{enc(id)}/rotate_secret")
+        # By default the old secret stops signing at once. With +{ overlap_seconds: }+ (at most 604800) every
+        # delivery is signed with both until +previous_secret_expires_at+ (epoch ms), so a verifier holding
+        # either passes. Choose an overlap only once every receiver accepts several signatures (0.7.0+).
+        def rotate_secret(id, body = Atlas::Transport::OMIT)
+          request(method: :post, path: "/v1/webhook_endpoints/#{enc(id)}/rotate_secret", body: body)
         end
 
         # +POST /v1/webhook_endpoints/:id/test+ — send a synthetic webhook.test event to this endpoint only.

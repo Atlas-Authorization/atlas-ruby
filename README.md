@@ -226,6 +226,27 @@ the publisher name shown on consent screens.
 
 `Atlas::Webhook.verify` accepts an `atlas-signature` header that carries several signatures separated by spaces (`v1,<sig> v1,<sig>`). While an endpoint secret rotates, Atlas may sign each delivery with the old and the new secret; the delivery verifies when any one signature matches.
 
+A rotation stops the old secret at once by default. Pass `overlap_seconds` (at most 7 days) to keep it signing each delivery next to the new one while you deploy; choose an overlap only once every receiver accepts several signatures:
+
+```ruby
+rotated = atlas.webhooks.endpoints.rotate_secret("whep_123", { overlap_seconds: 3600 })
+rotated["previous_secret_expires_at"]  # epoch ms, or nil when the old secret already stopped
+```
+
+## Trusted reverse proxy
+
+If a reverse proxy serves the Frontend API from your own origin, give it a proxy secret. It sends the secret in `X-Atlas-Proxy-Secret` and the browser's IP in `X-Atlas-Client-IP`; Atlas then uses that IP for rate limits, lockout, risk signals and audit logs.
+
+```ruby
+created = atlas.instance_security.create_proxy_secret
+created["secret"]                                   # shown once; store it in your proxy's environment
+atlas.instance_security.get_proxy_secret            # set, created_at, previous_expires_at (never the secret)
+atlas.instance_security.create_proxy_secret({ overlap_seconds: 3600 }) # rotate; the old one works 1 hour
+atlas.instance_security.delete_proxy_secret
+```
+
+Platform rotations take an overlap too: `platform.apps.rotate_instance_secret(app_id, instance_id, { overlap_seconds: 0 })` (default 72 hours), `platform.atlas_id_apps.rotate_secret(id, { overlap_seconds: 3600 })` (default 24 hours) and `platform.atlas_id_apps.rotate_webhook_secret(id, { overlap_seconds: 3600 })` (default 0).
+
 ## Back-channel logout
 
 When a user signs out, Atlas POSTs a signed `logout_token` to your app's `backchannel_logout_uri` (Sign in with Atlas apps and session-exchange apps). Verify it, end the matching local sessions, and answer 200:
