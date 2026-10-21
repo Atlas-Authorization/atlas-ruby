@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.9.0
+
+- **Referral attribution settings.** New `referrals` namespace: `get`, `update(body, idempotency_key: nil)` (`GET`/`PATCH /v1/instance/referrals`; `nil` clears; nested `security` with `challenge_referred_signups`, `on_high_risk`, `hold_until_email_verified`, `max_referred_signups_per_ip_hour`; `signing_secret` and `api_key` are write-only), `test` (`ok`, `http_status`, `latency_ms`, `error`), `list_calls(params = {})` (`limit`, `status`, `kind`, `user_id`) and `retry_call(id, idempotency_key: nil)`.
+- **Users.** User objects carry `referral` (`partner_id`, `referrer_external_id`, `referrer_user_id`, `matched_via`, `status`, `risk_level`, `flagged`, or `nil`), `referral_code` and `referral_link`. `users.create` accepts `referral` (`code`, `click_id`, `anon_id`) and `referral_code`; `users.update` accepts `referral_code` (`nil` clears). New `users.flag_referral(id, reason: nil, idempotency_key: nil)`.
+- **Webhooks.** New event `user.referral_attributed` (the referral platform answered after `user.created`).
+- **Error codes.** `Atlas::ErrorCode` adds `REFERRALS_NOT_CONFIGURED` (422) and `REFERRAL_CODE_TAKEN` (409). Preflight can report `referrals_enabled_unverified` and `referrals_without_bot_protection`.
+- Compatible: new methods only.
+
 ## 0.8.0
 
 - **Trusted reverse proxy secret.** `instance_security.get_proxy_secret`, `create_proxy_secret(body = OMIT)` (`{ overlap_seconds: }` on a rotation: default 86400, `0` stops the old secret now, at most 604800; the response carries `secret`, shown once, and `rotated`) and `delete_proxy_secret`. The view carries `set`, `created_at`, `previous_expires_at`, `secret_header` and `client_ip_header`.

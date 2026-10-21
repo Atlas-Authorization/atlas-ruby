@@ -247,6 +247,30 @@ atlas.instance_security.delete_proxy_secret
 
 Platform rotations take an overlap too: `platform.apps.rotate_instance_secret(app_id, instance_id, { overlap_seconds: 0 })` (default 72 hours), `platform.atlas_id_apps.rotate_secret(id, { overlap_seconds: 3600 })` (default 24 hours) and `platform.atlas_id_apps.rotate_webhook_secret(id, { overlap_seconds: 3600 })` (default 0).
 
+## Referral attribution
+
+With referral attribution on, Atlas reports every interactive sign-up to your referral platform before
+`user.created` is sent. Users carry `referral` (who referred them, or `nil`), `referral_code` and `referral_link`.
+
+```ruby
+atlas.referrals.update({
+  enabled: true,
+  provider: "webhook", # the Atlas referral protocol; or a built-in vendor adapter
+  endpoint_url: "https://referrals.example.com/atlas",
+  signing_secret: ENV.fetch("REFERRAL_SIGNING_SECRET"),
+  security: { on_high_risk: "hold" }
+})
+atlas.referrals.test                                   # { "ok" => true, "http_status" => 404, ... }
+failed = atlas.referrals.list_calls(status: "failed", limit: 20)
+atlas.referrals.retry_call(failed["data"].first["id"])
+
+atlas.users.update("user_123", { referral_code: "ada-1" }) # 409 REFERRAL_CODE_TAKEN if held
+atlas.users.flag_referral("user_123", reason: "self-referral")
+```
+
+Enabling without what the provider needs is `422 REFERRALS_NOT_CONFIGURED`. A late answer from the platform arrives
+as the `user.referral_attributed` webhook.
+
 ## Back-channel logout
 
 When a user signs out, Atlas POSTs a signed `logout_token` to your app's `backchannel_logout_uri` (Sign in with Atlas apps and session-exchange apps). Verify it, end the matching local sessions, and answer 200:

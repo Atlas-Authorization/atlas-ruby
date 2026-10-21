@@ -47,6 +47,23 @@ module Atlas
         request(method: :post, path: "/v1/users/#{enc(id)}/unlock")
       end
 
+      # +POST /v1/users/:id/referral/flag+ — mark the user's referral fraudulent.
+      # The user's +referral+ reads +flagged: true+, the referral platform is sent
+      # a +fraud_confirmed+ signal (when referrals are on) and the action is
+      # audited; the account is not changed. 404 when the user has no referral.
+      # +reason+ (at most 500 characters) is sent to the platform.
+      #
+      # Users carry +referral+ (+partner_id+, +referrer_external_id+,
+      # +referrer_user_id+, +matched_via+, +status+, +risk_level+, +flagged+, or
+      # nil), +referral_code+ and +referral_link+; +create+ accepts +referral+
+      # (+code+, +click_id+, +anon_id+) and +referral_code+, +update+ accepts
+      # +referral_code+ (nil clears; 409 +REFERRAL_CODE_TAKEN+ when held).
+      def flag_referral(id, reason: nil, idempotency_key: nil)
+        body = {}
+        body[:reason] = reason unless reason.nil?
+        request(method: :post, path: "/v1/users/#{enc(id)}/referral/flag", body: body, idempotency_key: idempotency_key)
+      end
+
       def delete(id)
         request(method: :delete, path: "/v1/users/#{enc(id)}")
       end
