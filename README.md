@@ -282,6 +282,11 @@ Enabling without what the provider needs is `422 REFERRALS_NOT_CONFIGURED`. When
 time `user.created` is sent, `referral["status"]` is `pending` and the `user.referral_resolved` webhook follows with the
 final user (`attributed`, `none` or `failed`). `user.referral_attributed` still fires for a late attribution.
 
+Two-way sync: a provider with the `inbound` capability sends referral changes made after sign-up back to Atlas. The
+settings report `inbound` (`url` to give the platform, `secret_set`, `endpoint_id`, and `last_event` with `at`, `type`,
+`outcome`). Send `inbound_secret` (write-only, 16-512 characters) to store the platform's event secret and
+`inbound_endpoint_id` for its subscription id; `nil` clears either.
+
 To give each user your own id before the first referral call, turn on the `before_user_create` hook. Atlas then sends
 your endpoint a signed `POST` (verify it with `Atlas::Webhook.verify`) of type `user.before_create` for every
 self-service sign-up, and stamps the `external_id` and metadata you answer:

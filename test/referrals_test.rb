@@ -39,6 +39,23 @@ class ReferralsTest < Minitest::Test
     assert_equal ["POST", "#{BASE}/v1/instance/referrals/test"], [@http.last.method, @http.last.url]
   end
 
+  def test_inbound_two_way_sync_fields
+    inbound = { "url" => "https://api.example.test/v1/webhooks/referrals/ins_1", "secret_set" => true, "endpoint_id" => "we_1",
+                "last_event" => { "at" => 1_700_000_000_000, "type" => "referral.updated", "outcome" => "applied" } }
+    @http.enqueue(body: SETTINGS.merge("inbound" => inbound))
+    view = @client.referrals.get
+    assert_equal "https://api.example.test/v1/webhooks/referrals/ins_1", view["inbound"]["url"]
+    assert_equal "applied", view["inbound"]["last_event"]["outcome"]
+
+    @http.enqueue(body: SETTINGS)
+    @client.referrals.update({ inbound_secret: "whsec_#{"y" * 32}", inbound_endpoint_id: "we_1" })
+    assert_equal({ "inbound_secret" => "whsec_#{"y" * 32}", "inbound_endpoint_id" => "we_1" }, JSON.parse(@http.last.body))
+
+    @http.enqueue(body: SETTINGS)
+    @client.referrals.update({ inbound_secret: nil, inbound_endpoint_id: nil })
+    assert_equal({ "inbound_secret" => nil, "inbound_endpoint_id" => nil }, JSON.parse(@http.last.body))
+  end
+
   def test_call_log_and_retry
     @http.enqueue(body: { "object" => "list", "data" => [CALL], "has_more" => false })
     page = @client.referrals.list_calls(limit: 10, status: "failed", kind: "signup", user_id: "user_1")

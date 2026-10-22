@@ -12,8 +12,9 @@ module Atlas
     # +referral_code+, +referral_link+). A late answer arrives as the
     # +user.referral_resolved+ webhook (and +user.referral_attributed+ when it
     # attributes the user). +provider+ is +webhook+ (the Atlas referral
-    # protocol), +referally+ or another built-in adapter. +signing_secret+ and
-    # +api_key+ are write-only: reads return +signing_secret_set+ / +api_key_set+.
+    # protocol), +referally+ or another built-in adapter. +signing_secret+,
+    # +api_key+ and +inbound_secret+ are write-only: reads return
+    # +signing_secret_set+ / +api_key_set+ / +inbound.secret_set+.
     class Referrals < Base
       # The settings, the connection status (+connection+) and the supported
       # +providers+ (with their +capabilities+ and +needs+).
@@ -29,6 +30,13 @@ module Atlas
       # +mirror_to_public_metadata+ and +include_referral_claims+. Reads add
       # +connection.last_ping+ and +connection.alert+ (+signature_rejected+ or
       # +connection_paused+ while delivery is blocked).
+      #
+      # Two-way sync: a provider with the +inbound+ capability sends referral
+      # changes made after sign-up to +inbound.url+ (reads also give
+      # +inbound.secret_set+, +inbound.endpoint_id+ and +inbound.last_event+
+      # with +at+, +type+, +outcome+). Send +inbound_secret+ (write-only, 16-512
+      # characters) to verify those events and +inbound_endpoint_id+ (the
+      # platform's subscription id); +nil+ clears either.
       # Enabling without what the provider needs is 422 +REFERRALS_NOT_CONFIGURED+.
       #
       #   atlas.referrals.update({ enabled: true, endpoint_url: "https://referrals.example.com/atlas",

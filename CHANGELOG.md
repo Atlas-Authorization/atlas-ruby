@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.11.0
+
+### Added
+
+- **Two-way referral sync.** Referral settings carry two-way sync: `inbound` (`url`, `secret_set`, `endpoint_id`, `last_event`) on reads, write-only `inbound_secret` and `inbound_endpoint_id` on updates (null clears), and provider capability `inbound`.
+
 ## 0.10.0
 
 - **Referral attribution v2.** `referrals.retry_failed(body = {}, idempotency_key: nil)` (`POST /v1/instance/referrals/calls/retry_failed`; `kind`, `error_code`; returns `requeued`), `referrals.simulate(code: nil)` (`POST /v1/instance/referrals/simulate`; `call_id`, `customer_ref`, `result`, `response`, `error`), `referrals.backfill(body, idempotency_key: nil)` and `referrals.get_backfill(id)` (`POST /v1/instance/referrals/backfill`, `GET /v1/instance/referrals/backfill/:id`; body `since`, `codes`, `code_metadata_path`; job `users_scanned`, `users_skipped`, `calls_queued`, `truncated`, `next_since`, `calls`), and `referrals.get_for_user(user_id)` (`GET /v1/users/:id/referral`).
