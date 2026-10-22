@@ -56,6 +56,22 @@ class ReferralsTest < Minitest::Test
     assert_equal({ "inbound_secret" => nil, "inbound_endpoint_id" => nil }, JSON.parse(@http.last.body))
   end
 
+  def test_browser_capture_fields
+    @http.enqueue(body: SETTINGS.merge("browser_sources" => %w[rewardful dub], "browser_sources_default" => false, "consent_provider" => "onetrust"))
+    view = @client.referrals.get
+    assert_equal %w[rewardful dub], view["browser_sources"]
+    assert_equal false, view["browser_sources_default"]
+    assert_equal "onetrust", view["consent_provider"]
+
+    @http.enqueue(body: SETTINGS)
+    @client.referrals.update({ browser_sources: %w[rewardful dub], consent_provider: "app" })
+    assert_equal({ "browser_sources" => %w[rewardful dub], "consent_provider" => "app" }, JSON.parse(@http.last.body))
+
+    @http.enqueue(body: SETTINGS)
+    @client.referrals.update({ browser_sources: nil })
+    assert_equal({ "browser_sources" => nil }, JSON.parse(@http.last.body))
+  end
+
   def test_call_log_and_retry
     @http.enqueue(body: { "object" => "list", "data" => [CALL], "has_more" => false })
     page = @client.referrals.list_calls(limit: 10, status: "failed", kind: "signup", user_id: "user_1")

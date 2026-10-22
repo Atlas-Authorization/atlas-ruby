@@ -37,6 +37,13 @@ module Atlas
       # with +at+, +type+, +outcome+). Send +inbound_secret+ (write-only, 16-512
       # characters) to verify those events and +inbound_endpoint_id+ (the
       # platform's subscription id); +nil+ clears either.
+      #
+      # Browser capture: +browser_sources+ lists the referral programs whose
+      # script or cookie the browser reads, in order (+referally+, +rewardful+,
+      # +tolt+, +promotekit+, +firstpromoter+, +partnerstack+, +dub+; +nil+
+      # goes back to the provider's default, reported by
+      # +browser_sources_default+), and +consent_provider+ picks the consent
+      # manager that decides (+auto+, one manager such as +onetrust+, or +app+).
       # Enabling without what the provider needs is 422 +REFERRALS_NOT_CONFIGURED+.
       #
       #   atlas.referrals.update({ enabled: true, endpoint_url: "https://referrals.example.com/atlas",

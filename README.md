@@ -287,6 +287,10 @@ settings report `inbound` (`url` to give the platform, `secret_set`, `endpoint_i
 `outcome`). Send `inbound_secret` (write-only, 16-512 characters) to store the platform's event secret and
 `inbound_endpoint_id` for its subscription id; `nil` clears either.
 
+Browser capture: `browser_sources` lists the referral programs whose script or cookie the browser reads (`nil` goes
+back to the provider's default, reported by `browser_sources_default`), and `consent_provider` picks the consent
+manager that decides (`auto`, one manager, or `app`).
+
 To give each user your own id before the first referral call, turn on the `before_user_create` hook. Atlas then sends
 your endpoint a signed `POST` (verify it with `Atlas::Webhook.verify`) of type `user.before_create` for every
 self-service sign-up, and stamps the `external_id` and metadata you answer:
