@@ -26,6 +26,13 @@ module Atlas
         request(method: :patch, path: "/v1/users/#{enc(id)}", body: body)
       end
 
+      # Set (or clear with +nil+) the user's +external_id+. With referral
+      # attribution on, Atlas forwards the change to the referral platform as
+      # an alias (old id, or the Atlas user id, to the new one).
+      def set_external_id(id, external_id)
+        request(method: :patch, path: "/v1/users/#{enc(id)}", body: { external_id: external_id })
+      end
+
       # +PUT /v1/users/:id/metadata+ — replaces the named bags wholesale.
       def replace_metadata(id, body)
         request(method: :put, path: "/v1/users/#{enc(id)}/metadata", body: body)
@@ -53,9 +60,11 @@ module Atlas
       # audited; the account is not changed. 404 when the user has no referral.
       # +reason+ (at most 500 characters) is sent to the platform.
       #
-      # Users carry +referral+ (+partner_id+, +referrer_external_id+,
-      # +referrer_user_id+, +matched_via+, +status+, +risk_level+, +flagged+, or
-      # nil), +referral_code+ and +referral_link+; +create+ accepts +referral+
+      # Users carry +referral+ (+status+: +pending+, +attributed+, +none+,
+      # +failed+, +held+ or +flagged+; +partner_id+, +partner_external_ref+,
+      # +referrer_external_id+, +referrer_user_id+, +matched_via+,
+      # +referral_status+ (the platform's own status), +notes+, +risk_level+,
+      # +flagged+; nil when never reported), +referral_code+ and +referral_link+; +create+ accepts +referral+
       # (+code+, +click_id+, +anon_id+) and +referral_code+, +update+ accepts
       # +referral_code+ (nil clears; 409 +REFERRAL_CODE_TAKEN+ when held).
       def flag_referral(id, reason: nil, idempotency_key: nil)

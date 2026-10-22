@@ -46,6 +46,7 @@ require_relative "resources/lti_platforms"
 require_relative "resources/instance"
 require_relative "resources/instance_security"
 require_relative "resources/referrals"
+require_relative "resources/user_hooks"
 require_relative "resources/tokens"
 require_relative "resources/email_addresses"
 require_relative "resources/organization_settings_schema"
@@ -170,6 +171,7 @@ module Atlas
     def instance          = @instance ||= Resources::Instance.new(@transport)
     def instance_security = @instance_security ||= Resources::InstanceSecurity.new(@transport)
     def referrals         = @referrals ||= Resources::Referrals.new(@transport)
+    def user_hooks        = @user_hooks ||= Resources::UserHooks.new(@transport)
     def tokens            = @tokens ||= Resources::Tokens.new(@transport)
     def email_addresses   = @email_addresses ||= Resources::EmailAddresses.new(@transport)
     def organization_settings_schema = @organization_settings_schema ||= Resources::OrganizationSettingsSchema.new(@transport)
