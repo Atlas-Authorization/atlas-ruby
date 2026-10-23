@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.15.0 — 2026-10-24
+
+### Added
+
+- **Migrate from Better Auth: sealed-bundle imports.** `better_auth_imports`: `get_public_key`, `rotate_public_key`, `create`, `list`, `get`, `upload_part` (text/plain), `finalize`, `dry_run`, `apply` (resumes a failed import), `delete`, `list_jwks`, `delete_jwk`. Helpers: `upload(bundle, options:, part_bytes:) { |n, of| }` creates the import, uploads the bundle in line-aligned parts of at most 8 MiB (`Atlas::Resources::BetterAuthImports.split_bundle_parts`, `PART_BYTES`) and finalizes it; `wait_for(id, interval:, timeout:) { |imp| }` polls until the import leaves `analyzing` / `queued` / `applying`.
+- **Better Auth session bridge.** `better_auth_bridge.get` / `update` / `delete` (migration window, cookie prefix, live fallback; the old app's secret is write-only) and `better_auth_bridge.exchange(token, client_ip:, user_agent:, remember:)` on the secret-key Backend API route, forwarding the end user's IP and user agent (`X-Atlas-Client-IP`, `X-Atlas-Client-User-Agent`). `Atlas::BetterAuth.exchange` classifies the outcome (`:session`, `:needs_mfa`, `:refused` with `meta.bridge_outcome`; never raises). `Atlas::BetterAuth::Bridge` turns a request's cookies into a `Decision` (Atlas cookies to set, Better Auth cookies cleared only on a final refusal, `continuation_url` for a second factor). `Atlas::BetterAuth::RackMiddleware` (any Rack app) and, in Rails, `Atlas.configure { |c| c.better_auth_bridge = true }` (with `secret_key`) exchange a GET/HEAD's Better Auth cookie and redirect to the same URL signed in. The transport takes per-call `headers:` (never the authorization header).
+- **Better Auth JWTs during the cutover.** `Atlas::Backend.new(..., legacy_issuers: [{ issuer:, until:, jwks: | jwks_url:, audience:, algorithms:, resolve_subject: }])` (and `c.legacy_issuers` in Rails): a token from that issuer, inside its window, is verified against that issuer's keys only (EdDSA, ES256, ES512, RS256, PS256; `exp` required) and its `sub` is mapped to the Atlas user id through `external_id` (Backend API lookup with `secret_key` / `bapi_base_url`, cached 5 minutes, at most 10 000 entries; failures are not cached). The claims carry `external_id` and `legacy`.
+
 ## 0.14.0 — 2026-10-24
 
 ### Added

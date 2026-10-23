@@ -37,6 +37,9 @@ require_relative "atlas/constants"
 require_relative "atlas/handshake"
 require_relative "atlas/webhook"
 require_relative "atlas/client"
+require_relative "atlas/dpop"
+require_relative "atlas/legacy_issuers"
+require_relative "atlas/better_auth"
 
 module Atlas
   # Convenience constructor mirroring the TS +createAtlasClient+ factory.

@@ -75,11 +75,14 @@ module Atlas
     #   this one request: +true+ sends +Atlas-Strict: true+ (unknown body fields
     #   are refused with 422 UNKNOWN_FIELD), +false+ sends +Atlas-Strict: false+.
     # @raise [Atlas::APIError] on any non-2xx response.
+    # @param headers [Hash, nil] extra request headers for this call (for example
+    #   the end user's forwarded IP); they never replace the Bearer secret.
     def request(method:, path:, query: nil, body: OMIT, idempotency_key: nil, raw: false,
-                raw_body: nil, content_type: nil, strict: INHERIT)
+                raw_body: nil, content_type: nil, strict: INHERIT, headers: nil)
       verb = method.to_s.upcase
       url = join_url(@base, path) + serialize_query(query)
 
+      extra = headers
       headers = {
         "authorization" => "Bearer #{@secret_key}",
         "accept" => "application/json"
@@ -96,6 +99,10 @@ module Atlas
         payload = JSON.generate(body)
       end
       headers["idempotency-key"] = idempotency_key if idempotency_key
+      extra&.each do |name, value|
+        key = name.to_s.downcase
+        headers[key] = value.to_s unless key == "authorization" || value.nil?
+      end
 
       effective_strict = strict.equal?(INHERIT) ? @strict : strict
       if !effective_strict.nil? && WRITE_METHODS.include?(verb)

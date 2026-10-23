@@ -27,11 +27,11 @@ module Atlas
       # a method that names no body sends none (no content-type), matching the
       # reference SDKs.
       def request(method:, path:, query: nil, body: Atlas::Transport::OMIT,
-                  idempotency_key: nil, raw: false, raw_body: nil, content_type: nil)
+                  idempotency_key: nil, raw: false, raw_body: nil, content_type: nil, headers: nil)
         @transport.request(
           method: method, path: path, query: query, body: body,
           idempotency_key: idempotency_key, raw: raw,
-          raw_body: raw_body, content_type: content_type
+          raw_body: raw_body, content_type: content_type, headers: headers
         )
       end
 

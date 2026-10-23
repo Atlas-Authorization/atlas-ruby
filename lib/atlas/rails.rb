@@ -46,6 +46,14 @@ module Atlas
     attr_accessor :bapi_base_url
     # @return [Array<String>, nil] optional +azp+ allowlist.
     attr_accessor :authorized_parties
+    # @return [Array<Hash>, nil] Better Auth cutover: legacy issuers whose JWTs
+    #   are also accepted for a bounded window (see {Atlas::LegacyIssuerVerifier}).
+    attr_accessor :legacy_issuers
+    # @return [Boolean, Hash, nil] Better Auth cutover: +true+ (or a Hash of
+    #   +cookie_prefix+, +cookie_name+, +better_auth_cookie_domain+, +secure+,
+    #   +sign_in_url+) makes {Atlas::Rails::Middleware} exchange a Better Auth
+    #   session cookie for an Atlas session on GET/HEAD. Needs +secret_key+.
+    attr_accessor :better_auth_bridge
 
     def initialize
       @jwks_url           = resolve("ATLAS_JWKS_URL", :jwks_url)
@@ -53,7 +61,10 @@ module Atlas
       @secret_key         = resolve("ATLAS_SECRET_KEY", :secret_key)
       @bapi_base_url      = resolve("ATLAS_BAPI_BASE_URL", :bapi_base_url)
       @authorized_parties = nil
+      @legacy_issuers     = nil
+      @better_auth_bridge = nil
       @backend            = nil
+      @bridge             = nil
     end
 
     # True once the minimum needed for local verification is present.
@@ -78,13 +89,39 @@ module Atlas
         authorized_parties: authorized_parties,
         secret_key: secret_key,
         bapi_base_url: bapi_base_url,
+        legacy_issuers: legacy_issuers,
       )
+    end
+
+    # The Better Auth bridge built from {#better_auth_bridge}, or nil when off.
+    # @return [Array(Atlas::BetterAuth::Bridge, String), nil] the bridge and the sign-in URL.
+    def bridge
+      return nil unless better_auth_bridge
+
+      @bridge ||= begin
+        if blank?(secret_key)
+          raise Atlas::ConfigurationError,
+                "better_auth_bridge needs secret_key: the exchange goes through the Backend API."
+        end
+
+        opts = better_auth_bridge.is_a?(Hash) ? better_auth_bridge.transform_keys(&:to_sym) : {}
+        client_opts = blank?(bapi_base_url) ? {} : { api_url: bapi_base_url }
+        bridge = Atlas::BetterAuth::Bridge.new(
+          client: Atlas::Client.new(secret_key, **client_opts),
+          cookie_prefix: opts[:cookie_prefix] || Atlas::BetterAuth::COOKIE_PREFIX,
+          cookie_name: opts[:cookie_name],
+          better_auth_cookie_domain: opts[:better_auth_cookie_domain],
+          secure: opts.fetch(:secure, true),
+        )
+        [bridge, opts[:sign_in_url]]
+      end
     end
 
     # Drop the memoized backend so the next request rebuilds it. Called after
     # {Atlas.configure} so edited values (and a fresh JWKS cache) take effect.
     def reset_backend!
       @backend = nil
+      @bridge = nil
     end
 
     private

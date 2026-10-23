@@ -74,8 +74,16 @@ module Atlas
     # @param http [#call, nil] injectable requester for +verify_online+.
     # @param fetch_impl [#call, nil] injectable JWKS fetcher (tests).
     # @param now [#call, nil] clock returning epoch milliseconds (tests).
+    # @param legacy_issuers [Array<Hash>, nil] cutover from another auth provider
+    #   (Better Auth): ALSO accept JWTs from these issuers until each one's
+    #   +until+, verified against that issuer's own key set, with +sub+ mapped to
+    #   the Atlas user id (the old id is the user's +external_id+; looked up with
+    #   +secret_key+ against +bapi_base_url+, default https://api.atlasauth.net,
+    #   unless the entry has a +resolve_subject+). The claims then carry +sub+ =
+    #   the Atlas id, +external_id+ and +legacy+ (+kind+, +issuer+, +sub+). See
+    #   {Atlas::LegacyIssuerVerifier}. Atlas tokens are unaffected.
     def initialize(jwks_url:, issuer:, authorized_parties: nil, secret_key: nil,
-                   bapi_base_url: nil, http: nil, fetch_impl: nil, now: nil)
+                   bapi_base_url: nil, http: nil, fetch_impl: nil, now: nil, legacy_issuers: nil)
       require_jwt!
       @issuer = issuer
       @authorized_parties = authorized_parties
@@ -83,6 +91,12 @@ module Atlas
       @bapi_base_url = bapi_base_url
       @http = http
       @jwks = JwksCache.new(url: jwks_url, fetch_impl: fetch_impl, now: now)
+      return if legacy_issuers.nil? || legacy_issuers.empty?
+
+      @legacy = LegacyIssuerVerifier.new(
+        legacy_issuers, atlas_issuer: issuer, secret_key: secret_key, api_url: bapi_base_url,
+                        http: http, fetch_impl: fetch_impl, now: now, leeway: CLOCK_SKEW_SECONDS
+      )
     end
 
     # Verify locally. No network call unless the +kid+ is unknown, and at most
@@ -90,6 +104,21 @@ module Atlas
     # @return [VerifyResult]
     def verify(token)
       return VerifyResult.failure(:malformed) if token.nil? || token.split(".").length != 3
+
+      # A token from a configured legacy issuer (inside its window) is verified
+      # against THAT issuer's keys only — never the Atlas keys; the iss routes,
+      # the signature decides.
+      if @legacy && (entry = @legacy.match(LegacyIssuerVerifier.peek_issuer(token)))
+        result = @legacy.verify(token, entry)
+        return result unless result.ok?
+
+        azp = result.claims["azp"]
+        if @authorized_parties && !@authorized_parties.empty? && !azp.nil? && !@authorized_parties.include?(azp)
+          return VerifyResult.failure(:unauthorized_party)
+        end
+
+        return result
+      end
 
       keys = @jwks.get(Atlas.read_kid(token))
       return VerifyResult.failure(:no_keys) if keys.nil? || keys["keys"].nil? || keys["keys"].empty?

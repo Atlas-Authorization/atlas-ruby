@@ -63,6 +63,8 @@ require_relative "resources/diagnostics"
 require_relative "resources/entitlement_overrides"
 require_relative "resources/events"
 require_relative "resources/legacy_auth_connection"
+require_relative "resources/better_auth_imports"
+require_relative "resources/better_auth_bridge"
 require_relative "resources/machines"
 require_relative "resources/mcp"
 require_relative "resources/mcp_connector"
@@ -193,6 +195,8 @@ module Atlas
     def entitlement_overrides = @entitlement_overrides ||= Resources::EntitlementOverrides.new(@transport)
     def events            = @events ||= Resources::Events.new(@transport)
     def legacy_auth_connection = @legacy_auth_connection ||= Resources::LegacyAuthConnection.new(@transport)
+    def better_auth_imports = @better_auth_imports ||= Resources::BetterAuthImports.new(@transport)
+    def better_auth_bridge = @better_auth_bridge ||= Resources::BetterAuthBridge.new(@transport)
     def machines          = @machines ||= Resources::Machines.new(@transport)
     def mcp               = @mcp ||= Resources::Mcp.new(@transport)
     def mcp_connector     = @mcp_connector ||= Resources::McpConnector.new(@transport)

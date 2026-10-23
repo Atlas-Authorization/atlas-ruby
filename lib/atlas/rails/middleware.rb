@@ -26,6 +26,13 @@ module Atlas
       end
 
       def call(env)
+        bridge, sign_in_url = configured_bridge
+        if bridge
+          return Atlas::BetterAuth.handle(bridge, env, sign_in_url: sign_in_url) do
+            env[ENV_KEY] = authenticate(env)
+            @app.call(env)
+          end
+        end
         env[ENV_KEY] = authenticate(env)
         @app.call(env)
       end
@@ -44,6 +51,11 @@ module Atlas
         )
       rescue StandardError
         Atlas::VerifyResult.failure(:invalid)
+      end
+
+      # The Better Auth bridge (Atlas.configure { |c| c.better_auth_bridge = true }), or nil.
+      def configured_bridge
+        (@configuration || Atlas.configuration).bridge
       end
 
       def backend
