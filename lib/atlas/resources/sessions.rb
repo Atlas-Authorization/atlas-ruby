@@ -41,6 +41,20 @@ module Atlas
       def create_token(id, template)
         request(method: :post, path: "/v1/sessions/#{enc(id)}/tokens/#{enc(template)}")
       end
+
+      # +PUT /v1/sessions/:id/custom_data+ — replace the session's custom data
+      # (+nil+ clears it). At most 2 KB; only an active session can be changed.
+      # Not for secrets: the signed-in user can read it. Sends the
+      # +session.updated+ webhook.
+      def set_custom_data(id, custom_data)
+        request(method: :put, path: "/v1/sessions/#{enc(id)}/custom_data", body: { custom_data: custom_data })
+      end
+
+      # +PATCH /v1/sessions/:id/custom_data+ — merge keys; a key set to +nil+ is
+      # removed.
+      def update_custom_data(id, patch)
+        request(method: :patch, path: "/v1/sessions/#{enc(id)}/custom_data", body: { custom_data: patch })
+      end
     end
   end
 end

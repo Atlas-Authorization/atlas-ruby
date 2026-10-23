@@ -42,6 +42,8 @@ module Atlas
       end
 
       # +POST /v1/billing/usage+ — report metered usage for a subject (idempotent on idempotency_key in the body).
+      # +feature+ counts it against one provider feature; +subscription_id+
+      # attributes it when the subject holds several.
       def report_usage(body)
         request(method: :post, path: "/v1/billing/usage", body: body)
       end
@@ -65,7 +67,41 @@ module Atlas
         request(method: :post, path: "/v1/billing/subscriptions/#{enc(id)}/restore")
       end
 
-      # +GET /v1/billing/providers+ — the providers (stripe, polar, dodo, creem)
+      # +GET /v1/billing/subscriptions/:id+ — one subscription (a subject may
+      # hold several: a base plan plus add-ons). Entitlement providers (Autumn,
+      # Commet) report what it grants in +entitlements+.
+      def get_subscription(id)
+        request(method: :get, path: "/v1/billing/subscriptions/#{enc(id)}")
+      end
+
+      # +POST /v1/billing/plans/:id/sync_entitlements+ — mirror a plan's
+      # features and limits from its provider (Autumn, Commet).
+      def sync_plan_entitlements(id)
+        request(method: :post, path: "/v1/billing/plans/#{enc(id)}/sync_entitlements")
+      end
+
+      # +GET /v1/billing/settings+ — how numeric limits merge when a subject
+      # holds several entitling subscriptions: +{ default_limit_merge:,
+      # limit_merge: { key => "max" | "sum" } }+.
+      def get_settings
+        request(method: :get, path: "/v1/billing/settings")
+      end
+
+      # +PUT /v1/billing/settings+ — +limit_merge+ replaces the stored map.
+      def update_settings(body)
+        request(method: :put, path: "/v1/billing/settings", body: body)
+      end
+
+      # +POST /v1/billing/check+ — may a subject use a feature?
+      # +{ subject_type:, subject_id:, feature:, required: }+. Asked live of
+      # Autumn/Commet when the subject is on one (+source: "provider"+),
+      # otherwise from the resolved entitlement and this period's usage.
+      def check_feature(body)
+        request(method: :post, path: "/v1/billing/check", body: body)
+      end
+
+      # +GET /v1/billing/providers+ — the providers (stripe, polar, dodo, creem,
+      # chargebee, autumn, commet)
       # this instance has its OWN credentials for. Secrets are never returned
       # (+secrets_set+ markers only); each carries the +webhook_url+ to register.
       def list_providers
@@ -79,7 +115,10 @@ module Atlas
       # +PUT /v1/billing/providers/:provider+ — +{ environment:, config: {...} }+,
       # merged onto what is stored. Stripe: +secret_key+, +webhook_secret+,
       # +publishable_key+; Polar: +access_token+, +webhook_secret+; Dodo and Creem:
-      # +api_key+, +webhook_secret+.
+      # +api_key+, +webhook_secret+; Chargebee: +api_key+, +site+,
+      # +webhook_username+ + +webhook_password+; Autumn: +secret_key+,
+      # +webhook_secret+; Commet: +api_key+, +webhook_secret+, optional
+      # +seat_feature_code+.
       def set_provider(provider, body)
         request(method: :put, path: "/v1/billing/providers/#{enc(provider)}", body: body)
       end

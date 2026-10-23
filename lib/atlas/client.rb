@@ -10,6 +10,8 @@ require_relative "resources/oauth_clients"
 require_relative "resources/resource_servers"
 require_relative "resources/app_roles"
 require_relative "resources/sso_connections"
+require_relative "resources/custom_oauth_providers"
+require_relative "resources/action_gallery"
 require_relative "resources/scim_tokens"
 require_relative "resources/domains"
 require_relative "resources/waitlist"
@@ -150,6 +152,7 @@ module Atlas
     def jwt_templates     = @jwt_templates ||= Resources::JwtTemplates.new(@transport)
     def api_keys          = @api_keys ||= Resources::ApiKeys.new(@transport)
     def oauth_providers   = @oauth_providers ||= Resources::OAuthProviders.new(@transport)
+    def custom_oauth_providers = @custom_oauth_providers ||= Resources::CustomOAuthProviders.new(@transport)
     def sso_onboarding    = @sso_onboarding ||= Resources::SsoOnboarding.new(@transport)
     def scim_provisioning = @scim_provisioning ||= Resources::ScimProvisioning.new(@transport)
     def fga               = @fga ||= Resources::Fga.new(@transport)
@@ -165,6 +168,8 @@ module Atlas
     def sms_templates     = @sms_templates ||= Resources::SmsTemplates.new(@transport)
     def localizations     = @localizations ||= Resources::Localizations.new(@transport)
     def actions           = @actions ||= Resources::Actions.new(@transport)
+    def action_gallery    = @action_gallery ||= Resources::ActionGallery.new(@transport)
+    def action_templates  = @action_templates ||= Resources::ActionTemplates.new(@transport)
     def billing           = @billing ||= Resources::Billing.new(@transport)
     def messaging         = @messaging ||= Resources::Messaging.new(@transport)
     def import_export     = @import_export ||= Resources::ImportExport.new(@transport)

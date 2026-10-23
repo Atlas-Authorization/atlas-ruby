@@ -31,6 +31,22 @@ module Atlas
         request(method: :patch, path: "/v1/instance", body: body)
       end
 
+      # Write +auth_config.accountLinkingTrust+: keys are an exact provider key,
+      # a +"prefix*"+ or +"*"+; values +"always"+ (vouch for the provider's
+      # email, for linking only), +"verified"+ or +"never"+ (refused with 409
+      # +IDENTITY_ALREADY_LINKED+). An account that never proved its email is
+      # never linked. See {Atlas::LINKING_TRUST_LEVELS}.
+      def set_account_linking_trust(trust)
+        update({ auth_config: { accountLinkingTrust: trust } })
+      end
+
+      # Merge +auth_config.captcha+: +provider+ (see {Atlas::CAPTCHA_PROVIDERS}),
+      # +siteKey+, +widget+, +minScore+, per-flow / per-action overrides and,
+      # for Vercel BotID, +attestationUrl+ (https or a root-relative path).
+      def set_captcha_config(captcha)
+        update({ auth_config: { captcha: captcha } })
+      end
+
       # +GET /v1/instance/preflight+ — check your setup in one call. Read-only.
       #
       # @return [Hash] +{ "object", "ok", "checked_at", "findings" }+. +ok+ is

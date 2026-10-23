@@ -27,6 +27,35 @@ module Atlas
         request(method: :post, path: "/v1/instance/signing_keys/rotate", body: body)
       end
 
+      # +GET /v1/instance/signing_key_provider+ — the key management service the
+      # signing key lives in (+"local"+ when none). Never carries credentials.
+      def get_signing_key_provider
+        request(method: :get, path: "/v1/instance/signing_key_provider")
+      end
+
+      # +PUT /v1/instance/signing_key_provider+ — sign every token with a key in
+      # your own KMS: +{ provider: "aws_kms" | "gcp_kms" | "azure_key_vault",
+      # config:, credentials:, grace_period_seconds:, emergency: }+.
+      #   aws_kms: config +{ region, key_id?, alg? }+, credentials +{ access_key_id, secret_access_key, session_token? }+
+      #   gcp_kms: config +{ crypto_key, key_version? }+, credentials +{ service_account_json }+
+      #   azure_key_vault: config +{ vault_url, key_name, key_version?, alg? }+, credentials +{ tenant_id, client_id, client_secret }+
+      def set_signing_key_provider(body)
+        request(method: :put, path: "/v1/instance/signing_key_provider", body: body)
+      end
+
+      # +DELETE /v1/instance/signing_key_provider+ — rotate back to a key Atlas
+      # holds and forget the KMS credentials (+grace_period_seconds+, +emergency+).
+      def remove_signing_key_provider(body = {})
+        request(method: :delete, path: "/v1/instance/signing_key_provider", body: body)
+      end
+
+      # +PUT /v1/instance/wallet_rpc_secret+ — store (write-only, encrypted) the
+      # wallet RPC endpoint for an EIP-155 chain, used by wallet token gating and
+      # the Sign in with Ethereum ENS lookup. An empty +url+ removes it.
+      def set_wallet_rpc_secret(chain_id:, url:)
+        request(method: :put, path: "/v1/instance/wallet_rpc_secret", body: { chain_id: chain_id, url: url })
+      end
+
       # Store a captcha provider secret: +{ secret:, provider: }+. +provider+ (default:
       # the configured one) lets you store it BEFORE turning captcha on — captcha is
       # bring-your-own-keys, and enabling it without a site key and secret is refused

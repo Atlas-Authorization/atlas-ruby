@@ -2,5 +2,5 @@
 
 module Atlas
   # The gem version. Tracks the TypeScript/Python backend SDK line.
-  VERSION = "0.13.0"
+  VERSION = "0.14.0"
 end
