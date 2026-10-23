@@ -24,6 +24,8 @@ module Atlas
   #   * +:role+             — the claims' org role must equal this.
   #   * +:any_permission+   — at least one of these permissions is granted.
   #   * +:all_permissions+  — every one of these permissions is granted.
+  #   * +:app_role+         — the +app_roles+ claim contains this (no org needed).
+  #   * +:app_permission+   — the +app_permissions+ claim contains this.
   module Authorization
     module_function
 
@@ -39,10 +41,18 @@ module Atlas
       role = fetch(condition, :role)
       any_permission = fetch(condition, :any_permission)
       all_permissions = fetch(condition, :all_permissions)
+      app_role = fetch(condition, :app_role)
+      app_permission = fetch(condition, :app_permission)
 
       # Empty condition: signed in is enough.
-      if permission.nil? && role.nil? && any_permission.nil? && all_permissions.nil?
+      if permission.nil? && role.nil? && any_permission.nil? && all_permissions.nil? &&
+         app_role.nil? && app_permission.nil?
         return { allowed: true, reason: nil }
+      end
+
+      return deny(:app_role) if app_role && !Array(fetch(claims, :app_roles)).include?(app_role)
+      if app_permission && !Array(fetch(claims, :app_permissions)).include?(app_permission)
+        return deny(:permission)
       end
 
       granted = Array(fetch(claims, :org_permissions))

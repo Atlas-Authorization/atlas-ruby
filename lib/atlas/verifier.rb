@@ -8,6 +8,11 @@ module Atlas
   # §7.3: five seconds either side, matching the server's minting tolerance.
   CLOCK_SKEW_SECONDS = 5
 
+  # The JWS algorithms Atlas signs tokens with: an instance key is RS256 (the
+  # default) or ES256, and an API may use either. Every verifier here is pinned
+  # to exactly this list — +none+ and HMAC never verify.
+  SIGNING_ALGS = %w[RS256 ES256].freeze
+
   # The outcome of a verification. A success carries the claims and the bound
   # +has?+ / +protect+ helpers; a failure carries a coarse +reason+.
   class VerifyResult
@@ -93,7 +98,7 @@ module Atlas
         jwk_set = JWT::JWK::Set.new(keys)
         payload, = JWT.decode(
           token, nil, true,
-          algorithms: ["RS256"],
+          algorithms: SIGNING_ALGS,
           iss: @issuer,
           verify_iss: true,
           jwks: jwk_set,
@@ -205,6 +210,17 @@ module Atlas
 
   # §8.2 standalone helpers for code that already holds a claims hash.
   module_function
+
+  # True when the +app_permissions+ claim (the union of the user's instance-wide
+  # app roles' permissions) contains +permission+. Needs no active organization.
+  def has_app_permission?(claims, permission)
+    Authorization.has_from_claims?(claims, app_permission: permission)
+  end
+
+  # True when the +app_roles+ claim contains +role+. Needs no active organization.
+  def has_app_role?(claims, role)
+    Authorization.has_from_claims?(claims, app_role: role)
+  end
 
   def has_permission?(claims, permission)
     Authorization.has_from_claims?(claims, permission: permission)

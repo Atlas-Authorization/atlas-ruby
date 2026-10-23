@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.13.0 — 2026-10-23
+
+### Added
+
+- **App roles.** `client.app_roles`: `list`, `create`, `get`, `update`, `delete`, `list_users`, `get_for_user`, `set_for_user` (replace, or add/remove), `remove_from_user`. `Atlas.has_app_role?` / `Atlas.has_app_permission?` and the `app_role:` / `app_permission:` conditions of `has?` / `protect` read the `app_roles` / `app_permissions` claims (no active organization needed).
+- **Organization teams and custom roles.** `organizations.teams` (list, create, get, update, delete, members list/add/remove) and `organizations.roles` (the roles an org can assign; create/update/delete its own, `reassign_to:`). `organizations.get_by_slug`, `organizations.check_slug`, `organizations.invitations.resend`.
+- **User search and timed bans.** `users.list` documents the search filters (`query`, `email_address`, `username`, `phone_number`, `external_id`, `banned`, `email_verified`, `organization_id`, `created_after` / `created_before`, `order_by`, `offset`, `include_total_count`); `users.ban(id, { reason:, note:, expires_in_seconds:, expires_at: })`.
+- **API key controls.** Create and update bodies take `enabled`, `rate_limit`, `remaining`, `prefix`, `expires_in_seconds`; `api_keys.verify` takes `required_scopes` and a refusal of a live key carries `code` (`insufficient_scope`, `rate_limited`, `usage_exhausted`).
+- **Billing providers (bring your own key).** `billing.list_providers`, `get_provider`, `set_provider`, `test_provider`, `delete_provider(force:)`; `billing.change_subscription`, `cancel_subscription(immediately:)`, `restore_subscription`. Plans take `provider`, `provider_price_id`, `annual_price_id`, `annual_amount`.
+- **OAuth server administration.** `instance_security.list_signing_keys` / `rotate_signing_key` (`alg` RS256 or ES256); `client.oauth_initial_access_tokens` (list, create, revoke). OAuth clients take `disabled`, `require_pkce`, `subject_type`, `sector_identifier_uri`, `secret_expires_in_seconds`; resource servers take `signing_alg` and `publish_resource_metadata`.
+- **Access-token verification for your API.** `Atlas::AccessTokenVerifier` checks an Atlas-issued OAuth access token locally (issuer, expiry, `token_use`, audience, scopes) and returns the RFC 6750 / RFC 9728 `WWW-Authenticate` challenge on refusal; the `Atlas::AccessTokenGuard` Rack middleware; `Atlas.build_www_authenticate`, `Atlas.protected_resource_metadata`, `Atlas.protected_resource_metadata_path`. DPoP-bound tokens are refused.
+- `scim_tokens.update`, `user_hooks.list_before_user_create_calls`, `referrals.get_call`.
+
+### Changed
+
+- Session and logout-token verification accept **ES256** as well as RS256 (`Atlas::SIGNING_ALGS`), and nothing else.
+
 ## 0.12.0
 
 ### Added

@@ -45,6 +45,54 @@ module Atlas
       def report_usage(body)
         request(method: :post, path: "/v1/billing/usage", body: body)
       end
+
+      # +POST /v1/billing/subscriptions/:id/change+ — switch to another plan or
+      # interval on the billing provider: +{ plan_id:, interval: "month"|"year",
+      # schedule_at_period_end: true }+ (default: now, prorated).
+      def change_subscription(id, body)
+        request(method: :post, path: "/v1/billing/subscriptions/#{enc(id)}/change", body: body)
+      end
+
+      # +POST /v1/billing/subscriptions/:id/cancel+ — at the period end, or now
+      # with +immediately: true+.
+      def cancel_subscription(id, immediately: false)
+        body = immediately ? { immediately: true } : {}
+        request(method: :post, path: "/v1/billing/subscriptions/#{enc(id)}/cancel", body: body)
+      end
+
+      # +POST /v1/billing/subscriptions/:id/restore+ — undo a scheduled cancellation.
+      def restore_subscription(id)
+        request(method: :post, path: "/v1/billing/subscriptions/#{enc(id)}/restore")
+      end
+
+      # +GET /v1/billing/providers+ — the providers (stripe, polar, dodo, creem)
+      # this instance has its OWN credentials for. Secrets are never returned
+      # (+secrets_set+ markers only); each carries the +webhook_url+ to register.
+      def list_providers
+        request(method: :get, path: "/v1/billing/providers")
+      end
+
+      def get_provider(provider)
+        request(method: :get, path: "/v1/billing/providers/#{enc(provider)}")
+      end
+
+      # +PUT /v1/billing/providers/:provider+ — +{ environment:, config: {...} }+,
+      # merged onto what is stored. Stripe: +secret_key+, +webhook_secret+,
+      # +publishable_key+; Polar: +access_token+, +webhook_secret+; Dodo and Creem:
+      # +api_key+, +webhook_secret+.
+      def set_provider(provider, body)
+        request(method: :put, path: "/v1/billing/providers/#{enc(provider)}", body: body)
+      end
+
+      # One read-only call with the stored credentials: +{ ok:, error:, account: }+.
+      def test_provider(provider)
+        request(method: :post, path: "/v1/billing/providers/#{enc(provider)}/test")
+      end
+
+      # Refused while live subscriptions or plans depend on it unless +force: true+.
+      def delete_provider(provider, force: false)
+        request(method: :delete, path: "/v1/billing/providers/#{enc(provider)}", query: force ? { force: "true" } : nil)
+      end
     end
   end
 end

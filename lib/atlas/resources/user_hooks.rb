@@ -28,6 +28,13 @@ module Atlas
       def test_before_user_create
         request(method: :post, path: "/v1/instance/hooks/before_user_create/test")
       end
+
+      # The hook's delivery log, newest first (kept 30 days). +params+: +limit+,
+      # +status+ (+ok+, +failed+, +timeout+, +error+, +invalid_response+), +test+
+      # and +starting_after+.
+      def list_before_user_create_calls(params = {})
+        request(method: :get, path: "/v1/instance/hooks/before_user_create/calls", query: params.empty? ? nil : params)
+      end
     end
   end
 end

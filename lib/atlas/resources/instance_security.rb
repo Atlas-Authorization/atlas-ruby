@@ -15,6 +15,18 @@ module Atlas
         request(method: :patch, path: "/v1/instance/security", body: body)
       end
 
+      # +GET /v1/instance/signing_keys+ — the published token-signing keys:
+      # +current+ and, inside a rotation's grace window, +previous+ with +retires_at+.
+      def list_signing_keys
+        request(method: :get, path: "/v1/instance/signing_keys")
+      end
+
+      # +POST /v1/instance/signing_keys/rotate+ — +{ alg: "RS256"|"ES256",
+      # grace_period_seconds:, emergency: }+ (all optional).
+      def rotate_signing_key(body = {})
+        request(method: :post, path: "/v1/instance/signing_keys/rotate", body: body)
+      end
+
       # Store a captcha provider secret: +{ secret:, provider: }+. +provider+ (default:
       # the configured one) lets you store it BEFORE turning captcha on — captcha is
       # bring-your-own-keys, and enabling it without a site key and secret is refused

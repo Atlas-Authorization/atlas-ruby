@@ -21,8 +21,14 @@ module Atlas
       # Check a presented secret. Rate-limited — it is an online credential check.
       # A valid result carries the subject, +name+, +claims+, +scopes+,
       # +constraints+, +limits+ and the caps' current-window +usage+.
-      def verify(secret)
-        request(method: :post, path: "/v1/api_keys/verify", body: { secret: secret })
+      #
+      # +required_scopes:+ must all be on the key. A LIVE key refused by its own
+      # policy answers +valid: false+ with a +code+: +insufficient_scope+
+      # (+missing_scopes+), +rate_limited+ (+retry_after_ms+) or +usage_exhausted+.
+      def verify(secret, required_scopes: nil)
+        body = { secret: secret }
+        body[:required_scopes] = required_scopes if required_scopes
+        request(method: :post, path: "/v1/api_keys/verify", body: body)
       end
 
       def get(id)

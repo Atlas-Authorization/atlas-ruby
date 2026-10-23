@@ -8,6 +8,7 @@ require_relative "resources/organizations"
 require_relative "resources/roles"
 require_relative "resources/oauth_clients"
 require_relative "resources/resource_servers"
+require_relative "resources/app_roles"
 require_relative "resources/sso_connections"
 require_relative "resources/scim_tokens"
 require_relative "resources/domains"
@@ -132,6 +133,8 @@ module Atlas
     def permissions      = @permissions ||= Resources::Permissions.new(@transport)
     def oauth_clients     = @oauth_clients ||= Resources::OAuthClients.new(@transport)
     def resource_servers  = @resource_servers ||= Resources::ResourceServers.new(@transport)
+    def app_roles         = @app_roles ||= Resources::AppRoles.new(@transport)
+    def oauth_initial_access_tokens = @oauth_initial_access_tokens ||= Resources::OAuthInitialAccessTokens.new(@transport)
     def sso_connections   = @sso_connections ||= Resources::SsoConnections.new(@transport)
     def scim_tokens       = @scim_tokens ||= Resources::ScimTokens.new(@transport)
     def domains           = @domains ||= Resources::Domains.new(@transport)

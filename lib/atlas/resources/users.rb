@@ -7,7 +7,11 @@ module Atlas
     # +/v1/users+ — the user directory, plus emails, identities, MFA, sessions,
     # OAuth access tokens, and consent grants.
     class Users < Base
-      # +GET /v1/users+ — cursor-paginated.
+      # +GET /v1/users+ — cursor-paginated (or +offset+). Search and filter with
+      # +query+, +email_address+, +username+, +phone_number+, +external_id+,
+      # +banned+, +email_verified+, +organization_id+, +created_after+ /
+      # +created_before+ (epoch ms), +order_by+ (+created_at+, +-created_at+,
+      # +last_sign_in_at+, +-last_sign_in_at+) and +include_total_count+.
       def list(params = {})
         request(method: :get, path: "/v1/users", query: params)
       end
@@ -38,8 +42,12 @@ module Atlas
         request(method: :put, path: "/v1/users/#{enc(id)}/metadata", body: body)
       end
 
-      def ban(id)
-        request(method: :post, path: "/v1/users/#{enc(id)}/ban")
+      # Permanent by default. +body+ may carry +reason+, +note+ and, for a timed
+      # ban that lifts itself, +expires_in_seconds+ or +expires_at+ (epoch ms).
+      def ban(id, body = nil)
+        return request(method: :post, path: "/v1/users/#{enc(id)}/ban") if body.nil? || body.empty?
+
+        request(method: :post, path: "/v1/users/#{enc(id)}/ban", body: body)
       end
 
       def unban(id)

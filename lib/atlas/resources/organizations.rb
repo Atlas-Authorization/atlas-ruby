@@ -96,6 +96,87 @@ module Atlas
         @group_roles ||= GroupRoles.new(@transport)
       end
 
+      # +organizations.teams+ — teams inside an organization.
+      def teams
+        @teams ||= Teams.new(@transport)
+      end
+
+      # +organizations.roles+ — the roles an org can assign, and its own custom roles.
+      def roles
+        @roles ||= Roles.new(@transport)
+      end
+
+      # Fetch an organization by slug (case-insensitive).
+      def get_by_slug(slug)
+        request(method: :get, path: "/v1/organizations/by_slug/#{enc(slug)}")
+      end
+
+      # Whether a slug is valid and free: +{ slug:, valid:, available: }+.
+      def check_slug(slug)
+        request(method: :get, path: "/v1/organizations/check_slug", query: { slug: slug })
+      end
+
+      # Nested: teams.
+      class Teams < Base
+        # +params+: +user_id+ narrows to the teams that user is in.
+        def list(org_id, params = {})
+          request(method: :get, path: "/v1/organizations/#{enc(org_id)}/teams", query: params.empty? ? nil : params)
+        end
+
+        def create(org_id, body)
+          request(method: :post, path: "/v1/organizations/#{enc(org_id)}/teams", body: body)
+        end
+
+        def get(org_id, team_id)
+          request(method: :get, path: "/v1/organizations/#{enc(org_id)}/teams/#{enc(team_id)}")
+        end
+
+        def update(org_id, team_id, body)
+          request(method: :patch, path: "/v1/organizations/#{enc(org_id)}/teams/#{enc(team_id)}", body: body)
+        end
+
+        def delete(org_id, team_id)
+          request(method: :delete, path: "/v1/organizations/#{enc(org_id)}/teams/#{enc(team_id)}")
+        end
+
+        def list_members(org_id, team_id)
+          request(method: :get, path: "/v1/organizations/#{enc(org_id)}/teams/#{enc(team_id)}/members")
+        end
+
+        def add_member(org_id, team_id, user_id)
+          request(method: :post, path: "/v1/organizations/#{enc(org_id)}/teams/#{enc(team_id)}/members",
+                  body: { user_id: user_id })
+        end
+
+        def remove_member(org_id, team_id, user_id)
+          request(method: :delete, path: "/v1/organizations/#{enc(org_id)}/teams/#{enc(team_id)}/members/#{enc(user_id)}")
+        end
+      end
+
+      # Nested: organization-scoped roles (instance roles plus the org's own).
+      class Roles < Base
+        # +own: true+ lists only the organization's own custom roles.
+        def list(org_id, own: false)
+          request(method: :get, path: "/v1/organizations/#{enc(org_id)}/roles", query: own ? { own: "true" } : nil)
+        end
+
+        # +{ key:, name:, description:, permissions: [] }+.
+        def create(org_id, body)
+          request(method: :post, path: "/v1/organizations/#{enc(org_id)}/roles", body: body)
+        end
+
+        def update(org_id, role_id, body)
+          request(method: :patch, path: "/v1/organizations/#{enc(org_id)}/roles/#{enc(role_id)}", body: body)
+        end
+
+        # +reassign_to:+ (a role key) moves members and pending invitations first;
+        # without it a role in use is refused (409 ROLE_IN_USE).
+        def delete(org_id, role_id, reassign_to: nil)
+          request(method: :delete, path: "/v1/organizations/#{enc(org_id)}/roles/#{enc(role_id)}",
+                  query: reassign_to ? { reassign_to: reassign_to } : nil)
+        end
+      end
+
       # Nested: memberships.
       class Memberships < Base
         def list(org_id)
@@ -127,6 +208,11 @@ module Atlas
 
         def revoke(org_id, invitation_id)
           request(method: :post, path: "/v1/organizations/#{enc(org_id)}/invitations/#{enc(invitation_id)}/revoke")
+        end
+
+        # Resend a pending invitation: same id and role, a fresh expiry.
+        def resend(org_id, invitation_id)
+          request(method: :post, path: "/v1/organizations/#{enc(org_id)}/invitations/#{enc(invitation_id)}/resend")
         end
       end
 

@@ -2,6 +2,7 @@
 
 require_relative "error"
 require_relative "jwks_cache"
+require_relative "verifier"
 
 module Atlas
   # Raised by {Atlas::BackchannelLogout#verify} for any logout token that must
@@ -146,7 +147,7 @@ module Atlas
     def decode(token, keys)
       JWT.decode(
         token, nil, true,
-        algorithms: ["RS256"],
+        algorithms: SIGNING_ALGS,
         jwks: JWT::JWK::Set.new(keys),
         iss: @issuer, verify_iss: true,
         aud: @client_id, verify_aud: true,
@@ -161,7 +162,7 @@ module Atlas
     end
 
     def check_header(header)
-      fail!(:wrong_algorithm) unless header["alg"] == "RS256"
+      fail!(:wrong_algorithm) unless SIGNING_ALGS.include?(header["alg"])
       typ = header["typ"]
       return if typ.nil?
 

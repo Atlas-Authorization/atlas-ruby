@@ -69,6 +69,11 @@ module Atlas
         request(method: :get, path: "/v1/instance/referrals/calls", query: params.empty? ? nil : params)
       end
 
+      # One call of the delivery log, by its id or the platform's request id.
+      def get_call(id)
+        request(method: :get, path: "/v1/instance/referrals/calls/#{enc(id)}")
+      end
+
       # Retry a failed, retrying or skipped call now (not a connection test).
       def retry_call(id, idempotency_key: nil)
         request(method: :post, path: "/v1/instance/referrals/calls/#{enc(id)}/retry", idempotency_key: idempotency_key)
