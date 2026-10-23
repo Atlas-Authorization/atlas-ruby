@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.16.0 — 2026-10-24
+
+### Added
+
+- **Policy acceptance.** `policies` (`list`, `create`, `get`, `update`, `delete`, `list_acceptances`, `export_acceptances_csv`, `for_user`) with `policies.versions` (`list`, `create`, `get`, `update`, `delete`, `publish`, `retire`) and `policies.settings` (`get`, `update`: the `pol` session claim), and `policy_source` (`get`, `update`, `delete`, `test`, `sync`, `list_deliveries`; the signing secret is write-only). `users.record_consent` / consent records carry the acceptance evidence (`policy_version_id`, `content_sha256`, `display`, `scrolled_to_end`, `view_ms`, `locale`).
+- **Policy source helpers** for a CMS written in Ruby: `Atlas::PolicySourceProtocol.verify_feed_request(method:, path_and_query:, headers:, secret:)` checks Atlas's signed feed request (`atlas-id`, `atlas-timestamp` in ms, `atlas-signature` with one or more `v1,<base64 HMAC-SHA256>` values over `{id}.{ts}.GET\n{path+query}`, five-minute window) and returns the `key` Atlas asked for; `sign_event(event:, secret:)` signs a `policy.published` / `policy.retired` event for Atlas.
+- `Atlas.policies(claims)` / `Atlas.accepted_policy_version(claims, key)` (and the same on `VerifyResult`) read the `pol` session claim. `WEBHOOK_EVENT_USER_POLICY_ACCEPTED`, `WEBHOOK_EVENT_POLICY_VERSION_PUBLISHED`.
+
 ## 0.15.0 — 2026-10-24
 
 ### Added

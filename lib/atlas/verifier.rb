@@ -47,6 +47,17 @@ module Atlas
       @ok && Authorization.has_from_claims?(@claims, condition)
     end
 
+    # The +pol+ claim: the accepted version of each required policy, by policy
+    # key (empty unless the instance turned the session claim on).
+    def policies
+      @ok ? Atlas.policies(@claims) : {}
+    end
+
+    # The version of policy +key+ the user accepted, from the +pol+ claim.
+    def accepted_policy_version(key)
+      policies[key.to_s]
+    end
+
     # Assert the condition; returns the claims on success, raises
     # {Atlas::ForbiddenError} otherwise.
     def protect(condition = {})
@@ -253,6 +264,22 @@ module Atlas
 
   def has_permission?(claims, permission)
     Authorization.has_from_claims?(claims, permission: permission)
+  end
+
+  # The +pol+ claim of a claims hash: the accepted version of each required
+  # policy, by policy key (empty unless the instance turned the session claim on).
+  def policies(claims)
+    pol = claims.is_a?(Hash) ? (claims["pol"] || claims[:pol]) : nil
+    return {} unless pol.is_a?(Hash)
+
+    pol.each_with_object({}) do |(k, v), out|
+      out[k.to_s] = v.to_s if v.is_a?(String) || v.is_a?(Numeric)
+    end
+  end
+
+  # The version of policy +key+ recorded in the +pol+ claim, or nil.
+  def accepted_policy_version(claims, key)
+    policies(claims)[key.to_s]
   end
 
   def has_role?(claims, role)

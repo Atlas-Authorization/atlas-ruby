@@ -41,6 +41,7 @@ require_relative "resources/sms_templates"
 require_relative "resources/localizations"
 require_relative "resources/actions"
 require_relative "resources/billing"
+require_relative "resources/policies"
 require_relative "resources/messaging"
 require_relative "resources/import_export"
 require_relative "resources/data_subject_requests"
@@ -173,6 +174,8 @@ module Atlas
     def action_gallery    = @action_gallery ||= Resources::ActionGallery.new(@transport)
     def action_templates  = @action_templates ||= Resources::ActionTemplates.new(@transport)
     def billing           = @billing ||= Resources::Billing.new(@transport)
+    def policies          = @policies ||= Resources::Policies.new(@transport)
+    def policy_source     = @policy_source ||= Resources::PolicySource.new(@transport)
     def messaging         = @messaging ||= Resources::Messaging.new(@transport)
     def import_export     = @import_export ||= Resources::ImportExport.new(@transport)
     def data_subject_requests = @data_subject_requests ||= Resources::DataSubjectRequests.new(@transport)

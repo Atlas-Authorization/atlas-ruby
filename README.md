@@ -411,9 +411,50 @@ It never extends past the absolute expiry and never revives an ended session (`A
 
 `users.create` and `import_export.import_users` accept `notify: false` (the default), which guarantees the user is sent no email, SMS or push as a consequence of the create.
 
+## Policy acceptance
+
+Terms of Service, privacy policies and any other policy your users accept at sign-up (and again
+at sign-in when a new version takes effect). A version goes draft, published (with an
+`effective_at`), retired; each acceptance is kept as evidence.
+
+```ruby
+atlas.policies.create({ key: "tos", title: "Terms of Service", applies_to: "sign_in_and_sign_up" })
+atlas.policies.versions.create("tos", { version: "2026-10-24", content_markdown: "# Terms\n..." })
+atlas.policies.versions.publish("tos", "2026-10-24", { effective_at: "2026-11-01T00:00:00Z" })
+atlas.policies.list_acceptances("tos", { version: "2026-10-24", limit: 50 })
+csv = atlas.policies.export_acceptances_csv("tos")
+atlas.policies.for_user("user_123")                      # standing on every policy, incl. needs_acceptance
+atlas.policies.settings.update({ session_claim: true })  # put `pol` on session tokens
+```
+
+With the session claim on, `Atlas.policies(claims)` / `Atlas.accepted_policy_version(claims, "tos")`
+(and the same two methods on a `VerifyResult`) read the `pol` claim. The `user.policy_accepted`
+and `policy.version_published` webhook events have the constants
+`Atlas::WEBHOOK_EVENT_USER_POLICY_ACCEPTED` and `Atlas::WEBHOOK_EVENT_POLICY_VERSION_PUBLISHED`.
+`users.record_consent` takes the acceptance evidence (`policy_version_id`, `content_sha256`,
+`display`, `scrolled_to_end`, `view_ms`, `locale`).
+
+### Serving policies from your own system (policy source)
+
+Point Atlas at a CMS or service with `atlas.policy_source.update(enabled: true, endpoint_url: ...,
+signing_secret: ...)` (the secret is write-only), then `test` / `sync`. In your service, verify
+Atlas's signed `GET {endpoint}/policies[?key=...]` and answer a feed:
+
+```ruby
+v = Atlas::PolicySourceProtocol.verify_feed_request(
+  method: request.request_method, path_and_query: request.fullpath, headers: request.headers, secret: secret
+)
+return head(:unauthorized) unless v.verified?
+render json: { object: "policy_list", policies: build_policies(only: v.key) }
+
+# When a policy changes, tell Atlas (it re-fetches; nothing in the event is trusted as content):
+signed = Atlas::PolicySourceProtocol.sign_event(event: { type: "policy.published", key: "tos", version: "2026-10-24" }, secret: secret)
+Net::HTTP.post(URI(webhook_url), signed.body, { "content-type" => "application/json" }.merge(signed.headers))
+```
+
 ## Resources
 
-Every Backend API operation is available on the client: `users`, `sessions`, `organizations` (with `memberships`, `invitations`, `domains`, `group_roles`, `audit_streams`, `end_users`, `reader_domain`, settings, design and branding), `roles`, `permissions`, `oauth_clients`, `resource_servers`, `sso_connections`, `scim_tokens`, `scim_provisioning`, `domains`, `waitlist`, `allowlist`, `blocklist`, `attack_protection`, `actor_tokens`, `invitations`, `webhooks`, `sign_in_tokens`, `audit_logs`, `audit_events`, `jwt_templates`, `api_keys`, `oauth_providers`, `sso_onboarding`, `fga`, `openfga`, `rate_limit_policy`, `risk_based_mfa`, `bot_signals`, `network_acls`, `managed_waf`, `log_streams`, `branding`, `design`, `email_templates`, `sms_templates`, `localizations`, `actions`, `billing`, `messaging`, `import_export`, `data_subject_requests`, `radius_clients`, `lti_platforms`, `instance` (incl. `preflight` and cookie consent), `instance_security`, `tokens`, `email_addresses`, `organization_settings_schema`, `entitlement_overrides`, `machines` (incl. enrolment tokens), `connectors`, `directory`, `diagnostics`, `config_changelog`, `events`, `usage`, `legacy_auth_connection`, `mcp`, `mcp_connector`, `notifications` (with `categories` and `templates`), `org_ldap_connections`, `pca`, `redirect_urls`, `session_exchange_apps`, `tickets`, `captcha`, `testing` (development-instance helpers), and `platform` (`apps`, `atlas_id_apps`, `design_assets`; needs a platform key).
+Every Backend API operation is available on the client: `users`, `sessions`, `organizations` (with `memberships`, `invitations`, `domains`, `group_roles`, `audit_streams`, `end_users`, `reader_domain`, settings, design and branding), `roles`, `permissions`, `oauth_clients`, `resource_servers`, `sso_connections`, `scim_tokens`, `scim_provisioning`, `domains`, `waitlist`, `allowlist`, `blocklist`, `attack_protection`, `actor_tokens`, `invitations`, `webhooks`, `sign_in_tokens`, `audit_logs`, `audit_events`, `jwt_templates`, `api_keys`, `oauth_providers`, `sso_onboarding`, `fga`, `openfga`, `rate_limit_policy`, `risk_based_mfa`, `bot_signals`, `network_acls`, `managed_waf`, `log_streams`, `branding`, `design`, `email_templates`, `sms_templates`, `localizations`, `actions`, `billing`, `messaging`, `import_export`, `data_subject_requests`, `radius_clients`, `lti_platforms`, `instance` (incl. `preflight` and cookie consent), `instance_security`, `tokens`, `email_addresses`, `organization_settings_schema`, `entitlement_overrides`, `machines` (incl. enrolment tokens), `connectors`, `directory`, `diagnostics`, `config_changelog`, `events`, `usage`, `legacy_auth_connection`, `mcp`, `mcp_connector`, `notifications` (with `categories` and `templates`), `org_ldap_connections`, `policies` (with `versions` and `settings`), `policy_source`, `pca`, `redirect_urls`, `session_exchange_apps`, `tickets`, `captcha`, `testing` (development-instance helpers), and `platform` (`apps`, `atlas_id_apps`, `design_assets`; needs a platform key).
 
 Anything not wrapped yet can be called directly: `atlas.transport.request(method: :get, path: "/v1/...")`.
 
