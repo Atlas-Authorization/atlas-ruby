@@ -12,7 +12,7 @@ module Atlas
     # +referral_code+, +referral_link+). A late answer arrives as the
     # +user.referral_resolved+ webhook (and +user.referral_attributed+ when it
     # attributes the user). +provider+ is +webhook+ (the Atlas referral
-    # protocol), +referally+ or another built-in adapter. +signing_secret+,
+    # protocol), +referalli+ or another built-in adapter. +signing_secret+,
     # +api_key+ and +inbound_secret+ are write-only: reads return
     # +signing_secret_set+ / +api_key_set+ / +inbound.secret_set+.
     class Referrals < Base
@@ -39,7 +39,7 @@ module Atlas
       # platform's subscription id); +nil+ clears either.
       #
       # Browser capture: +browser_sources+ lists the referral programs whose
-      # script or cookie the browser reads, in order (+referally+, +rewardful+,
+      # script or cookie the browser reads, in order (+referalli+, +rewardful+,
       # +tolt+, +promotekit+, +firstpromoter+, +partnerstack+, +dub+; +nil+
       # goes back to the provider's default, reported by
       # +browser_sources_default+), and +consent_provider+ picks the consent
@@ -107,6 +107,19 @@ module Atlas
       # +users_skipped+, +calls_queued+, +truncated+, +next_since+, +calls+.
       def get_backfill(id)
         request(method: :get, path: "/v1/instance/referrals/backfill/#{enc(id)}")
+      end
+
+      # +POST /v1/instance/referrals/:preset/install+ — install a provider preset
+      # (body: +return_to+) and get the +ReferralInstall+ (where to finish the connection).
+      #
+      # Settings also carry +context_cookies+ (Array), +provider_aliases+ (an old id
+      # such as +referalli+ still resolves to +referalli+), +capabilities+,
+      # +one_click+ and +one_click_presets+; +providers[]+ carry +aliases+ and
+      # +default_context_cookies+; +connection.last_ping+ carries
+      # +advertised_capabilities+. Writes accept +context_cookie+ as a String, an
+      # Array or +nil+, and +context_cookies+.
+      def install(preset, body = {}, idempotency_key: nil)
+        request(method: :post, path: "/v1/instance/referrals/#{enc(preset)}/install", body: body, idempotency_key: idempotency_key)
       end
 
       # +GET /v1/users/:id/referral+ — the stored result for one user (+status+,

@@ -7,6 +7,7 @@ module Atlas
     # +/v1/entitlement_overrides+ — sales-led plan, feature and limit grants without Stripe.
     class EntitlementOverrides < Base
       # +POST /v1/entitlement_overrides+ — pin a plan, features or limits onto a user or organization without Stripe.
+      # Overrides carry +internal+ (hidden from the customer); the create body accepts it too.
       def create(body, idempotency_key: nil)
         request(method: :post, path: "/v1/entitlement_overrides", body: body, idempotency_key: idempotency_key)
       end

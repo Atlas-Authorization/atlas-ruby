@@ -122,7 +122,7 @@ class ReferralsTest < Minitest::Test
     assert_equal "REFERRALS_NOT_CONFIGURED", Atlas::ErrorCode::REFERRALS_NOT_CONFIGURED
   end
   def test_v2_settings_fields_ping_test_and_call_paging
-    settings = SETTINGS.merge("provider" => "referally", "tracking_token" => "tt_public_1", "signup_code_field" => true,
+    settings = SETTINGS.merge("provider" => "referalli", "tracking_token" => "tt_public_1", "signup_code_field" => true,
                               "include_referral_claims" => true,
                               "connection" => { "last_ping" => { "ok" => true, "org_name" => "Acme", "clock_skew_warning" => true },
                                                 "alert" => { "code" => "signature_rejected", "message" => "401", "at" => 9 } })
@@ -132,9 +132,9 @@ class ReferralsTest < Minitest::Test
     assert_equal "signature_rejected", view["connection"]["alert"]["code"]
 
     @http.enqueue(body: settings)
-    @client.referrals.update({ provider: "referally", tracking_token: "tt_public_1", code_lookup_url: nil,
+    @client.referrals.update({ provider: "referalli", tracking_token: "tt_public_1", code_lookup_url: nil,
                                forward_lifecycle: false, mirror_to_public_metadata: true, include_referral_claims: true })
-    assert_equal({ "provider" => "referally", "tracking_token" => "tt_public_1", "code_lookup_url" => nil,
+    assert_equal({ "provider" => "referalli", "tracking_token" => "tt_public_1", "code_lookup_url" => nil,
                    "forward_lifecycle" => false, "mirror_to_public_metadata" => true, "include_referral_claims" => true },
                  JSON.parse(@http.last.body))
 

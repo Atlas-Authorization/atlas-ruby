@@ -208,4 +208,44 @@ module Atlas
       raise InvalidLogoutTokenError.new(reason, message)
     end
   end
+
+  # A Rack endpoint for the back-channel logout URL (Sinatra, Hanami, Roda, Rails
+  # routes: +mount Atlas::BackchannelLogoutApp.new(...), at: "/atlas/logout"+).
+  # It reads the +logout_token+ form field, verifies it with {BackchannelLogout}
+  # and calls your block with the {LogoutTokenClaims}; the answer follows the
+  # spec: 200 on success, 400 for a final refusal, 503 + +Retry-After+ when the
+  # issuer's keys are unreachable (Atlas retries).
+  #
+  #   run Atlas::BackchannelLogoutApp.new(logout: verifier) { |claims| Sessions.revoke(sid: claims.sid, sub: claims.sub) }
+  class BackchannelLogoutApp
+    def initialize(logout:, retry_after: 30, &on_logout)
+      raise ArgumentError, "BackchannelLogoutApp needs an on_logout block" unless on_logout
+
+      @logout = logout
+      @retry_after = retry_after
+      @on_logout = on_logout
+    end
+
+    def call(env)
+      return respond(405, "method not allowed", "Allow" => "POST") unless env["REQUEST_METHOD"] == "POST"
+
+      form = URI.decode_www_form(env["rack.input"].read.to_s).to_h
+      env["rack.input"].rewind if env["rack.input"].respond_to?(:rewind)
+      claims = @logout.verify(form["logout_token"])
+      @on_logout.call(claims)
+      respond(200, "")
+    rescue InvalidLogoutTokenError => e
+      if e.retryable?
+        respond(503, "keys unavailable", "Retry-After" => @retry_after.to_s)
+      else
+        respond(400, "invalid logout token")
+      end
+    end
+
+    private
+
+    def respond(status, body, extra = {})
+      [status, { "content-type" => "text/plain", "cache-control" => "no-store" }.merge(extra), [body]]
+    end
+  end
 end

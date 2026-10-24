@@ -1,5 +1,33 @@
 # Changelog
 
+## 0.17.0 — 2026-10-24
+
+### Added
+
+- **Credentials.** `whoami.get`, `secret_keys` (`create` with `key_format` / `secret_recipient` / `dry_run:`, `list` with a `metadata:` filter, `get`, `update`, `rotate`, `revoke`), `keys.list`, `keys.revoke_leaked`, `keys.operator`, `keys.exchange_token` / `client_credentials` / `token_exchange` (`POST /v1/oauth/token`, form-encoded), `partner_links` (`create`, `list`, `get`, `rotate_secret`, `revoke`, `outbound.list/save/test/remove`) and `atlas_id_apps` grants (`list_apps`, `lookup`, `revoke_grant`). Platform: `platform.whoami`, `platform.keys` (`list`, `create`, `update`, `revoke`), `platform.audit.list` and `platform.audit.streams` (CRUD + `test`).
+- **Privacy executor.** `privacy` (`discover`, `preset`, `lookup`, `create_request`, `get_request`, `cancel_request`, `orchestrator.get/set/delete`); `Atlas::Privacy.verify_orchestrator_call` (verifies a signed case call or `privacy_request.updated` / `.completed` webhook), `valid_idempotency_key?`, `privacy_event?`. Data subject requests document the new fields (`canonical_type`, `source`, `detail`, `case_id`, `external_case`, `trace_id`, `steps`, `retention`, `deletion_effective_at`) and the `restriction` / `rectification` types.
+- **Integrations.** `integrations` (`list`, `get`, `set` / `delete` with `dry_run:`, `deliveries` with `trace`, `events_secret`, `atlas_id_tokens`, `report_verify_error`, `card`, `card_revoke_sessions`, `public_instance`) and the server-side mint `integrations.get_token(session_id, for: "referalli")` / `sessions.get_token(id, for:)` (`POST /v1/sessions/:id/integration_tokens/:integration`).
+- **Webhook endpoints.** `webhooks.endpoints.get`, `put_by_url`, `redeliver`, `replay`, `test(id, wait:)`, `create(dry_run:)`, `list` with `metadata:` and `starting_after`; delivery log params `status`, `event_type`, `since`, `until`, `starting_after` (limit up to 1000); `webhooks.delivery_health` / `delivery_health` (`get`, `set_alert_contacts`), `meta.egress_ips`. `Atlas::Webhook.verify(url:, require_v2:)` checks `v2` signatures (HMAC over `id.ts.url.body`, so a delivery replayed to another URL fails) and ignores unknown versions.
+- **Status.** `status.get`, `status.subscription` (`get`, `set`, `delete`, `rotate_feed`), `status.incidents`, `status.dependencies` (CRUD + `refresh`).
+- **Notices, advisories, exports.** `notices` (`list`, `acknowledge`), `security_advisories` (`list`, `acknowledge`, `list_public`), `audit_exports` (CRUD, `test`, `rotate_secret`), `sub_processors.list`, `entitlements.get`, `integration_health` (`get`, `providers`), `embed` (`get`, `csp`), `openapi` (`diff`, `api_catalog`), `instance.unknown_fields_report`, `instance.preflight_filtered` (`min_severity`, `include_suppressed`), `messaging.get_channel`.
+- **Platform apps.** `platform.apps.create(dry_run:)` / `update(dry_run:)` / `bulk_delete(metadata:, dry_run:)`, `list` with a `metadata:` filter, `create_secret_key`, `clone_config`; bodies take `external_ref` and `metadata`.
+- **Referrals.** `referrals.install(preset)`; provider id `referalli` (the old `referally` still resolves: `Atlas::REFERRAL_PROVIDER_ALIASES`); `context_cookies`, `provider_aliases`, `capabilities`, `one_click`. Entitlement overrides carry `internal`.
+- **Errors.** `INSUFFICIENT_SCOPE` (alias of `SCOPE_MISSING`, still tolerated: `APIError#insufficient_scope?`, `#required_scope`), `STEP_UP_REQUIRED` (`#step_up_required?`), `ROUTE_NOT_FOUND` with `#did_you_mean`, `#allowed_methods`, `#docs_url`, `PARTNER_LINK_UNAVAILABLE`, `NOT_A_LIVE_INSTANCE`, `TEST_MODE_ONLY`, `TESTING_UNAVAILABLE`.
+- **Tracing and keys.** `Atlas::Client.new(key, traceparent:)` / `with_options(traceparent:)` send a W3C `traceparent` on every request; `Atlas::Trace` (`generate`, `parse`, `child`, `valid?`, `from_headers`). `Atlas::KeyFormat` recognises `atlas_<env>_<kind>_...` alongside `sk_` / `pk_` / `psk_` / `whsec_`.
+- **Back-channel logout.** `Atlas::BackchannelLogoutApp`, a Rack endpoint that verifies the `logout_token` and answers 200 / 400 / 503 + `Retry-After`.
+- **Constants.** New webhook event names (privacy, secret key, webhook endpoint and delivery target health, `webhook.test`, `status.incident.*`, `user.deletion_*`), `WEBHOOK_EVENT_NAMING`, `WEBHOOK_SIGNATURE_VERSIONS`, the new scopes and preflight codes.
+- **Gap fixes.** OIDC relying parties: `Atlas::OIDC.organization_of` (`org_id`, `org_slug`, `org_role`, `org_permissions`), `organizations_of` (the `orgs` claim of the `organizations` scope, `Atlas::OIDC::SCOPE_ORGANIZATIONS`), `sso_of` (`sso_connection_id`, `sso_tenant_id`, `sso_issuer`, `sso_domain`) and `authorize_url_with_organization` (the `organization` authorize parameter). Partner link requests: `partner_links.requests` (`list`, `get`, `approve`, `deny`), `partner_links.set_certificates` (mTLS `cert_fingerprints`), `partner_links.outbound.request_link`; for a partner product `Atlas::PartnerLinkRequests.create` / `get` / `verify_delivery` (the signed `partner_link.credentials` / `partner_link.denied` delivery). Keys document `owner`, `expires_at` (default one year, never longer) and `allowed_origins`; `ORIGIN_NOT_ALLOWED` with `APIError#origin_not_allowed?`. Webhook replay and redelivery accept `since: "failing_since"` (`Atlas::WEBHOOK_REPLAY_SINCE_FAILING`); endpoints report `last_failing_since`. `Atlas::AtlasIdTokens.fetch` calls the browser route `POST /v1/client/integrations/:id/atlas_id_tokens` for Sign in with Atlas users (Bearer or DPoP).
+- Lists on the new routes are cursor-paginated (`starting_after` / `next_cursor`), so `Atlas.paginate` works with them.
+
+### Changed
+
+- The referral provider is `referalli` throughout (`referally` is still accepted by the server).
+
+### Not covered
+
+- Sealed-box (`secret_recipient`) opening: it needs libsodium, which the gem does not depend on. Pass the recipient key and open `sealed_secret` with `rbnacl` or `libsodium`.
+- Device-flow login helpers for CLIs: this SDK has no CLI.
+
 ## 0.16.0 — 2026-10-24
 
 ### Added
@@ -68,7 +96,7 @@
 ## 0.10.0
 
 - **Referral attribution v2.** `referrals.retry_failed(body = {}, idempotency_key: nil)` (`POST /v1/instance/referrals/calls/retry_failed`; `kind`, `error_code`; returns `requeued`), `referrals.simulate(code: nil)` (`POST /v1/instance/referrals/simulate`; `call_id`, `customer_ref`, `result`, `response`, `error`), `referrals.backfill(body, idempotency_key: nil)` and `referrals.get_backfill(id)` (`POST /v1/instance/referrals/backfill`, `GET /v1/instance/referrals/backfill/:id`; body `since`, `codes`, `code_metadata_path`; job `users_scanned`, `users_skipped`, `calls_queued`, `truncated`, `next_since`, `calls`), and `referrals.get_for_user(user_id)` (`GET /v1/users/:id/referral`).
-- **Settings.** The referral settings gain `tracking_token`, `code_lookup_url`, `signup_code_field`, `forward_lifecycle`, `mirror_to_public_metadata` and `include_referral_claims` (read and write). `provider` can be `referally`. Provider capabilities gain `alias`, `user` and `ping`. `connection` gains `last_ping` and `alert` (`signature_rejected` or `connection_paused`). `referrals.test` returns `method` (`ping` or `probe`), `ping` and `warnings`.
+- **Settings.** The referral settings gain `tracking_token`, `code_lookup_url`, `signup_code_field`, `forward_lifecycle`, `mirror_to_public_metadata` and `include_referral_claims` (read and write). `provider` can be `referalli`. Provider capabilities gain `alias`, `user` and `ping`. `connection` gains `last_ping` and `alert` (`signature_rejected` or `connection_paused`). `referrals.test` returns `method` (`ping` or `probe`), `ping` and `warnings`.
 - **Call log.** `list_calls` takes `error_code` and `starting_after`; `limit` goes up to 1000. Kinds add `alias`, `user` and `ping`; calls carry `latency_ms`, `error_code`, `response`, `highlights`, `request_id` and `batch_id`.
 - **Users.** New `users.set_external_id(id, external_id)` (`PATCH /v1/users/:id`; `nil` clears; with referrals on, the change is forwarded to the platform as an alias). The user `referral` gains `partner_external_ref`, `referral_status` and `notes`. New event `user.referral_resolved` (`data` is the full user).
 - **before_user_create hook.** New `user_hooks` namespace: `get_before_user_create`, `update_before_user_create(body, idempotency_key: nil)` and `test_before_user_create` (`/v1/instance/hooks/before_user_create`). The hook call is signed like a webhook with type `user.before_create`; verify it with `Atlas::Webhook.verify`.

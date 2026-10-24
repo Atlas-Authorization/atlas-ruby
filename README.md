@@ -257,7 +257,7 @@ With referral attribution on, Atlas reports every interactive sign-up to your re
 ```ruby
 atlas.referrals.update({
   enabled: true,
-  provider: "webhook", # the Atlas referral protocol; or "referally" or another built-in adapter
+  provider: "webhook", # the Atlas referral protocol; or "referalli" or another built-in adapter
   endpoint_url: "https://referrals.example.com/atlas",
   signing_secret: ENV.fetch("REFERRAL_SIGNING_SECRET"),
   security: { on_high_risk: "hold" }
@@ -452,9 +452,37 @@ signed = Atlas::PolicySourceProtocol.sign_event(event: { type: "policy.published
 Net::HTTP.post(URI(webhook_url), signed.body, { "content-type" => "application/json" }.merge(signed.headers))
 ```
 
+## Integrator platform (0.17)
+
+```ruby
+atlas = Atlas::Client.new(ENV.fetch("ATLAS_SECRET_KEY"), traceparent: Atlas::Trace.generate)
+atlas.whoami.get                                   # the key in use: kind, scopes, expiry
+key = atlas.secret_keys.create({ name: "ci", scopes: ["users:read"] })   # key["secret"] is shown once
+atlas.privacy.lookup({ emails: ["ada@example.com"] })                     # data-rights executor (privacy:execute)
+atlas.integrations.get_token("sess_123", for: "referalli")                # server-side integration token
+atlas.webhooks.endpoints.test("we_1", wait: 10)
+atlas.platform.apps.create({ external_ref: "crm-42", metadata: { team: "a" } }, dry_run: true)
+```
+
+Verify a webhook that also signs the URL (`signature_versions` including `v2`) with
+`Atlas::Webhook.verify(body:, headers:, secret:, url: endpoint_url)`. Any `sk_` / `psk_` check should
+accept the new `atlas_<env>_<kind>_...` form too: `Atlas::KeyFormat.secret_key?(key)`. Mount
+`Atlas::BackchannelLogoutApp.new(logout: verifier) { |claims| ... }` for back-channel logout.
+`INSUFFICIENT_SCOPE` replaces `SCOPE_MISSING`; use `error.insufficient_scope?` to match both.
+
+Partner links need no pasted key: a partner calls `Atlas::PartnerLinkRequests.create(...)`, you
+`approve` or `deny` it with `atlas.partner_links.requests`, and Atlas delivers the credentials to the
+partner's callback, which checks them with `Atlas::PartnerLinkRequests.verify_delivery`. Secret keys
+take `owner`, `expires_at` (one year by default, never longer) and `allowed_origins` (a call from another
+browser origin is refused with `ORIGIN_NOT_ALLOWED`: `error.origin_not_allowed?`). Replay what an endpoint
+missed with `atlas.webhooks.endpoints.replay(id, { since: "failing_since" })`. For OIDC relying parties,
+`Atlas::OIDC.organization_of(claims)`, `organizations_of` (scope `organizations`) and `sso_of` read the
+`org_*`, `orgs` and `sso_*` claims. `Atlas::AtlasIdTokens.fetch(...)` is the browser
+`atlas_id_tokens` route for Sign in with Atlas users.
+
 ## Resources
 
-Every Backend API operation is available on the client: `users`, `sessions`, `organizations` (with `memberships`, `invitations`, `domains`, `group_roles`, `audit_streams`, `end_users`, `reader_domain`, settings, design and branding), `roles`, `permissions`, `oauth_clients`, `resource_servers`, `sso_connections`, `scim_tokens`, `scim_provisioning`, `domains`, `waitlist`, `allowlist`, `blocklist`, `attack_protection`, `actor_tokens`, `invitations`, `webhooks`, `sign_in_tokens`, `audit_logs`, `audit_events`, `jwt_templates`, `api_keys`, `oauth_providers`, `sso_onboarding`, `fga`, `openfga`, `rate_limit_policy`, `risk_based_mfa`, `bot_signals`, `network_acls`, `managed_waf`, `log_streams`, `branding`, `design`, `email_templates`, `sms_templates`, `localizations`, `actions`, `billing`, `messaging`, `import_export`, `data_subject_requests`, `radius_clients`, `lti_platforms`, `instance` (incl. `preflight` and cookie consent), `instance_security`, `tokens`, `email_addresses`, `organization_settings_schema`, `entitlement_overrides`, `machines` (incl. enrolment tokens), `connectors`, `directory`, `diagnostics`, `config_changelog`, `events`, `usage`, `legacy_auth_connection`, `mcp`, `mcp_connector`, `notifications` (with `categories` and `templates`), `org_ldap_connections`, `policies` (with `versions` and `settings`), `policy_source`, `pca`, `redirect_urls`, `session_exchange_apps`, `tickets`, `captcha`, `testing` (development-instance helpers), and `platform` (`apps`, `atlas_id_apps`, `design_assets`; needs a platform key).
+Every Backend API operation is available on the client: `users`, `sessions`, `organizations` (with `memberships`, `invitations`, `domains`, `group_roles`, `audit_streams`, `end_users`, `reader_domain`, settings, design and branding), `roles`, `permissions`, `oauth_clients`, `resource_servers`, `sso_connections`, `scim_tokens`, `scim_provisioning`, `domains`, `waitlist`, `allowlist`, `blocklist`, `attack_protection`, `actor_tokens`, `invitations`, `webhooks`, `sign_in_tokens`, `audit_logs`, `audit_events`, `jwt_templates`, `api_keys`, `oauth_providers`, `sso_onboarding`, `fga`, `openfga`, `rate_limit_policy`, `risk_based_mfa`, `bot_signals`, `network_acls`, `managed_waf`, `log_streams`, `branding`, `design`, `email_templates`, `sms_templates`, `localizations`, `actions`, `billing`, `messaging`, `import_export`, `data_subject_requests`, `radius_clients`, `lti_platforms`, `instance` (incl. `preflight` and cookie consent), `instance_security`, `tokens`, `email_addresses`, `organization_settings_schema`, `entitlement_overrides`, `machines` (incl. enrolment tokens), `connectors`, `directory`, `diagnostics`, `config_changelog`, `events`, `usage`, `legacy_auth_connection`, `mcp`, `mcp_connector`, `notifications` (with `categories` and `templates`), `org_ldap_connections`, `policies` (with `versions` and `settings`), `policy_source`, `pca`, `redirect_urls`, `session_exchange_apps`, `tickets`, `captcha`, `whoami`, `secret_keys`, `keys`, `partner_links`, `privacy`, `integrations`, `status`, `notices`, `security_advisories`, `audit_exports`, `sub_processors`, `entitlements`, `integration_health`, `embed`, `openapi`, `delivery_health`, `meta`, `testing` (development-instance helpers), and `platform` (`apps`, `atlas_id_apps`, `design_assets`; needs a platform key).
 
 Anything not wrapped yet can be called directly: `atlas.transport.request(method: :get, path: "/v1/...")`.
 

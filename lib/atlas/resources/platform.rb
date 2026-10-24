@@ -26,6 +26,75 @@ module Atlas
         @atlas_id_publisher ||= AtlasIdPublisher.new(@transport)
       end
 
+      # +GET /v1/platform/whoami+ — introspect the platform key / token in use.
+      def whoami
+        request(method: :get, path: "/v1/platform/whoami")
+      end
+
+      # +/v1/platform/keys+ — every credential on the account and minting/revoking them.
+      def keys
+        @keys ||= Keys.new(@transport)
+      end
+
+      # +/v1/platform/audit_logs+ and +/v1/platform/audit_streams+ — the account audit log.
+      def audit
+        @audit ||= Audit.new(@transport)
+      end
+
+      class Keys < Base
+        # +params+: +kind+, +status+, +instance_id+.
+        def list(params = {})
+          request(method: :get, path: "/v1/platform/keys", query: params.empty? ? nil : params)
+        end
+
+        # Body: +scopes+ (a subset of the caller's), +name+, +application_ids+, +expires_at+,
+        # +ip_allowlist+, +owner+, +key_format+ (+atlas+ / +legacy+), +secret_recipient+.
+        def create(body, idempotency_key: nil)
+          request(method: :post, path: "/v1/platform/keys", body: body, idempotency_key: idempotency_key)
+        end
+
+        def update(id, body)
+          request(method: :patch, path: "/v1/platform/keys/#{enc(id)}", body: body)
+        end
+
+        def revoke(id)
+          request(method: :post, path: "/v1/platform/keys/#{enc(id)}/revoke")
+        end
+      end
+
+      class Audit < Base
+        # +params+: +limit+, +starting_after+, +action+.
+        def list(params = {})
+          request(method: :get, path: "/v1/platform/audit_logs", query: params.empty? ? nil : params)
+        end
+
+        def streams
+          @streams ||= Streams.new(@transport)
+        end
+
+        class Streams < Base
+          def list
+            request(method: :get, path: "/v1/platform/audit_streams")
+          end
+
+          def create(body)
+            request(method: :post, path: "/v1/platform/audit_streams", body: body)
+          end
+
+          def update(id, body)
+            request(method: :patch, path: "/v1/platform/audit_streams/#{enc(id)}", body: body)
+          end
+
+          def delete(id)
+            request(method: :delete, path: "/v1/platform/audit_streams/#{enc(id)}")
+          end
+
+          def test(id)
+            request(method: :post, path: "/v1/platform/audit_streams/#{enc(id)}/test")
+          end
+        end
+      end
+
       # +GET /v1/platform/config_changelog+ — config change history for the
       # account's Sign in with Atlas apps (+action:+, +limit:+,
       # +starting_after:+, +since:+). Same entry shape as +config_changelog.list+.
@@ -36,13 +105,17 @@ module Atlas
       # +/v1/platform/apps+ — apps (instances) your platform provisions and owns.
       class Apps < Base
         # +GET /v1/platform/apps+ — the apps this platform owns (include_archived:, archived:, tag:).
+        # Also a +metadata:+ Hash filter (sent as +metadata[key]=value+).
         def list(params = {})
-          request(method: :get, path: "/v1/platform/apps", query: params)
+          request(method: :get, path: "/v1/platform/apps", query: Atlas::Resources.metadata_query(params))
         end
 
         # +POST /v1/platform/apps+ — provision a new app. Its secret key is returned once.
-        def create(body = {}, idempotency_key: nil)
-          request(method: :post, path: "/v1/platform/apps", body: body, idempotency_key: idempotency_key)
+        # The body takes +external_ref+ and +metadata+; the response echoes them plus
+        # +idempotent_replay+. +dry_run: true+ validates and writes nothing.
+        def create(body = {}, idempotency_key: nil, dry_run: false)
+          request(method: :post, path: "/v1/platform/apps", body: body, idempotency_key: idempotency_key,
+                  query: Atlas::Resources.dry_run_query(dry_run))
         end
 
         # +GET /v1/platform/apps/:id+ — one owned app.
@@ -55,8 +128,20 @@ module Atlas
         # (+"redirect"+ | +"embedded"+ | +"auto"+), as on +instance.update+. App objects
         # carry +frontend_api_host+, +issuer+, +discovery_url+, +jwks_uri+ and
         # +allowed_origin_integrations+.
-        def update(id, body)
-          request(method: :patch, path: "/v1/platform/apps/#{enc(id)}", body: body)
+        def update(id, body, dry_run: false)
+          request(method: :patch, path: "/v1/platform/apps/#{enc(id)}", body: body, query: Atlas::Resources.dry_run_query(dry_run))
+        end
+
+        # +POST /v1/platform/apps/:id/secret_keys+ — mint an additional secret key for the app (revealed once).
+        def create_secret_key(id, body = {}, idempotency_key: nil)
+          request(method: :post, path: "/v1/platform/apps/#{enc(id)}/secret_keys", body: body, idempotency_key: idempotency_key)
+        end
+
+        # +POST /v1/platform/apps/:id/clone_config+ — copy configuration from another app
+        # (body: +from_app_id+ ... ). +dry_run: true+ previews.
+        def clone_config(id, body, dry_run: false)
+          request(method: :post, path: "/v1/platform/apps/#{enc(id)}/clone_config", body: body,
+                  query: Atlas::Resources.dry_run_query(dry_run))
         end
 
         # +DELETE /v1/platform/apps/:id+ — disable an owned app (soft and reversible).
@@ -75,8 +160,13 @@ module Atlas
         end
 
         # +POST /v1/platform/apps/bulk_delete+ — disable up to 100 owned apps in one call.
-        def bulk_delete(ids)
-          request(method: :post, path: "/v1/platform/apps/bulk_delete", body: { ids: ids })
+        # +metadata:+ selects apps by metadata instead of ids; +dry_run: true+ lists what would be deleted.
+        def bulk_delete(ids = nil, metadata: nil, dry_run: false)
+          body = {}
+          body[:ids] = ids unless ids.nil?
+          body[:metadata] = metadata unless metadata.nil?
+          body[:dry_run] = true if dry_run
+          request(method: :post, path: "/v1/platform/apps/bulk_delete", body: body)
         end
 
         # +POST /v1/platform/apps/:id/instances+ — provision an additional instance under an owned app. Its secret key is returned once.

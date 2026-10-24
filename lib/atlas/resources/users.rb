@@ -12,6 +12,9 @@ module Atlas
       # +banned+, +email_verified+, +organization_id+, +created_after+ /
       # +created_before+ (epoch ms), +order_by+ (+created_at+, +-created_at+,
       # +last_sign_in_at+, +-last_sign_in_at+) and +include_total_count+.
+      # +params+ include +limit+, +starting_after+ (cursor; reads +next_cursor+),
+      # +updated_after+ / +updated_before+ (epoch ms or ISO 8601) and
+      # +order_by+ (+updated_at+ or +-updated_at+) for incremental syncs.
       def list(params = {})
         request(method: :get, path: "/v1/users", query: params)
       end

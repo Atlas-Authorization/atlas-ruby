@@ -34,15 +34,21 @@ module Atlas
 
     module_function
 
-    def verify(body:, headers:, secret:, now_ms: nil, tolerance_ms: REPLAY_TOLERANCE_MS)
+    # +url:+ is the exact URL Atlas POSTed to (your endpoint's +url+). When given,
+    # +v2+ entries — HMAC over +"<id>.<ts>.<url>.<body>"+, for endpoints whose
+    # +signature_versions+ include +v2+ — are checked too, so a delivery replayed
+    # to another URL fails. +require_v2: true+ accepts only a +v2+ entry (needs +url+).
+    # Entries of unknown versions are ignored.
+    def verify(body:, headers:, secret:, now_ms: nil, tolerance_ms: REPLAY_TOLERANCE_MS, url: nil, require_v2: false)
       raw = body.to_s
       id = header(headers, "atlas-id")
       ts_raw = header(headers, "atlas-timestamp")
       signature = header(headers, "atlas-signature")
       return failure(:missing_headers) if blank?(id) || blank?(ts_raw) || blank?(signature)
 
-      provided = signatures(signature)
-      return failure(:malformed_signature) if provided.empty?
+      provided = require_v2 ? [] : signatures(signature)
+      provided_v2 = url.nil? ? [] : signatures(signature, "v2")
+      return failure(:malformed_signature) if provided.empty? && provided_v2.empty?
 
       timestamp = Integer(ts_raw.strip, 10) rescue nil
       return failure(:stale_timestamp) if timestamp.nil?
@@ -54,6 +60,12 @@ module Atlas
       expected = Base64.strict_encode64(mac)
       # Compare every entry (no early exit), each in constant time.
       matched = provided.map { |candidate| secure_compare(expected, candidate) }.any?
+      unless url.nil?
+        mac2 = OpenSSL::HMAC.digest("SHA256", secret, "#{id}.#{timestamp}.#{url}.#{raw}")
+        expected2 = Base64.strict_encode64(mac2)
+        matched_v2 = provided_v2.map { |candidate| secure_compare(expected2, candidate) }.any?
+        matched ||= matched_v2
+      end
       return failure(:signature_mismatch) unless matched
 
       event = begin
@@ -65,13 +77,13 @@ module Atlas
       Result.new(verified: true, reason: nil, event: event, delivery_id: id, timestamp: timestamp)
     end
 
-    # The +v1+ signatures in an +atlas-signature+ header: one +v1,<base64>+
+    # The +wanted+ (default +v1+) signatures in an +atlas-signature+ header: one +v1,<base64>+
     # entry, or several separated by spaces (while an endpoint secret rotates,
     # Atlas signs with the old and the new secret). Other versions are skipped.
-    def signatures(header)
+    def signatures(header, wanted = "v1")
       header.split.filter_map do |entry|
         version, value = entry.split(",", 2)
-        value if version == "v1" && !blank?(value)
+        value if version == wanted && !blank?(value)
       end
     end
 

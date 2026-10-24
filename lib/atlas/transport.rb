@@ -45,8 +45,11 @@ module Atlas
     # @return [#call, nil] the unknown-fields callback, if any.
     attr_reader :on_unknown_fields
 
+    # @return [String, nil] a W3C +traceparent+ sent on every request (nil = none).
+    attr_reader :traceparent
+
     def initialize(secret_key:, api_url: DEFAULT_API_URL, http: nil,
-                   open_timeout: 30, read_timeout: 30, strict: nil, on_unknown_fields: nil)
+                   open_timeout: 30, read_timeout: 30, strict: nil, on_unknown_fields: nil, traceparent: nil)
       raise ConfigurationError, "Atlas::Client requires a secret_key." if secret_key.nil? || secret_key.empty?
 
       @secret_key = secret_key
@@ -54,12 +57,14 @@ module Atlas
       @http = http || NetHTTPRequester.new(open_timeout: open_timeout, read_timeout: read_timeout)
       @strict = strict
       @on_unknown_fields = on_unknown_fields
+      @traceparent = traceparent
     end
 
     # A copy of this transport with some settings replaced. The HTTP requester
     # (and its connection settings) is shared.
-    def with(strict: INHERIT, on_unknown_fields: INHERIT)
+    def with(strict: INHERIT, on_unknown_fields: INHERIT, traceparent: INHERIT)
       copy = dup
+      copy.instance_variable_set(:@traceparent, traceparent) unless traceparent.equal?(INHERIT)
       copy.instance_variable_set(:@strict, strict) unless strict.equal?(INHERIT)
       copy.instance_variable_set(:@on_unknown_fields, on_unknown_fields) unless on_unknown_fields.equal?(INHERIT)
       copy
@@ -99,6 +104,7 @@ module Atlas
         payload = JSON.generate(body)
       end
       headers["idempotency-key"] = idempotency_key if idempotency_key
+      headers["traceparent"] = @traceparent if @traceparent && !@traceparent.to_s.empty?
       extra&.each do |name, value|
         key = name.to_s.downcase
         headers[key] = value.to_s unless key == "authorization" || value.nil?

@@ -48,9 +48,55 @@ module Atlas
       @errors.any? { |e| (e["code"] || e[:code]) == code }
     end
 
+    # Both the current and the legacy code for a missing scope.
+    SCOPE_CODES = %w[INSUFFICIENT_SCOPE SCOPE_MISSING].freeze
+
+    # True for +INSUFFICIENT_SCOPE+ and its legacy alias +SCOPE_MISSING+.
+    def insufficient_scope?
+      SCOPE_CODES.any? { |c| has_code?(c) }
+    end
+
+    # The scope a +INSUFFICIENT_SCOPE+ error says is missing (+meta.required_scope+).
+    def required_scope
+      meta = error_field("meta")
+      meta.is_a?(Hash) ? (meta["required_scope"] || meta[:required_scope]) : nil
+    end
+
+    # True when a browser-origin-locked key was used from another origin (+ORIGIN_NOT_ALLOWED+).
+    def origin_not_allowed?
+      has_code?(ErrorCode::ORIGIN_NOT_ALLOWED)
+    end
+
+    # True when the action needs a step-up (+STEP_UP_REQUIRED+).
+    def step_up_required?
+      has_code?(ErrorCode::STEP_UP_REQUIRED)
+    end
+
+    # Route suggestions on a +ROUTE_NOT_FOUND+ error.
+    def did_you_mean
+      Array(error_field("did_you_mean"))
+    end
+
+    # The methods a +ROUTE_NOT_FOUND+ path does accept.
+    def allowed_methods
+      Array(error_field("allowed_methods"))
+    end
+
+    # Link to the error's page (+https://atlasauth.net/errors/<code>+).
+    def docs_url
+      error_field("docs_url")
+    end
+
     # A short human summary for logs. Never includes the secret key.
     def to_s
       "#{self.class.name}: status=#{@status} code=#{code.inspect} #{super}"
+    end
+
+    private
+
+    def error_field(name)
+      first = @errors.first
+      first && (first[name] || first[name.to_sym])
     end
   end
 
@@ -116,7 +162,25 @@ module Atlas
     NOT_FOUND = "NOT_FOUND"
     VALIDATION_FAILED = "VALIDATION_FAILED"
     RATE_LIMITED = "RATE_LIMITED"
+    # Legacy name of {INSUFFICIENT_SCOPE}; older servers still send it, and the new
+    # code carries it in +meta["legacy_code"]+. Branch on {Atlas::APIError#insufficient_scope?}.
     SCOPE_MISSING = "SCOPE_MISSING"
+    # The key lacks a scope the route needs (+meta["required_scope"]+ names it).
+    INSUFFICIENT_SCOPE = "INSUFFICIENT_SCOPE"
+    # A key locked to +allowed_origins+ was used from another browser origin (403).
+    ORIGIN_NOT_ALLOWED = "ORIGIN_NOT_ALLOWED"
+    # The action needs a fresh second factor (step-up); re-authenticate and retry.
+    STEP_UP_REQUIRED = "STEP_UP_REQUIRED"
+    # No such route (was NOT_FOUND). The item carries +did_you_mean+, +allowed_methods+ and +docs_url+.
+    ROUTE_NOT_FOUND = "ROUTE_NOT_FOUND"
+    # The partner link the call needs is not set up (or not usable).
+    PARTNER_LINK_UNAVAILABLE = "PARTNER_LINK_UNAVAILABLE"
+    # The route only exists on a live instance.
+    NOT_A_LIVE_INSTANCE = "NOT_A_LIVE_INSTANCE"
+    # The route only exists on a test-mode instance.
+    TEST_MODE_ONLY = "TEST_MODE_ONLY"
+    # Test helpers are not available on this deployment.
+    TESTING_UNAVAILABLE = "TESTING_UNAVAILABLE"
     # An idempotency key was reused with a different request (e.g. another unit or amount).
     IDEMPOTENCY_CONFLICT = "IDEMPOTENCY_CONFLICT"
     # A usage debit would exceed one of the API key's spend caps (the +code+ of a refused debit).

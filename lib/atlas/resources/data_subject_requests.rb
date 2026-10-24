@@ -5,6 +5,12 @@ require_relative "base"
 module Atlas
   module Resources
     # +/v1/data_subject_requests+ — the GDPR/DSAR admin surface.
+    #
+    # A request carries +canonical_type+ / +canonicalType+, +source+ (for example
+    # +api+), +detail+, +case_id+, +external_case+, +trace_id+, +steps+,
+    # +retention+ and +deletion_effective_at+. +type+ is +access+, +deletion+,
+    # +closure+, +restriction+, +rectification+ (create also accepts +erase+).
+    # The data-rights executor protocol lives on {Atlas::Resources::Privacy}.
     class DataSubjectRequests < Base
       def list(params = {})
         request(method: :get, path: "/v1/data_subject_requests", query: params)

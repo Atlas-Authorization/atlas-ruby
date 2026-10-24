@@ -55,6 +55,17 @@ module Atlas
       def update_custom_data(id, patch)
         request(method: :patch, path: "/v1/sessions/#{enc(id)}/custom_data", body: { custom_data: patch })
       end
+
+      # +getToken({ for: })+ — mint a token for another product of the suite from
+      # this session, server side (+POST /v1/sessions/:id/integration_tokens/:integration+).
+      # +audience_hint+ is optional.
+      #
+      #   atlas.sessions.get_token("sess_1", for: "referalli")
+      def get_token(id, for:, audience_hint: nil)
+        integration = binding.local_variable_get(:for)
+        body = audience_hint ? { audience_hint: audience_hint } : Atlas::Transport::OMIT
+        request(method: :post, path: "/v1/sessions/#{enc(id)}/integration_tokens/#{enc(integration)}", body: body)
+      end
     end
   end
 end

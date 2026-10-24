@@ -79,6 +79,12 @@ require_relative "resources/testing"
 require_relative "resources/tickets"
 require_relative "resources/usage"
 require_relative "resources/platform"
+require_relative "resources/credentials"
+require_relative "resources/privacy"
+require_relative "resources/integrations"
+require_relative "resources/status"
+require_relative "resources/notices"
+require_relative "resources/misc_v2"
 
 module Atlas
   # The typed management client for the Atlas Backend API — the secret-key
@@ -107,12 +113,15 @@ module Atlas
     #   (+fields+, +method+, +path+) whenever a successful write reports body
     #   fields the endpoint ignored (the +Atlas-Unknown-Fields+ response header).
     #   Handy for logging typos: +->(w) { logger.warn("ignored: #{w.fields}") }+.
+    # @param traceparent [String, nil] a W3C +traceparent+ header value sent on every
+    #   request, so Atlas stores it as the trace of everything the call emits
+    #   (webhook deliveries, referral calls, verify errors). See {Atlas::Trace}.
     def initialize(secret_key, api_url: DEFAULT_API_URL, http: nil,
-                   open_timeout: 30, read_timeout: 30, strict: nil, on_unknown_fields: nil)
+                   open_timeout: 30, read_timeout: 30, strict: nil, on_unknown_fields: nil, traceparent: nil)
       @transport = Transport.new(
         secret_key: secret_key, api_url: api_url, http: http,
         open_timeout: open_timeout, read_timeout: read_timeout,
-        strict: strict, on_unknown_fields: on_unknown_fields
+        strict: strict, on_unknown_fields: on_unknown_fields, traceparent: traceparent
       )
     end
 
@@ -125,9 +134,10 @@ module Atlas
     #   atlas.with_options(strict: false).users.update("user_1", { legacy_field: 1 })
     #
     # @return [Atlas::Client]
-    def with_options(strict: Transport::INHERIT, on_unknown_fields: Transport::INHERIT)
+    def with_options(strict: Transport::INHERIT, on_unknown_fields: Transport::INHERIT, traceparent: Transport::INHERIT)
       copy = self.class.allocate
-      copy.instance_variable_set(:@transport, @transport.with(strict: strict, on_unknown_fields: on_unknown_fields))
+      copy.instance_variable_set(:@transport, @transport.with(strict: strict, on_unknown_fields: on_unknown_fields,
+                                                              traceparent: traceparent))
       copy
     end
 
@@ -212,6 +222,24 @@ module Atlas
     def testing           = @testing ||= Resources::Testing.new(@transport)
     def tickets           = @tickets ||= Resources::Tickets.new(@transport)
     def usage             = @usage ||= Resources::Usage.new(@transport)
+    def whoami            = @whoami ||= Resources::Whoami.new(@transport)
+    def secret_keys       = @secret_keys ||= Resources::SecretKeys.new(@transport)
+    def keys              = @keys ||= Resources::Keys.new(@transport)
+    def partner_links     = @partner_links ||= Resources::PartnerLinks.new(@transport)
+    def atlas_id_apps     = @atlas_id_apps ||= Resources::AtlasIdGrants.new(@transport)
+    def privacy           = @privacy ||= Resources::Privacy.new(@transport)
+    def integrations      = @integrations ||= Resources::Integrations.new(@transport)
+    def status            = @status ||= Resources::Status.new(@transport)
+    def notices           = @notices ||= Resources::Notices.new(@transport)
+    def security_advisories = @security_advisories ||= Resources::SecurityAdvisories.new(@transport)
+    def audit_exports     = @audit_exports ||= Resources::AuditExports.new(@transport)
+    def sub_processors    = @sub_processors ||= Resources::SubProcessors.new(@transport)
+    def entitlements      = @entitlements ||= Resources::Entitlements.new(@transport)
+    def integration_health = @integration_health ||= Resources::IntegrationHealth.new(@transport)
+    def embed             = @embed ||= Resources::Embed.new(@transport)
+    def openapi           = @openapi ||= Resources::OpenApi.new(@transport)
+    def delivery_health   = @delivery_health ||= Resources::DeliveryHealth.new(@transport)
+    def meta              = @meta ||= Resources::Meta.new(@transport)
     # Platform-key surface: construct the client with a +psk_+ key to use it.
     def platform          = @platform ||= Resources::Platform.new(@transport)
   end

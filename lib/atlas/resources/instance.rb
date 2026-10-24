@@ -62,6 +62,20 @@ module Atlas
         request(method: :get, path: "/v1/instance/preflight")
       end
 
+      # +GET /v1/instance/unknown_fields_report+ — which request-body fields your
+      # callers sent that Atlas ignored over the last +days+ (default 7), and
+      # whether it is +safe_to_enable_strict+ request bodies.
+      def unknown_fields_report(days: nil)
+        request(method: :get, path: "/v1/instance/unknown_fields_report", query: days.nil? ? nil : { days: days })
+      end
+
+      # +GET /v1/instance/preflight+ with filters: +min_severity+ and
+      # +include_suppressed+. The report carries +min_severity+, +suppressed+,
+      # +integrations+; findings carry +group+.
+      def preflight_filtered(params = {})
+        request(method: :get, path: "/v1/instance/preflight", query: params.empty? ? nil : params)
+      end
+
       # +POST /v1/instance/move_origin+ — move every URL that points at one
       # origin to another (a domain move), across the instance, its OAuth
       # clients, webhooks, redirect URLs and Sign in with Atlas apps.

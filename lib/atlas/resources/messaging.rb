@@ -58,6 +58,12 @@ module Atlas
       end
 
       # The instance's configured email and SMS providers, secrets omitted.
+      # +GET /v1/messaging_providers/:channel+ — one channel (+email+ / +sms+); 200 with
+      # +configured: false+ when none is set up.
+      def get_channel(channel)
+        request(method: :get, path: "/v1/messaging_providers/#{enc(channel)}")
+      end
+
       def get
         request(method: :get, path: "/v1/messaging_providers")
       end
