@@ -116,12 +116,18 @@ module Atlas
     # @param traceparent [String, nil] a W3C +traceparent+ header value sent on every
     #   request, so Atlas stores it as the trace of everything the call emits
     #   (webhook deliveries, referral calls, verify errors). See {Atlas::Trace}.
+    # @param secret_recipient [String, nil] an +x25519:<base64 public key>+ sent as
+    #   +X-Secret-Recipient+ on every request: each shown-once secret in an answer comes back
+    #   sealed to it (+sealed_secret+, +sealed_client_secret+, +sealed_webhook_secret+, with
+    #   +secrets_sealed+ naming the fields) and the plaintext field is absent.
     def initialize(secret_key, api_url: DEFAULT_API_URL, http: nil,
-                   open_timeout: 30, read_timeout: 30, strict: nil, on_unknown_fields: nil, traceparent: nil)
+                   open_timeout: 30, read_timeout: 30, strict: nil, on_unknown_fields: nil, traceparent: nil,
+                   secret_recipient: nil)
       @transport = Transport.new(
         secret_key: secret_key, api_url: api_url, http: http,
         open_timeout: open_timeout, read_timeout: read_timeout,
-        strict: strict, on_unknown_fields: on_unknown_fields, traceparent: traceparent
+        strict: strict, on_unknown_fields: on_unknown_fields, traceparent: traceparent,
+        secret_recipient: secret_recipient
       )
     end
 
@@ -134,10 +140,12 @@ module Atlas
     #   atlas.with_options(strict: false).users.update("user_1", { legacy_field: 1 })
     #
     # @return [Atlas::Client]
-    def with_options(strict: Transport::INHERIT, on_unknown_fields: Transport::INHERIT, traceparent: Transport::INHERIT)
+    def with_options(strict: Transport::INHERIT, on_unknown_fields: Transport::INHERIT, traceparent: Transport::INHERIT,
+                     secret_recipient: Transport::INHERIT)
       copy = self.class.allocate
       copy.instance_variable_set(:@transport, @transport.with(strict: strict, on_unknown_fields: on_unknown_fields,
-                                                              traceparent: traceparent))
+                                                              traceparent: traceparent,
+                                                              secret_recipient: secret_recipient))
       copy
     end
 

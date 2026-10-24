@@ -187,8 +187,17 @@ module Atlas
     # +/v1/atlas_id_apps+ on the secret-key surface — Sign in with Atlas apps this
     # instance manages and their grants.
     class AtlasIdGrants < Base
+      # The apps this instance manages: +managed_via+ (+instance_toggle+ or +adopted+) and
+      # +button_rendered_origins+ on each.
       def list_apps
         request(method: :get, path: "/v1/atlas_id_apps")
+      end
+
+      # +GET /v1/atlas_id_apps/:id/preflight+ — the setup check of an app this instance manages
+      # (+diagnostics:read+ is enough): +ok+, +findings+, +button_rendered_origins+,
+      # +authorize_requests_7d+, +fallback_origins+, +homepage_includes_script+.
+      def preflight(app_id)
+        request(method: :get, path: "/v1/atlas_id_apps/#{enc(app_id)}/preflight")
       end
 
       # Is this verified email a user of the app? An empty list otherwise.

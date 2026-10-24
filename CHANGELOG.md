@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.18.0 — 2026-10-24
+
+### Added
+
+- **Enterprise SSO claims.** `Atlas::OIDC.sso_of` also returns `organization_id` (`sso_organization_id`, nil for an instance-wide connection) and `type` (`sso_connection_type`, `saml` or `oidc`); it works on ID-token, userinfo and session claims. Scope a per-organization "require SSO" rule on `organization_id`, never on "signed in via SSO".
+- **Adopting a Sign in with Atlas app.** `platform.atlas_id_apps.set_managed_by(id, instance_id_or_nil)` (`PUT /v1/platform/atlas_id_apps/{id}/managed_by`). App objects carry `managed_via` (`instance_toggle` | `adopted`) and `button_rendered_origins`.
+- **Instance-surface app setup check.** `atlas_id_apps.preflight(app_id)` (`GET /v1/atlas_id_apps/{id}/preflight`); both preflights answer `button_rendered_origins`, `authorize_requests_7d`, `fallback_origins`, `homepage_includes_script`.
+- **Dry run.** `Atlas::DryRunResult.from(answer)` reads `mode` (`native` | `rollback` | `plan`), `validated`, `warnings`, `would_return`, `would_return_status`, `suppressed` and `validation_skipped`.
+- **Sealed secrets.** `secret_recipient:` on `Atlas::Client.new` and `with_options` sends `X-Secret-Recipient` on every request, so every route that returns a shown-once secret answers with `sealed_secret` / `sealed_client_secret` / `sealed_webhook_secret` and `secrets_sealed`.
+
 ## 0.17.0 — 2026-10-24
 
 ### Added

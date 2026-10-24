@@ -60,13 +60,13 @@ class GapFixesTest < Minitest::Test
   CLAIMS = {
     "sub" => "u1", "org_id" => "org_1", "org_slug" => "acme", "org_role" => "admin",
     "org_permissions" => ["org:read", 3], "orgs" => [{ "id" => "org_1", "slug" => "acme", "role" => "admin" }, { "slug" => "x" }],
-    "sso_connection_id" => "sso_1", "sso_tenant_id" => "tid", "sso_issuer" => "https://idp", "sso_domain" => "acme.com"
+    "sso_connection_id" => "sso_1", "sso_organization_id" => "org_1", "sso_connection_type" => "saml", "sso_tenant_id" => "tid", "sso_issuer" => "https://idp", "sso_domain" => "acme.com"
   }.freeze
 
   def test_oidc_claims
     assert_equal({ id: "org_1", slug: "acme", role: "admin", permissions: ["org:read"] }, Atlas::OIDC.organization_of(CLAIMS))
     assert_equal [{ id: "org_1", slug: "acme", role: "admin" }], Atlas::OIDC.organizations_of(CLAIMS)
-    assert_equal({ connection_id: "sso_1", tenant_id: "tid", issuer: "https://idp", domain: "acme.com" }, Atlas::OIDC.sso_of(CLAIMS))
+    assert_equal({ connection_id: "sso_1", organization_id: "org_1", type: "saml", tenant_id: "tid", issuer: "https://idp", domain: "acme.com" }, Atlas::OIDC.sso_of(CLAIMS))
     assert_nil Atlas::OIDC.organization_of({ "sub" => "u" })
     assert_nil Atlas::OIDC.organizations_of({ "sub" => "u" })
     assert_nil Atlas::OIDC.sso_of({ "sub" => "u" })

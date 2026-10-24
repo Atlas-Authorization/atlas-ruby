@@ -310,7 +310,8 @@ module Atlas
           request(method: :post, path: "/v1/platform/atlas_id_apps/#{enc(id)}/backchannel_logout/test")
         end
 
-        # +GET /v1/platform/atlas_id_apps/:id/preflight+ — check one app's setup (+ok+, +user_count+, +findings+).
+        # +GET /v1/platform/atlas_id_apps/:id/preflight+ — check one app's setup (+ok+, +user_count+, +findings+, +button_rendered_origins+,
+        # +authorize_requests_7d+, +fallback_origins+, +homepage_includes_script+).
         def preflight(id)
           request(method: :get, path: "/v1/platform/atlas_id_apps/#{enc(id)}/preflight")
         end
@@ -333,6 +334,16 @@ module Atlas
         # from one origin to another (+from:+, +to:+, +dry_run:+).
         def move_origin(id, body)
           request(method: :post, path: "/v1/platform/atlas_id_apps/#{enc(id)}/move_origin", body: body)
+        end
+
+        # +PUT /v1/platform/atlas_id_apps/:id/managed_by+ — hand the app's grant management to an
+        # instance of the same account (+managed_via: "adopted"+), or take it back with +nil+.
+        # That instance's secret key, scoped to +privacy:grants:revoke+ or +atlas_id_apps:*+, then
+        # lists and revokes the app's grants, so a data-rights tool never needs the platform key.
+        # Returns the app plus +changed+.
+        def set_managed_by(id, instance_id)
+          request(method: :put, path: "/v1/platform/atlas_id_apps/#{enc(id)}/managed_by",
+                  body: { instance_id: instance_id })
         end
 
         # +POST /v1/platform/atlas_id_apps/:id/webhook/rotate_secret+ — rotate the

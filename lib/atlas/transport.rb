@@ -48,8 +48,14 @@ module Atlas
     # @return [String, nil] a W3C +traceparent+ sent on every request (nil = none).
     attr_reader :traceparent
 
+    # @return [String, nil] an +x25519:<base64 public key>+ sent as +X-Secret-Recipient+ on every
+    #   request, so every shown-once secret in an answer comes back sealed (+sealed_*+ fields,
+    #   +secrets_sealed+). nil = none.
+    attr_reader :secret_recipient
+
     def initialize(secret_key:, api_url: DEFAULT_API_URL, http: nil,
-                   open_timeout: 30, read_timeout: 30, strict: nil, on_unknown_fields: nil, traceparent: nil)
+                   open_timeout: 30, read_timeout: 30, strict: nil, on_unknown_fields: nil, traceparent: nil,
+                   secret_recipient: nil)
       raise ConfigurationError, "Atlas::Client requires a secret_key." if secret_key.nil? || secret_key.empty?
 
       @secret_key = secret_key
@@ -58,12 +64,14 @@ module Atlas
       @strict = strict
       @on_unknown_fields = on_unknown_fields
       @traceparent = traceparent
+      @secret_recipient = secret_recipient
     end
 
     # A copy of this transport with some settings replaced. The HTTP requester
     # (and its connection settings) is shared.
-    def with(strict: INHERIT, on_unknown_fields: INHERIT, traceparent: INHERIT)
+    def with(strict: INHERIT, on_unknown_fields: INHERIT, traceparent: INHERIT, secret_recipient: INHERIT)
       copy = dup
+      copy.instance_variable_set(:@secret_recipient, secret_recipient) unless secret_recipient.equal?(INHERIT)
       copy.instance_variable_set(:@traceparent, traceparent) unless traceparent.equal?(INHERIT)
       copy.instance_variable_set(:@strict, strict) unless strict.equal?(INHERIT)
       copy.instance_variable_set(:@on_unknown_fields, on_unknown_fields) unless on_unknown_fields.equal?(INHERIT)
@@ -105,6 +113,7 @@ module Atlas
       end
       headers["idempotency-key"] = idempotency_key if idempotency_key
       headers["traceparent"] = @traceparent if @traceparent && !@traceparent.to_s.empty?
+      headers["x-secret-recipient"] = @secret_recipient if @secret_recipient && !@secret_recipient.to_s.empty?
       extra&.each do |name, value|
         key = name.to_s.downcase
         headers[key] = value.to_s unless key == "authorization" || value.nil?
