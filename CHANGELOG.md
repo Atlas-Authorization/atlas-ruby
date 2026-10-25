@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.20.0 — 2026-10-25
+
+### Added
+
+- **Test and review accounts for Sign in with Atlas apps.** `platform.atlas_id_apps.provisioned_accounts` (`list`, `create`, `get`, `remove`, `rotate_password`). A password comes back once, on `create` and `rotate_password`, as `password`, or as `sealed_password` when you pass `secret_recipient:`. Needs the `platform:atlas_id_apps:provision` scope, or `atlas_id_apps:<app id>:provision` for one app.
+- **Verified domains.** `platform.domains` (`list`, `claim`, `check`, with `verify` as an alias, `remove`).
+- **App settings.** `test_mode` and `provisioned_verified_domains_only` on Sign in with Atlas apps (create, update and the app object).
+- `Atlas::ErrorCode::TEST_ACCOUNT_RESTRICTED` (403), `PROVISIONED_ACCOUNT_LIMIT_REACHED` (409) and `DOMAIN_NOT_VERIFIED` (422).
+
 ## 0.19.0 — 2026-10-25
 
 ### Added

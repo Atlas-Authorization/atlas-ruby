@@ -194,6 +194,18 @@ app = platform.atlas_id_apps.create(
 app["client_secret"]                                 # shown once (confidential apps)
 
 platform.atlas_id_apps.rotate_secret(app["id"])
+
+# Test and review accounts (scope platform:atlas_id_apps:provision, or atlas_id_apps:<id>:provision).
+# The password is returned once; pass secret_recipient: to get sealed_password instead.
+acct = platform.atlas_id_apps.provisioned_accounts.create(
+  app["id"], { email: "reviewer@example.com", label: "app-store reviewer" }
+)
+platform.atlas_id_apps.provisioned_accounts.rotate_password(app["id"], acct["id"])
+platform.atlas_id_apps.provisioned_accounts.remove(app["id"], acct["id"])
+
+# Verified domains gate test_mode and provisioned_verified_domains_only.
+domain = platform.domains.claim("example.com")   # publish domain["verification"] as a TXT record
+platform.domains.check(domain["id"])
 asset = platform.design_assets.upload(File.binread("logo.png"), kind: "logo")
 platform.atlas_id_apps.update(app["id"], { branding: { design: { logo: { assetId: asset["asset_id"] } } } })
 platform.apps.list                                   # apps (instances) your platform provisions

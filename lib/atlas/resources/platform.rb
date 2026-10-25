@@ -22,6 +22,12 @@ module Atlas
         @design_assets ||= DesignAssets.new(@transport)
       end
 
+      # +/v1/platform/domains+ — domains the account verified by DNS; they gate test sign-in
+      # mode and the test-account domain restriction.
+      def domains
+        @domains ||= Domains.new(@transport)
+      end
+
       def atlas_id_publisher
         @atlas_id_publisher ||= AtlasIdPublisher.new(@transport)
       end
@@ -357,9 +363,94 @@ module Atlas
           request(method: :post, path: "/v1/platform/atlas_id_apps/#{enc(id)}/webhook/rotate_secret", body: body)
         end
 
+        # +/v1/platform/atlas_id_apps/:id/provisioned_accounts+ — test and review accounts for the app.
+        # Needs the +platform:atlas_id_apps:provision+ scope, or +atlas_id_apps:<app id>:provision+ for one app.
+        def provisioned_accounts
+          @provisioned_accounts ||= AtlasIdProvisionedAccounts.new(@transport)
+        end
+
         # +POST /v1/platform/atlas_id_apps/design/preview+ — preview a Sign in with Atlas app design without saving it.
         def preview_design(design)
           request(method: :post, path: "/v1/platform/atlas_id_apps/design/preview", body: { design: design })
+        end
+      end
+
+      # +/v1/platform/atlas_id_apps/:id/provisioned_accounts+ — Sign in with Atlas test and review accounts:
+      # real accounts confined to the app(s) they were made for (reviewer logins, CI, demos).
+      #
+      # A password comes back exactly once, on {#create} and {#rotate_password}, as +password+ (or as
+      # +sealed_password+ when +secret_recipient:+ — an +x25519:<base64 public key>+ — is given; open it
+      # with libsodium +crypto_box_seal_open+). Store it at once; the account object never shows it again.
+      # Errors: +TEST_ACCOUNT_RESTRICTED+ (403), +PROVISIONED_ACCOUNT_LIMIT_REACHED+ (409),
+      # +DOMAIN_NOT_VERIFIED+ (422); see {Atlas::ErrorCode}.
+      class AtlasIdProvisionedAccounts < Base
+        # +GET /v1/platform/atlas_id_apps/:app_id/provisioned_accounts+ — +data+, plus the account-wide +limit+ and +total+.
+        def list(app_id)
+          request(method: :get, path: base_path(app_id))
+        end
+
+        # +POST /v1/platform/atlas_id_apps/:app_id/provisioned_accounts+ — create a test or review account.
+        #
+        # @param body [Hash] +email+, +label+ (required); +password+ (at least 12 characters; omit and Atlas
+        #   generates one); +email_verified+ (default true); +two_factor_exempt+; +expires_at+ (epoch ms or
+        #   ISO 8601; omit or nil for none).
+        # @param secret_recipient [String, nil] seal the returned password to this key (+sealed_password+).
+        def create(app_id, body, idempotency_key: nil, secret_recipient: nil)
+          request(method: :post, path: base_path(app_id), body: body, idempotency_key: idempotency_key,
+                  headers: recipient_headers(secret_recipient))
+        end
+
+        # +GET /v1/platform/atlas_id_apps/:app_id/provisioned_accounts/:id+ — one account (never a password).
+        def get(app_id, id)
+          request(method: :get, path: "#{base_path(app_id)}/#{enc(id)}")
+        end
+
+        # +DELETE /v1/platform/atlas_id_apps/:app_id/provisioned_accounts/:id+ — delete the account and end
+        # every session and grant it holds (+deleted+, +sessions_ended+).
+        def remove(app_id, id)
+          request(method: :delete, path: "#{base_path(app_id)}/#{enc(id)}")
+        end
+
+        # +POST /v1/platform/atlas_id_apps/:app_id/provisioned_accounts/:id/password+ — a new password (+password:+
+        # at least 12 characters, or omit for a generated one), returned once.
+        def rotate_password(app_id, id, body = Atlas::Transport::OMIT, secret_recipient: nil)
+          request(method: :post, path: "#{base_path(app_id)}/#{enc(id)}/password", body: body,
+                  headers: recipient_headers(secret_recipient))
+        end
+
+        private
+
+        def base_path(app_id)
+          "/v1/platform/atlas_id_apps/#{enc(app_id)}/provisioned_accounts"
+        end
+
+        def recipient_headers(secret_recipient)
+          secret_recipient.to_s.empty? ? nil : { "x-secret-recipient" => secret_recipient }
+        end
+      end
+
+      # +/v1/platform/domains+ — domains the account verified by DNS. They gate test sign-in mode and
+      # the test-account domain restriction.
+      class Domains < Base
+        # +GET /v1/platform/domains+ — +data+ and +verified_domains+.
+        def list
+          request(method: :get, path: "/v1/platform/domains")
+        end
+
+        # +POST /v1/platform/domains+ — claim a domain; the answer carries the TXT +verification+ record to publish.
+        def claim(domain)
+          request(method: :post, path: "/v1/platform/domains", body: { domain: domain })
+        end
+
+        # +POST /v1/platform/domains/:id/verify+ — look the TXT record up now.
+        def check(id)
+          request(method: :post, path: "/v1/platform/domains/#{enc(id)}/verify")
+        end
+        alias verify check
+
+        # +DELETE /v1/platform/domains/:id+ — release the domain.
+        def remove(id)
+          request(method: :delete, path: "/v1/platform/domains/#{enc(id)}")
         end
       end
 

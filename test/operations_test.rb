@@ -231,6 +231,15 @@ class OperationsTest < Minitest::Test
     ["POST", "/v1/oauth_clients/id_1/backchannel_logout/test", nil, false, ->(c) { c.oauth_clients.test_backchannel_logout("id_1") }],
     ["GET", "/v1/platform/atlas_id_apps/id_1/backchannel_deliveries", nil, false, ->(c) { c.platform.atlas_id_apps.list_backchannel_deliveries("id_1") }],
     ["POST", "/v1/platform/atlas_id_apps/id_1/backchannel_logout/test", nil, false, ->(c) { c.platform.atlas_id_apps.test_backchannel_logout("id_1") }],
+    ["GET", "/v1/platform/atlas_id_apps/id_1/provisioned_accounts", nil, false, ->(c) { c.platform.atlas_id_apps.provisioned_accounts.list("id_1") }],
+    ["POST", "/v1/platform/atlas_id_apps/id_1/provisioned_accounts", { "x" => 1 }, true, ->(c) { c.platform.atlas_id_apps.provisioned_accounts.create("id_1", { "x" => 1 }, idempotency_key: "idem_1") }],
+    ["GET", "/v1/platform/atlas_id_apps/id_1/provisioned_accounts/acct_1", nil, false, ->(c) { c.platform.atlas_id_apps.provisioned_accounts.get("id_1", "acct_1") }],
+    ["DELETE", "/v1/platform/atlas_id_apps/id_1/provisioned_accounts/acct_1", nil, false, ->(c) { c.platform.atlas_id_apps.provisioned_accounts.remove("id_1", "acct_1") }],
+    ["POST", "/v1/platform/atlas_id_apps/id_1/provisioned_accounts/acct_1/password", { "x" => 1 }, false, ->(c) { c.platform.atlas_id_apps.provisioned_accounts.rotate_password("id_1", "acct_1", { "x" => 1 }) }],
+    ["GET", "/v1/platform/domains", nil, false, ->(c) { c.platform.domains.list }],
+    ["POST", "/v1/platform/domains", { "domain" => "example.com" }, false, ->(c) { c.platform.domains.claim("example.com") }],
+    ["POST", "/v1/platform/domains/dom_1/verify", nil, false, ->(c) { c.platform.domains.check("dom_1") }],
+    ["DELETE", "/v1/platform/domains/dom_1", nil, false, ->(c) { c.platform.domains.remove("dom_1") }],
     ["GET", "/v1/platform/atlas_id_apps/id_1/preflight", nil, false, ->(c) { c.platform.atlas_id_apps.preflight("id_1") }],
     ["GET", "/v1/platform/atlas_id_apps/id_1/users?email=a%40example.com", nil, false, ->(c) { c.platform.atlas_id_apps.find_users("id_1", "a@example.com") }],
     ["DELETE", "/v1/platform/atlas_id_apps/id_1/grants/grant_id_1", nil, false, ->(c) { c.platform.atlas_id_apps.revoke_grant("id_1", "grant_id_1") }],
@@ -273,6 +282,6 @@ class OperationsTest < Minitest::Test
         refute req.headers.key?("idempotency-key")
       end
     end
-    assert_equal 242, OPERATIONS.length
+    assert_equal 251, OPERATIONS.length
   end
 end

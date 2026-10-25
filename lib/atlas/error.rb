@@ -191,6 +191,13 @@ module Atlas
     SESSION_REVOKED = "SESSION_REVOKED"
     SESSION_IDLE_EXPIRED = "SESSION_IDLE_EXPIRED"
     SESSION_EXPIRED = "SESSION_EXPIRED"
+    # A Sign in with Atlas test or review account tried something outside the app(s) it was made for
+    # (another app, the Atlas dashboard, account settings) (403).
+    TEST_ACCOUNT_RESTRICTED = "TEST_ACCOUNT_RESTRICTED"
+    # The account already holds the maximum number of test and review accounts (409).
+    PROVISIONED_ACCOUNT_LIMIT_REACHED = "PROVISIONED_ACCOUNT_LIMIT_REACHED"
+    # The setting or address needs a domain you verified (422); also returned when an expired test account signs in.
+    DOMAIN_NOT_VERIFIED = "DOMAIN_NOT_VERIFIED"
   end
 
   module ErrorFactory
