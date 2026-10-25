@@ -66,7 +66,9 @@ module Atlas
         request(method: :post, path: "/v1/keys/revoke_leaked", body: body)
       end
 
-      # +GET /v1/operator+ — where the operator device flow and token exchange live.
+      # +GET /v1/operator+ — where the operator device flow and token exchange live, the
+      # other products that accept Atlas operators (+audiences+) and the claims an operator
+      # access token carries (+access_token_claims+).
       def operator
         request(method: :get, path: "/v1/operator")
       end
@@ -159,6 +161,8 @@ module Atlas
       end
 
       class Outbound < Base
+        # Each link's +source+ is +manual+, +oauth_install+ (delivered by the partner) or
+        # +registration+ (a partner platform's stored partner token).
         def list
           request(method: :get, path: "/v1/partner_links/outbound")
         end
@@ -211,6 +215,15 @@ module Atlas
     end
 
     # Query helpers shared by the v2 resources.
+
+    # The query of a per-call audience: the integration's own parameters, +cbid+, +audience+.
+    def self.audience_query(audience: nil, cbid: nil, params: nil)
+      q = {}
+      (params || {}).each { |k, v| q[k.to_sym] = v unless v.nil? || v.to_s.empty? }
+      q[:cbid] = cbid if cbid && !cbid.to_s.empty?
+      q[:audience] = audience if audience && !audience.to_s.empty?
+      q.empty? ? nil : q
+    end
     def self.dry_run_query(dry_run)
       dry_run ? { dry_run: true } : nil
     end

@@ -153,6 +153,8 @@ module Atlas
     REFERRALS_NOT_CONFIGURED = "REFERRALS_NOT_CONFIGURED"
     # Another user on the instance already holds that referral code (409).
     REFERRAL_CODE_TAKEN = "REFERRAL_CODE_TAKEN"
+    # Managed WAF provision or deprovision on an instance with no WAF configuration saved (422; +meta.action+).
+    MANAGED_WAF_NOT_CONFIGURED = "MANAGED_WAF_NOT_CONFIGURED"
     # A billing plan that subscriptions still use cannot be deleted.
     PLAN_IN_USE = "PLAN_IN_USE"
     # The key is valid but for a different API surface (e.g. a platform key on an instance route).

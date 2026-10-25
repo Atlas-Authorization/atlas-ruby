@@ -59,7 +59,11 @@ module Atlas
 
         # Body: +provider+, +name+, +enabled+, +case_url+, +cancel_url+ (contains +{id}+),
         # +auth_header+, +auth_scheme+ (+bearer+ / +raw+), +api_key+ (write-only),
-        # +use_partner_link+, +sign_requests+, +completion_webhook_url+, +open_closure_cases+.
+        # +use_partner_link+, +partner_link_id+ (implies +use_partner_link+), +site_id+ (the
+        # orchestrator-side site a case is for), +sign_requests+, +completion_webhook_url+,
+        # +open_closure_cases+ and +cancel_deletion_on_sign_in+ (cancel a self-scheduled
+        # deletion when the person signs back in during the grace period). Presets may carry
+        # a +case_format+.
         def set(body)
           request(method: :put, path: "/v1/instance/privacy_orchestrator", body: body)
         end

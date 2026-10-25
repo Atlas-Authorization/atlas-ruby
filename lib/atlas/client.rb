@@ -82,6 +82,7 @@ require_relative "resources/platform"
 require_relative "resources/credentials"
 require_relative "resources/privacy"
 require_relative "resources/integrations"
+require_relative "resources/partner_platforms"
 require_relative "resources/status"
 require_relative "resources/notices"
 require_relative "resources/misc_v2"
@@ -235,6 +236,7 @@ module Atlas
     def keys              = @keys ||= Resources::Keys.new(@transport)
     def partner_links     = @partner_links ||= Resources::PartnerLinks.new(@transport)
     def atlas_id_apps     = @atlas_id_apps ||= Resources::AtlasIdGrants.new(@transport)
+    def partner_platforms = @partner_platforms ||= Resources::PartnerPlatforms.new(@transport)
     def privacy           = @privacy ||= Resources::Privacy.new(@transport)
     def integrations      = @integrations ||= Resources::Integrations.new(@transport)
     def status            = @status ||= Resources::Status.new(@transport)

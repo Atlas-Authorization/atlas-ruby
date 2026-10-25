@@ -60,11 +60,18 @@ module Atlas
       # this session, server side (+POST /v1/sessions/:id/integration_tokens/:integration+).
       # +audience_hint+ is optional.
       #
+      # A per-call audience picks the token's +aud+ for this one mint, when the
+      # integration's +per_call_audience+ permits it (otherwise 403): +audience+ is the
+      # whole audience, +cbid+ the site id of an integration whose parameter is +cbid+,
+      # and +audience_params+ any integration's own parameter (+{ tenant: "t1" }+).
+      #
       #   atlas.sessions.get_token("sess_1", for: "referalli")
-      def get_token(id, for:, audience_hint: nil)
+      #   atlas.sessions.get_token("sess_1", for: "acme", audience_params: { tenant: "t1" })
+      def get_token(id, for:, audience_hint: nil, audience: nil, cbid: nil, audience_params: nil)
         integration = binding.local_variable_get(:for)
         body = audience_hint ? { audience_hint: audience_hint } : Atlas::Transport::OMIT
-        request(method: :post, path: "/v1/sessions/#{enc(id)}/integration_tokens/#{enc(integration)}", body: body)
+        request(method: :post, path: "/v1/sessions/#{enc(id)}/integration_tokens/#{enc(integration)}", body: body,
+                query: Atlas::Resources.audience_query(audience: audience, cbid: cbid, params: audience_params))
       end
     end
   end

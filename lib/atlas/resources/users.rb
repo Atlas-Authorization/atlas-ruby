@@ -14,13 +14,15 @@ module Atlas
       # +last_sign_in_at+, +-last_sign_in_at+) and +include_total_count+.
       # +params+ include +limit+, +starting_after+ (cursor; reads +next_cursor+),
       # +updated_after+ / +updated_before+ (epoch ms or ISO 8601) and
-      # +order_by+ (+updated_at+ or +-updated_at+) for incremental syncs.
+      # +order_by+ (+updated_at+ or +-updated_at+) for incremental syncs. Soft-deleted
+      # users are left out unless +include_deleted: true+.
       def list(params = {})
         request(method: :get, path: "/v1/users", query: params)
       end
 
-      def get(id)
-        request(method: :get, path: "/v1/users/#{enc(id)}")
+      def get(id, include_deleted: nil)
+        request(method: :get, path: "/v1/users/#{enc(id)}",
+                query: include_deleted.nil? ? nil : { include_deleted: include_deleted })
       end
 
       # +notify: false+ (the default) guarantees no email, SMS or push is sent to

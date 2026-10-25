@@ -241,7 +241,14 @@ class OperationsTest < Minitest::Test
     ["PATCH", "/v1/platform/atlas_id_publisher", { "skip_consent" => true }, false, ->(c) { c.platform.atlas_id_publisher.update(skip_consent: true) }],
     ["DELETE", "/v1/platform/atlas_id_publisher", nil, false, ->(c) { c.platform.atlas_id_publisher.delete }],
     ["POST", "/v1/platform/atlas_id_publisher/verify", nil, false, ->(c) { c.platform.atlas_id_publisher.verify }],
-    ["GET", "/v1/platform/config_changelog?limit=5", nil, false, ->(c) { c.platform.config_changelog({ limit: 5 }) }]
+    ["GET", "/v1/platform/config_changelog?limit=5", nil, false, ->(c) { c.platform.config_changelog({ limit: 5 }) }],
+    ["GET", "/v1/partner_platforms", nil, false, ->(c) { c.partner_platforms.list }],
+    ["GET", "/v1/partner_platforms/acme", nil, false, ->(c) { c.partner_platforms.get("acme") }],
+    ["PUT", "/v1/partner_platforms/acme", { "enabled" => true }, false, ->(c) { c.partner_platforms.set("acme", { enabled: true }) }],
+    ["DELETE", "/v1/partner_platforms/acme", nil, false, ->(c) { c.partner_platforms.delete("acme") }],
+    ["GET", "/v1/partner_platforms/acme/registration", nil, false, ->(c) { c.partner_platforms.registration("acme") }],
+    ["POST", "/v1/partner_platforms/acme/token", { "token" => "t", "rotate" => true }, false, ->(c) { c.partner_platforms.store_token("acme", "t", rotate: true) }],
+    ["GET", "/v1/partner_platforms/acme/deliveries?limit=5", nil, false, ->(c) { c.partner_platforms.deliveries("acme", limit: 5) }]
   ].freeze
 
   def test_every_added_operation_hits_its_route
@@ -266,6 +273,6 @@ class OperationsTest < Minitest::Test
         refute req.headers.key?("idempotency-key")
       end
     end
-    assert_equal 235, OPERATIONS.length
+    assert_equal 242, OPERATIONS.length
   end
 end

@@ -23,6 +23,8 @@ module Atlas
       end
 
       # Connect or replace an integration. +dry_run: true+ validates and writes nothing.
+      # +per_call_audience+ (+{ param:, template:, allowed: [], any_matching: }+) sets which
+      # per-call audiences a token mint may ask for; +nil+ allows the configured audience only.
       def set(id, body, dry_run: false, idempotency_key: nil)
         request(method: :put, path: "/v1/instance/integrations/#{enc(id)}", body: body,
                 query: Atlas::Resources.dry_run_query(dry_run), idempotency_key: idempotency_key)
@@ -49,19 +51,24 @@ module Atlas
       # +POST /v1/sessions/:session_id/integration_tokens/:integration+ — mint a
       # token for another product of the suite from a session, server side.
       # The server-side peer of +getToken({ for: integration })+.
-      def mint_token(session_id, integration, body = Atlas::Transport::OMIT, idempotency_key: nil)
+      def mint_token(session_id, integration, body = Atlas::Transport::OMIT, idempotency_key: nil, query: nil)
         request(method: :post, path: "/v1/sessions/#{enc(session_id)}/integration_tokens/#{enc(integration)}",
-                body: body, idempotency_key: idempotency_key)
+                body: body, idempotency_key: idempotency_key, query: query)
       end
 
       # +getToken({ for: })+ — mint an integration token for a session; the
-      # optional +audience_hint+ is sent as the ticket-exchange body.
+      # optional +audience_hint+ is sent as the ticket-exchange body. A per-call audience
+      # (+audience+, +cbid+ or +audience_params+, the integration's own parameter) follows the
+      # integration's +per_call_audience+ (+param+, +template+, +allowed+, +any_matching+;
+      # +nil+ turns it off); one it does not permit is refused with 403.
       #
       #   atlas.integrations.get_token("sess_1", for: "referalli")
-      def get_token(session_id, for:, audience_hint: nil)
+      #   atlas.integrations.get_token("sess_1", for: "acme", audience: "acme:t1")
+      def get_token(session_id, for:, audience_hint: nil, audience: nil, cbid: nil, audience_params: nil)
         integration = binding.local_variable_get(:for)
         body = audience_hint ? { audience_hint: audience_hint } : Atlas::Transport::OMIT
-        mint_token(session_id, integration, body)
+        mint_token(session_id, integration, body,
+                   query: Atlas::Resources.audience_query(audience: audience, cbid: cbid, params: audience_params))
       end
 
       # +POST /v1/integrations/verify_errors+ — report a token-verification failure from a receiver.

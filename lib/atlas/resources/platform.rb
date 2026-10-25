@@ -319,13 +319,16 @@ module Atlas
         # +GET /v1/platform/atlas_id_apps/:id/users?email=+ — privacy requests: is
         # this person one of the app's users? Exact match on a verified email;
         # returns +{ "data" => [{ "sub", "grant_id", "scopes", "granted_at" }] }+,
-        # or an empty list for anyone else.
+        # or an empty list for anyone else. The secret key of the instance that manages
+        # the app (see +set_managed_by+) may call this route too; +atlas.atlas_id_apps.lookup+
+        # is the same call on the instance client.
         def find_users(id, email)
           request(method: :get, path: "/v1/platform/atlas_id_apps/#{enc(id)}/users", query: { email: email })
         end
 
         # +DELETE /v1/platform/atlas_id_apps/:id/grants/:grant_id+ — revoke one
-        # user's grant; the next sign-in shows the consent screen again.
+        # user's grant; the next sign-in shows the consent screen again. The secret key
+        # of the instance that manages the app may call this route too.
         def revoke_grant(id, grant_id)
           request(method: :delete, path: "/v1/platform/atlas_id_apps/#{enc(id)}/grants/#{enc(grant_id)}")
         end
