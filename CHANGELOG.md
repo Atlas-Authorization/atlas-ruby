@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- **Full Backend API coverage.** 452 more operations, each with an exact-route test row. New namespaces on the client: `app_catalog`, `ldap_server_clients`, `journeys`, `groups` (with `rules`), `migrations` (with `imports`), `managed_grants`, `least_privilege`, `flags`, `mfa_factors` (with `yubikeys`, `smart_card_mappings`), `analytics` (with `reports`, `alert_rules`), `marketing`, `audit_event_schemas`, `directory_pull_sources`, `relay_agents`, `oauth_client_profiles`, `passkey_api`, `vc`, `listen`, `agent_registration`, `agents`, `agent_access_requests`, `workflows`, `page_templates`, `service_connectors`, `desktop_mfa`, `identity_verification`, `iga`, `scim_provisioning_presets`, `vault`, `connections`, `ssf`, `network_zones`, `access_policies`, `abac`, `resources` (the class is `Atlas::Resources::ProtectedResources`), `org_role_grants`, `devices`, `authz_decisions`, `policy_bundles`, `proxy_apps`, `mcp_gateways`.
+- **Added to existing namespaces.** `users` (required actions, notes, guardians, saved searches and views, history, minor status, links, device keys), `organizations` (webhook endpoints, connected apps, connection secret), `oauth_clients` (app settings, workload identity, trusted issuers, exchange policy, profile, delegated UI, login and consent requests), `org_ldap_connections` (sync, sync runs, relay), `fga` and `openfga` (`list_users`, `read_changes`), `attack_protection` and `risk_based_mfa` (secrets), `actions.calls`, `instance.integrations.rotate_events_secret`, `integrations.run_card_action`, `delivery_health.get_scope`.
+- `listen.stream_session` and `policy_bundles.archive` return the raw body as a String (the event stream is read to its end, not streamed).
+- **Risk-event timeline.** `risk_based_mfa.list_events` (`GET /v1/risk_events`; query `user_id`, `level`, `limit`, `before`), `event_metrics` (`GET /v1/risk_events/metrics`) and `event_feedback(id, verdict)` (`POST /v1/risk_events/{id}/feedback`, verdict `legit` or `fraud`).
+- **Fraud lookup.** `risk_based_mfa.fraud_lookup` (`POST /v1/fraud/lookup`).
+
 ## 0.20.0 — 2026-10-25
 
 ### Added

@@ -86,6 +86,59 @@ require_relative "resources/partner_platforms"
 require_relative "resources/status"
 require_relative "resources/notices"
 require_relative "resources/misc_v2"
+require_relative "resources/app_catalog"
+require_relative "resources/ldap_server_clients"
+require_relative "resources/users_more"
+require_relative "resources/journeys"
+require_relative "resources/groups"
+require_relative "resources/migrations"
+require_relative "resources/managed_grants"
+require_relative "resources/least_privilege"
+require_relative "resources/delivery_health_more"
+require_relative "resources/flags"
+require_relative "resources/mfa_factors"
+require_relative "resources/analytics"
+require_relative "resources/marketing"
+require_relative "resources/audit_event_schemas"
+require_relative "resources/directory_pull_sources"
+require_relative "resources/org_ldap_connections_more"
+require_relative "resources/relay_agents"
+require_relative "resources/oauth_clients_more"
+require_relative "resources/organizations_more"
+require_relative "resources/oauth_client_profiles"
+require_relative "resources/passkey_api"
+require_relative "resources/vc"
+require_relative "resources/listen"
+require_relative "resources/agent_registration"
+require_relative "resources/agents"
+require_relative "resources/agent_access_requests"
+require_relative "resources/actions_more"
+require_relative "resources/workflows"
+require_relative "resources/page_templates"
+require_relative "resources/service_connectors"
+require_relative "resources/desktop_mfa"
+require_relative "resources/identity_verification"
+require_relative "resources/iga"
+require_relative "resources/scim_provisioning_presets"
+require_relative "resources/vault"
+require_relative "resources/connections"
+require_relative "resources/fga_more"
+require_relative "resources/openfga_more"
+require_relative "resources/attack_protection_more"
+require_relative "resources/risk_based_mfa_more"
+require_relative "resources/ssf"
+require_relative "resources/network_zones"
+require_relative "resources/access_policies"
+require_relative "resources/abac"
+require_relative "resources/resources"
+require_relative "resources/org_role_grants"
+require_relative "resources/devices"
+require_relative "resources/authz_decisions"
+require_relative "resources/policy_bundles"
+require_relative "resources/proxy_apps"
+require_relative "resources/mcp_gateways"
+require_relative "resources/instance_more"
+require_relative "resources/integrations_more"
 
 module Atlas
   # The typed management client for the Atlas Backend API — the secret-key
@@ -250,6 +303,47 @@ module Atlas
     def openapi           = @openapi ||= Resources::OpenApi.new(@transport)
     def delivery_health   = @delivery_health ||= Resources::DeliveryHealth.new(@transport)
     def meta              = @meta ||= Resources::Meta.new(@transport)
+    def app_catalog = @app_catalog ||= Resources::AppCatalog.new(@transport)
+    def ldap_server_clients = @ldap_server_clients ||= Resources::LdapServerClients.new(@transport)
+    def journeys = @journeys ||= Resources::Journeys.new(@transport)
+    def groups = @groups ||= Resources::Groups.new(@transport)
+    def migrations = @migrations ||= Resources::Migrations.new(@transport)
+    def managed_grants = @managed_grants ||= Resources::ManagedGrants.new(@transport)
+    def least_privilege = @least_privilege ||= Resources::LeastPrivilege.new(@transport)
+    def flags = @flags ||= Resources::Flags.new(@transport)
+    def mfa_factors = @mfa_factors ||= Resources::MfaFactors.new(@transport)
+    def analytics = @analytics ||= Resources::Analytics.new(@transport)
+    def marketing = @marketing ||= Resources::Marketing.new(@transport)
+    def audit_event_schemas = @audit_event_schemas ||= Resources::AuditEventSchemas.new(@transport)
+    def directory_pull_sources = @directory_pull_sources ||= Resources::DirectoryPullSources.new(@transport)
+    def relay_agents = @relay_agents ||= Resources::RelayAgents.new(@transport)
+    def oauth_client_profiles = @oauth_client_profiles ||= Resources::OauthClientProfiles.new(@transport)
+    def passkey_api = @passkey_api ||= Resources::PasskeyApi.new(@transport)
+    def vc = @vc ||= Resources::Vc.new(@transport)
+    def listen = @listen ||= Resources::Listen.new(@transport)
+    def agent_registration = @agent_registration ||= Resources::AgentRegistration.new(@transport)
+    def agents = @agents ||= Resources::Agents.new(@transport)
+    def agent_access_requests = @agent_access_requests ||= Resources::AgentAccessRequests.new(@transport)
+    def workflows = @workflows ||= Resources::Workflows.new(@transport)
+    def page_templates = @page_templates ||= Resources::PageTemplates.new(@transport)
+    def service_connectors = @service_connectors ||= Resources::ServiceConnectors.new(@transport)
+    def desktop_mfa = @desktop_mfa ||= Resources::DesktopMfa.new(@transport)
+    def identity_verification = @identity_verification ||= Resources::IdentityVerification.new(@transport)
+    def iga = @iga ||= Resources::Iga.new(@transport)
+    def scim_provisioning_presets = @scim_provisioning_presets ||= Resources::ScimProvisioningPresets.new(@transport)
+    def vault = @vault ||= Resources::Vault.new(@transport)
+    def connections = @connections ||= Resources::Connections.new(@transport)
+    def ssf = @ssf ||= Resources::Ssf.new(@transport)
+    def network_zones = @network_zones ||= Resources::NetworkZones.new(@transport)
+    def access_policies = @access_policies ||= Resources::AccessPolicies.new(@transport)
+    def abac = @abac ||= Resources::Abac.new(@transport)
+    def resources = @resources ||= Resources::ProtectedResources.new(@transport)
+    def org_role_grants = @org_role_grants ||= Resources::OrgRoleGrants.new(@transport)
+    def devices = @devices ||= Resources::Devices.new(@transport)
+    def authz_decisions = @authz_decisions ||= Resources::AuthzDecisions.new(@transport)
+    def policy_bundles = @policy_bundles ||= Resources::PolicyBundles.new(@transport)
+    def proxy_apps = @proxy_apps ||= Resources::ProxyApps.new(@transport)
+    def mcp_gateways = @mcp_gateways ||= Resources::McpGateways.new(@transport)
     # Platform-key surface: construct the client with a +psk_+ key to use it.
     def platform          = @platform ||= Resources::Platform.new(@transport)
   end
