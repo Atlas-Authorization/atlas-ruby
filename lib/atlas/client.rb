@@ -87,6 +87,7 @@ require_relative "resources/status"
 require_relative "resources/notices"
 require_relative "resources/misc_v2"
 require_relative "resources/app_catalog"
+require_relative "resources/app_events"
 require_relative "resources/ldap_server_clients"
 require_relative "resources/users_more"
 require_relative "resources/journeys"
@@ -304,6 +305,7 @@ module Atlas
     def delivery_health   = @delivery_health ||= Resources::DeliveryHealth.new(@transport)
     def meta              = @meta ||= Resources::Meta.new(@transport)
     def app_catalog = @app_catalog ||= Resources::AppCatalog.new(@transport)
+    def app_events = @app_events ||= Resources::AppEvents.new(@transport)
     def ldap_server_clients = @ldap_server_clients ||= Resources::LdapServerClients.new(@transport)
     def journeys = @journeys ||= Resources::Journeys.new(@transport)
     def groups = @groups ||= Resources::Groups.new(@transport)

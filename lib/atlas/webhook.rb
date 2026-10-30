@@ -77,6 +77,43 @@ module Atlas
       Result.new(verified: true, reason: nil, event: event, delivery_id: id, timestamp: timestamp)
     end
 
+    # Verify an APPLICATION webhook (the events an app publishes to its
+    # customers' endpoints through +app_events+): Standard Webhooks —
+    # +webhook-id+, +webhook-timestamp+ (decimal seconds), +webhook-signature:
+    # v1,<base64>+ (one entry per secret during a rotation), HMAC-SHA256 over
+    # +"<id>.<timestamp>.<raw body>"+ keyed with the base64-decoded part of
+    # +whsec_<base64>+. Returns the same {Result} as {verify} (+timestamp+ in
+    # seconds). Matches +verifyStandardWebhook+ in +@atlasauth/backend+.
+    #
+    #   result = Atlas::Webhook.verify_standard(body: request.raw_post, headers: request.headers, secret: "whsec_...")
+    def verify_standard(body:, headers:, secret:, now: nil, tolerance_sec: REPLAY_TOLERANCE_MS / 1000)
+      raw = body.to_s
+      id = header(headers, "webhook-id")
+      ts_raw = header(headers, "webhook-timestamp")
+      signature = header(headers, "webhook-signature")
+      return failure(:missing_headers) if blank?(id) || blank?(ts_raw) || blank?(signature)
+
+      provided = signatures(signature)
+      return failure(:malformed_signature) if provided.empty?
+      return failure(:stale_timestamp) unless ts_raw.match?(/\A\d+\z/)
+
+      timestamp = ts_raw.to_i
+      now_sec = (now || Time.now).to_i
+      return failure(:stale_timestamp) if (now_sec - timestamp).abs > tolerance_sec
+
+      key = Base64.decode64(secret.to_s.delete_prefix("whsec_"))
+      expected = Base64.strict_encode64(OpenSSL::HMAC.digest("SHA256", key, "#{id}.#{timestamp}.#{raw}"))
+      matched = provided.map { |candidate| secure_compare(expected, candidate) }.any?
+      return failure(:signature_mismatch) unless matched
+
+      event = begin
+        JSON.parse(raw)
+      rescue JSON::ParserError
+        nil
+      end
+      Result.new(verified: true, reason: nil, event: event, delivery_id: id, timestamp: timestamp)
+    end
+
     # The +wanted+ (default +v1+) signatures in an +atlas-signature+ header: one +v1,<base64>+
     # entry, or several separated by spaces (while an endpoint secret rotates,
     # Atlas signs with the old and the new secret). Other versions are skipped.

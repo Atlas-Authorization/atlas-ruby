@@ -27,8 +27,54 @@ module Atlas
       # +branding: { audiences: }+.
       #
       #   atlas.instance.update({ allowed_origins: ["https://a.example", { origin: "https://app.example", integration: "redirect" }] })
+      #
+      # The result may carry +"warnings"+: what the write did not do as sent,
+      # each +{ "code", "message", "field", "hint", "did_you_mean", "origin" }+
+      # (+code+ +origin_still_referenced+: a removed origin URLs still point at;
+      # +unknown_field+: an ignored auth_config key, +field+ its full path).
       def update(body)
         request(method: :patch, path: "/v1/instance", body: body)
+      end
+
+      # "Sign in with Atlas" on the instance (+/v1/instance/sign_in_with_atlas+).
+      def sign_in_with_atlas
+        @sign_in_with_atlas ||= SignInWithAtlas.new(@transport)
+      end
+
+      # Where the hosted pages send the browser (+/v1/instance/hosted_pages+).
+      def hosted_pages
+        @hosted_pages ||= HostedPages.new(@transport)
+      end
+
+      # Settings: +{ "object" => "sign_in_with_atlas", "enabled", "connection_id",
+      # "managed_via" ("instance_toggle" | "linked" | nil), "connection_status",
+      # "available", "issuer", "candidates" => [{ "id", "client_id",
+      # "managed_by_this_instance" }] }+.
+      class SignInWithAtlas < Base
+        def get
+          request(method: :get, path: "/v1/instance/sign_in_with_atlas")
+        end
+
+        # Body: +enabled+ and optional +connection_id+. +enabled: true+ links an
+        # existing connection to the Atlas issuer (or the one named), else creates one.
+        def update(body)
+          request(method: :patch, path: "/v1/instance/sign_in_with_atlas", body: body)
+        end
+      end
+
+      # Settings: +{ "object" => "hosted_pages", "sign_in_url", "sign_up_url",
+      # "user_url", "hosted" => { "sign_in", "sign_up", "user" } }+. A set URL makes
+      # the hosted page answer 302 there.
+      class HostedPages < Base
+        def get
+          request(method: :get, path: "/v1/instance/hosted_pages")
+        end
+
+        # Body: +sign_in_url+, +sign_up_url+, +user_url+ (https, on an allowed
+        # origin; +nil+ clears one).
+        def update(body)
+          request(method: :patch, path: "/v1/instance/hosted_pages", body: body)
+        end
       end
 
       # Write +auth_config.accountLinkingTrust+: keys are an exact provider key,

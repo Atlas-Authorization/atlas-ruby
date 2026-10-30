@@ -10,8 +10,23 @@ module Atlas
     class Sessions < Base
       # +POST /v1/sessions+ — mint a session for a user without the sign-in flow.
       # Returns the bearer jwt + refresh token in-body. Refused for a banned user.
+      # With +mode: "browser_ticket"+ (+redirect_url+, +expires_in_seconds+) it
+      # returns a browser ticket instead: see {#create_browser_ticket}.
       def create(params)
         request(method: :post, path: "/v1/sessions", body: params)
+      end
+
+      # +POST /v1/sessions+ with +mode: "browser_ticket"+ — a one-time ticket that
+      # signs a BROWSER in as the user (support handoffs, E2E). No session is minted
+      # here. +redirect_url+ (an allowed origin) makes the response carry a ready
+      # +url+; +expires_in_seconds+ is 1 to 300 (default 60). Returns +{ "object" =>
+      # "browser_ticket", "id", "user_id", "ticket", "url", "redirect_url",
+      # "expires_in", "expires_at" (ISO 8601) }+. Successor of +sign_in_tokens.create+.
+      def create_browser_ticket(user_id, redirect_url: nil, expires_in_seconds: nil)
+        body = { user_id: user_id, mode: "browser_ticket" }
+        body[:redirect_url] = redirect_url unless redirect_url.nil?
+        body[:expires_in_seconds] = expires_in_seconds unless expires_in_seconds.nil?
+        request(method: :post, path: "/v1/sessions", body: body)
       end
 
       # +GET /v1/sessions?user_id=+ — requires a +user_id+.

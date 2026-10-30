@@ -1,8 +1,22 @@
 # Changelog
 
-## Unreleased
+## 0.21.0 — 2026-10-30
 
 ### Added
+
+- **Application webhooks.** `app_events` (`publish`, `list`, `get`), `app_events.types` (the event catalog: `list`, `create`, `get`, `update`, `delete`, by `aet_` id or type name) and `app_events.endpoints` (one organization's endpoints: `list`, `create`, `get`, `update`, `delete`, `rotate_secret`, `reveal_secret`, `test`, `deliveries`, `redeliver`, `replay`, `app_event_types`).
+- **Standard Webhooks verifier.** `Atlas::Webhook.verify_standard(body:, headers:, secret:, now:, tolerance_sec:)` for application webhooks (`webhook-id`, `webhook-timestamp`, `webhook-signature`, `whsec_` base64 key). Returns the same `Result` as `verify`.
+- **Browser tickets.** `sessions.create_browser_ticket(user_id, redirect_url:, expires_in_seconds:)` (`POST /v1/sessions` with `mode: "browser_ticket"`); `sessions.create` accepts `mode`, `redirect_url`, `expires_in_seconds` too.
+- **Sign-in URL for tests.** `testing.create_sign_in_url(user_id, redirect_url, expires_in_seconds:)` (`POST /v1/testing/sign_in_url`, development instances only).
+- **Sign in with Atlas and hosted pages.** `instance.sign_in_with_atlas` and `instance.hosted_pages` (`get`, `update`).
+- **Privacy integration.** `privacy.integration` (`get`, `connect`): consent manager, orchestrator, completion webhook and executor key in one idempotent call.
+- Documented: `instance.update` result `warnings`; `api_keys` limit periods `second` and `minute`, `scopes`, `import` and `effective_scopes`.
+
+### Deprecated
+
+- `sign_in_tokens.create` and `revoke` (sunset 2027-04-01): use `sessions.create_browser_ticket`.
+
+### Added (full Backend API coverage)
 
 - **Full Backend API coverage.** 452 more operations, each with an exact-route test row. New namespaces on the client: `app_catalog`, `ldap_server_clients`, `journeys`, `groups` (with `rules`), `migrations` (with `imports`), `managed_grants`, `least_privilege`, `flags`, `mfa_factors` (with `yubikeys`, `smart_card_mappings`), `analytics` (with `reports`, `alert_rules`), `marketing`, `audit_event_schemas`, `directory_pull_sources`, `relay_agents`, `oauth_client_profiles`, `passkey_api`, `vc`, `listen`, `agent_registration`, `agents`, `agent_access_requests`, `workflows`, `page_templates`, `service_connectors`, `desktop_mfa`, `identity_verification`, `iga`, `scim_provisioning_presets`, `vault`, `connections`, `ssf`, `network_zones`, `access_policies`, `abac`, `resources` (the class is `Atlas::Resources::ProtectedResources`), `org_role_grants`, `devices`, `authz_decisions`, `policy_bundles`, `proxy_apps`, `mcp_gateways`.
 - **Added to existing namespaces.** `users` (required actions, notes, guardians, saved searches and views, history, minor status, links, device keys), `organizations` (webhook endpoints, connected apps, connection secret), `oauth_clients` (app settings, workload identity, trusted issuers, exchange policy, profile, delegated UI, login and consent requests), `org_ldap_connections` (sync, sync runs, relay), `fga` and `openfga` (`list_users`, `read_changes`), `attack_protection` and `risk_based_mfa` (secrets), `actions.calls`, `instance.integrations.rotate_events_secret`, `integrations.run_card_action`, `delivery_health.get_scope`.

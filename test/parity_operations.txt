@@ -5,6 +5,7 @@ DELETE /v1/abac_templates/{}
 DELETE /v1/access_policies/{}
 DELETE /v1/analytics/alert_rules/{}
 DELETE /v1/app_catalog/installed/{}
+DELETE /v1/app_event_types/{}
 DELETE /v1/attack_protection/app_attestation_secret
 DELETE /v1/audit_event_schemas/{}
 DELETE /v1/connections/oauth_clients/{}
@@ -39,6 +40,7 @@ DELETE /v1/oauth_clients/{}/exchange_policy
 DELETE /v1/oauth_clients/{}/trusted_issuers/{}
 DELETE /v1/org_role_grants/{}
 DELETE /v1/org_role_grants/{}/delegations/{}
+DELETE /v1/organizations/{}/app_webhook_endpoints/{}
 DELETE /v1/organizations/{}/connected_apps/{}
 DELETE /v1/organizations/{}/webhook_endpoints/{}
 DELETE /v1/passkey_api/users/{}/passkeys/{}
@@ -93,6 +95,10 @@ GET /v1/analytics/reports/inactive_users
 GET /v1/analytics/reports/mfa_coverage
 GET /v1/app_catalog
 GET /v1/app_catalog/installed
+GET /v1/app_event_types
+GET /v1/app_event_types/{}
+GET /v1/app_events
+GET /v1/app_events/{}
 GET /v1/audit_event_schemas
 GET /v1/audit_event_schemas/{}
 GET /v1/audit_events/{}/redactions
@@ -150,8 +156,11 @@ GET /v1/iga/requests/{}
 GET /v1/iga/settings
 GET /v1/iga/sod_rules
 GET /v1/iga/sod_violations
+GET /v1/instance/hosted_pages
 GET /v1/instance/page_templates
 GET /v1/instance/page_templates/{}
+GET /v1/instance/privacy_integrations
+GET /v1/instance/sign_in_with_atlas
 GET /v1/ldap_server_clients
 GET /v1/ldap_server_clients/{}
 GET /v1/leads
@@ -186,6 +195,10 @@ GET /v1/org_role_grants
 GET /v1/org_role_grants/effective
 GET /v1/org_role_grants/{}
 GET /v1/org_role_grants/{}/delegations
+GET /v1/organizations/{}/app_webhook_endpoints
+GET /v1/organizations/{}/app_webhook_endpoints/{}
+GET /v1/organizations/{}/app_event_types
+GET /v1/organizations/{}/app_webhook_endpoints/{}/deliveries
 GET /v1/organizations/{}/connected_apps
 GET /v1/organizations/{}/connections/{}/secret
 GET /v1/organizations/{}/webhook_endpoints
@@ -245,6 +258,7 @@ PATCH /v1/abac_templates/{}
 PATCH /v1/access_policies/{}
 PATCH /v1/analytics/alert_rules/{}
 PATCH /v1/app_catalog/installed/{}
+PATCH /v1/app_event_types/{}
 PATCH /v1/audit_event_schemas/{}
 PATCH /v1/connections/{}
 PATCH /v1/connections/{}/webhook_endpoints/{}
@@ -257,12 +271,15 @@ PATCH /v1/groups/{}
 PATCH /v1/iga/birthright_rules/{}
 PATCH /v1/iga/entitlements/{}
 PATCH /v1/iga/sod_rules/{}
+PATCH /v1/instance/hosted_pages
+PATCH /v1/instance/sign_in_with_atlas
 PATCH /v1/ldap_server_clients/{}
 PATCH /v1/mcp_gateways/{}
 PATCH /v1/mcp_gateways/{}/budgets/{}
 PATCH /v1/network_zones/{}
 PATCH /v1/oauth_clients/{}/app_settings
 PATCH /v1/org_role_grants/{}
+PATCH /v1/organizations/{}/app_webhook_endpoints/{}
 PATCH /v1/organizations/{}/webhook_endpoints/{}
 PATCH /v1/proxy_apps/{}
 PATCH /v1/relay_agents/{}
@@ -291,6 +308,8 @@ POST /v1/agents/{}/revoke_access
 POST /v1/analytics/alert_rules
 POST /v1/analytics/alert_rules/{}/test
 POST /v1/app_catalog/{}/install
+POST /v1/app_event_types
+POST /v1/app_events
 POST /v1/audit_event_schemas
 POST /v1/audit_events/{}/redact
 POST /v1/authzen/access/v1/evaluation
@@ -350,6 +369,7 @@ POST /v1/instance/duo_health_check
 POST /v1/instance/integrations/{}/events_secret/rotate
 POST /v1/instance/page_templates/{}/preview
 POST /v1/instance/page_templates/{}/promote
+POST /v1/instance/privacy_integrations/connect
 POST /v1/integrations/{}/card/actions/{}
 POST /v1/ldap_server_clients
 POST /v1/ldap_server_clients/{}/rotate_secret
@@ -370,6 +390,12 @@ POST /v1/openfga/stores/{}/list-users
 POST /v1/org_ldap_connections/{}/sync_runs
 POST /v1/org_role_grants
 POST /v1/org_role_grants/{}/delegations
+POST /v1/organizations/{}/app_webhook_endpoints
+POST /v1/organizations/{}/app_webhook_endpoints/{}/deliveries/{}/redeliver
+POST /v1/organizations/{}/app_webhook_endpoints/{}/replay
+POST /v1/organizations/{}/app_webhook_endpoints/{}/reveal_secret
+POST /v1/organizations/{}/app_webhook_endpoints/{}/rotate_secret
+POST /v1/organizations/{}/app_webhook_endpoints/{}/test
 POST /v1/organizations/{}/webhook_endpoints
 POST /v1/organizations/{}/webhook_endpoints/{}/rotate_secret
 POST /v1/passkey_api/login/finalize
@@ -391,10 +417,12 @@ POST /v1/resource_types
 POST /v1/resources/sync
 POST /v1/service_connectors
 POST /v1/service_connectors/{}/invoke
+POST /v1/sessions
 POST /v1/ssf/receivers
 POST /v1/ssf/streams
 POST /v1/ssf/streams/{}/status
 POST /v1/ssf/streams/{}/verify
+POST /v1/testing/sign_in_url
 POST /v1/users/search
 POST /v1/users/search/export
 POST /v1/users/search/views

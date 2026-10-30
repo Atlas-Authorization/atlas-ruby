@@ -12,8 +12,11 @@ module Atlas
       end
 
       # Mint a key. The secret is returned once, here. Pass +limits+ (an array of
-      # +{ unit:, amount:, period: "request" | "day" | "month" | "total" }+) to set
-      # per-key spend caps, metered with #record_usage.
+      # +{ unit:, amount:, period: "request" | "second" | "minute" | "day" | "month" | "total" }+) to set
+      # per-key spend caps, metered with #record_usage. +scopes+ sets the key's
+      # scopes; +import: { secret_hash:, hash_algorithm: ("sha256" | "sha256_hex"),
+      # prefix: }+ brings over a key minted elsewhere (no secret is returned). A
+      # verify result carries +effective_scopes+.
       def create(body, idempotency_key: nil)
         request(method: :post, path: "/v1/api_keys", body: body, idempotency_key: idempotency_key)
       end
