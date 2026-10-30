@@ -20,6 +20,17 @@ module Atlas
       def create_testing_token
         request(method: :post, path: "/v1/testing_tokens")
       end
+
+      # +POST /v1/testing/sign_in_url+ — a ready one-time URL that signs a browser in
+      # as +user_id+ and lands on +redirect_url+ (an allowed origin or localhost).
+      # Development instances only (403 +TESTING_UNAVAILABLE+ otherwise). Returns
+      # +{ "object" => "testing_sign_in_url", "id", "user_id", "ticket", "url",
+      # "redirect_url", "expires_in", "expires_at" }+.
+      def create_sign_in_url(user_id, redirect_url, expires_in_seconds: nil)
+        body = { user_id: user_id, redirect_url: redirect_url }
+        body[:expires_in_seconds] = expires_in_seconds unless expires_in_seconds.nil?
+        request(method: :post, path: "/v1/testing/sign_in_url", body: body)
+      end
     end
   end
 end

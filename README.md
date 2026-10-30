@@ -245,6 +245,19 @@ rotated = atlas.webhooks.endpoints.rotate_secret("whep_123", { overlap_seconds: 
 rotated["previous_secret_expires_at"]  # epoch ms, or nil when the old secret already stopped
 ```
 
+### Application webhooks
+
+Send your app's own events to endpoints your customers' organizations register. Atlas signs them with Standard Webhooks headers; receivers verify with `Atlas::Webhook.verify_standard`:
+
+```ruby
+atlas.app_events.types.create({ type: "call.completed", description: "A call finished." })
+atlas.app_events.endpoints.create("org_123", { url: "https://hooks.example.com/atlas", enabled_events: ["call.completed"] })
+atlas.app_events.publish({ organization_id: "org_123", type: "call.completed", data: { call_id: "c1" }, idempotency_key: "c1" })
+
+# on the receiving side
+result = Atlas::Webhook.verify_standard(body: request.raw_post, headers: request.headers, secret: "whsec_...")
+```
+
 ## Trusted reverse proxy
 
 If a reverse proxy serves the Frontend API from your own origin, give it a proxy secret. It sends the secret in `X-Atlas-Proxy-Secret` and the browser's IP in `X-Atlas-Client-IP`; Atlas then uses that IP for rate limits, lockout, risk signals and audit logs.
@@ -498,7 +511,7 @@ missed with `atlas.webhooks.endpoints.replay(id, { since: "failing_since" })`. F
 
 ## Resources
 
-Every Backend API operation is available on the client: `users`, `sessions`, `organizations` (with `memberships`, `invitations`, `domains`, `group_roles`, `audit_streams`, `end_users`, `reader_domain`, settings, design and branding), `roles`, `permissions`, `oauth_clients`, `resource_servers`, `sso_connections`, `scim_tokens`, `scim_provisioning`, `domains`, `waitlist`, `allowlist`, `blocklist`, `attack_protection`, `actor_tokens`, `invitations`, `webhooks`, `sign_in_tokens`, `audit_logs`, `audit_events`, `jwt_templates`, `api_keys`, `oauth_providers`, `sso_onboarding`, `fga`, `openfga`, `rate_limit_policy`, `risk_based_mfa` (incl. the `list_events` / `event_metrics` / `event_feedback` risk-event timeline and `fraud_lookup`), `bot_signals`, `network_acls`, `managed_waf`, `log_streams`, `branding`, `design`, `email_templates`, `sms_templates`, `localizations`, `actions`, `billing`, `messaging`, `import_export`, `data_subject_requests`, `radius_clients`, `lti_platforms`, `instance` (incl. `preflight` and cookie consent), `instance_security`, `tokens`, `email_addresses`, `organization_settings_schema`, `entitlement_overrides`, `machines` (incl. enrolment tokens), `connectors`, `directory`, `diagnostics`, `config_changelog`, `events`, `usage`, `legacy_auth_connection`, `mcp`, `mcp_connector`, `notifications` (with `categories` and `templates`), `org_ldap_connections`, `policies` (with `versions` and `settings`), `policy_source`, `pca`, `redirect_urls`, `session_exchange_apps`, `tickets`, `captcha`, `whoami`, `secret_keys`, `keys`, `partner_links`, `partner_platforms`, `privacy`, `integrations`, `status`, `notices`, `security_advisories`, `audit_exports`, `sub_processors`, `entitlements`, `integration_health`, `embed`, `openapi`, `delivery_health`, `meta`, `testing` (development-instance helpers), and `platform` (`apps`, `atlas_id_apps`, `design_assets`; needs a platform key).
+Every Backend API operation is available on the client: `users`, `sessions`, `organizations` (with `memberships`, `invitations`, `domains`, `group_roles`, `audit_streams`, `end_users`, `reader_domain`, settings, design and branding), `roles`, `permissions`, `oauth_clients`, `resource_servers`, `sso_connections`, `scim_tokens`, `scim_provisioning`, `domains`, `waitlist`, `allowlist`, `blocklist`, `attack_protection`, `actor_tokens`, `invitations`, `webhooks`, `app_events` (with `types` and `endpoints`), `sign_in_tokens` (deprecated: use `sessions.create_browser_ticket`), `audit_logs`, `audit_events`, `jwt_templates`, `api_keys`, `oauth_providers`, `sso_onboarding`, `fga`, `openfga`, `rate_limit_policy`, `risk_based_mfa` (incl. the `list_events` / `event_metrics` / `event_feedback` risk-event timeline and `fraud_lookup`), `bot_signals`, `network_acls`, `managed_waf`, `log_streams`, `branding`, `design`, `email_templates`, `sms_templates`, `localizations`, `actions`, `billing`, `messaging`, `import_export`, `data_subject_requests`, `radius_clients`, `lti_platforms`, `instance` (incl. `preflight`, cookie consent, `sign_in_with_atlas` and `hosted_pages`), `instance_security`, `tokens`, `email_addresses`, `organization_settings_schema`, `entitlement_overrides`, `machines` (incl. enrolment tokens), `connectors`, `directory`, `diagnostics`, `config_changelog`, `events`, `usage`, `legacy_auth_connection`, `mcp`, `mcp_connector`, `notifications` (with `categories` and `templates`), `org_ldap_connections`, `policies` (with `versions` and `settings`), `policy_source`, `pca`, `redirect_urls`, `session_exchange_apps`, `tickets`, `captcha`, `whoami`, `secret_keys`, `keys`, `partner_links`, `partner_platforms`, `privacy` (incl. `integration.connect`), `integrations`, `status`, `notices`, `security_advisories`, `audit_exports`, `sub_processors`, `entitlements`, `integration_health`, `embed`, `openapi`, `delivery_health`, `meta`, `testing` (development-instance helpers), and `platform` (`apps`, `atlas_id_apps`, `design_assets`; needs a platform key).
 
 Anything not wrapped yet can be called directly: `atlas.transport.request(method: :get, path: "/v1/...")`.
 

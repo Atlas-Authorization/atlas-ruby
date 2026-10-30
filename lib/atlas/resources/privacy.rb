@@ -50,6 +50,31 @@ module Atlas
         @orchestrator ||= Orchestrator.new(@transport)
       end
 
+      def integration
+        @integration ||= Integration.new(@transport)
+      end
+
+      # +/v1/instance/privacy_integrations+ — the consent manager, orchestrator,
+      # completion webhook and executor key in one view: +{ "object" =>
+      # "privacy_integration", "preset", "connected", "cookie_consent",
+      # "privacy_orchestrator", "dsr_webhook", "executor_key", "warnings" }+.
+      class Integration < Base
+        def get
+          request(method: :get, path: "/v1/instance/privacy_integrations")
+        end
+
+        # +POST /v1/instance/privacy_integrations/connect+ — wire all of it in one
+        # idempotent call. Body: +preset+ (+cookiemunch+ or +custom+), +site_id+,
+        # +api_key+, +partner_link_id+, +completion_webhook_url+, +cookie_consent+
+        # (overrides, or +false+ to leave it alone), +orchestrator+ (further
+        # fields) and +key+ (+name+, +scopes+ (privacy:* only), +expires_at+,
+        # +allowed_ips+, +allowed_origins+). +executor_key.secret+ comes back once;
+        # a re-run answers +executor_key.idempotent_replay+.
+        def connect(body)
+          request(method: :post, path: "/v1/instance/privacy_integrations/connect", body: body)
+        end
+      end
+
       # +/v1/instance/privacy_orchestrator+ — where Atlas opens a case when an
       # account deletion is scheduled. Secrets come back once, on the write that minted them.
       class Orchestrator < Base
