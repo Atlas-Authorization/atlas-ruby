@@ -111,7 +111,10 @@ module Atlas
       # +/v1/platform/apps+ — apps (instances) your platform provisions and owns.
       class Apps < Base
         # +GET /v1/platform/apps+ — the apps this platform owns (include_archived:, archived:, tag:).
-        # Also a +metadata:+ Hash filter (sent as +metadata[key]=value+).
+        # Also a +metadata:+ Hash filter (sent as +metadata[key]=value+). Find one app with
+        # +name:+ (exact, ignoring case), +name_prefix:+ or +external_ref:+ (zero or one item).
+        # Newest first; without +limit:+ every match is returned, else page with
+        # +limit:+ (up to 500) and +starting_after:+ = the previous page's +next_cursor+.
         def list(params = {})
           request(method: :get, path: "/v1/platform/apps", query: Atlas::Resources.metadata_query(params))
         end

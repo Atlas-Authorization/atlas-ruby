@@ -59,7 +59,10 @@ module Atlas
       # Store a captcha provider secret: +{ secret:, provider: }+. +provider+ (default:
       # the configured one) lets you store it BEFORE turning captcha on — captcha is
       # bring-your-own-keys, and enabling it without a site key and secret is refused
-      # with 422 +CAPTCHA_KEYS_REQUIRED+.
+      # with 422 +CAPTCHA_KEYS_REQUIRED+. With +site_key:+ (the provider's public site
+      # key) the same atomic write also switches +auth_config.captcha+ to +provider+
+      # (e.g. from the built-in +atlas+ captcha to Turnstile); the response then has
+      # +switched: true+ and the resulting +captcha+ config.
       def set_captcha_secret(body)
         request(method: :put, path: "/v1/instance/captcha_secret", body: body)
       end

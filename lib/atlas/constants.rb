@@ -57,6 +57,12 @@ module Atlas
   WEBHOOK_EVENT_SCIM_GROUP_DELETED = "scim_group.deleted"
   WEBHOOK_EVENT_SCIM_GROUP_MEMBER_ADDED = "scim_group.member_added"
   WEBHOOK_EVENT_SCIM_GROUP_MEMBER_REMOVED = "scim_group.member_removed"
+  # A session idled out (+data.reason+ +idle_expired+) or reached its absolute lifetime (+expired+).
+  WEBHOOK_EVENT_SESSION_EXPIRED = "session.expired"
+  # Instance invitations (+POST /v1/invitations+); +invitation.accepted+ carries +user_id+.
+  WEBHOOK_EVENT_INVITATION_CREATED = "invitation.created"
+  WEBHOOK_EVENT_INVITATION_ACCEPTED = "invitation.accepted"
+  WEBHOOK_EVENT_INVITATION_REVOKED = "invitation.revoked"
 
   # +since+ value for webhook replay / redelivery: from the start of the endpoint's last
   # failure streak.

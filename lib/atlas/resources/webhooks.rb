@@ -95,7 +95,7 @@ module Atlas
 
         # +POST /v1/webhook_endpoints/:id/test+ — send a synthetic webhook.test event to this endpoint only.
         # +wait:+ (seconds) holds the call until the attempt finishes and returns its outcome:
-        # +delivery_id+, +event_id+, +event_type+ (+"webhook.test"+), +status+, +http_status+,
+        # +delivery_id+, +event_id+, +event_type+ (+"webhook.test"+), +url+ (the exact URL tried), +status+, +http_status+,
         # +latency_ms+, +response_snippet+, +error+, +error_kind+ (+non_2xx+, +redirect+,
         # +timeout+, +tls+, +dns+, +connection_refused+, +network+, +url_blocked+; nil on
         # success), +signature_header_sent+ and +will_retry+.

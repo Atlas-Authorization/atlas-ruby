@@ -122,6 +122,35 @@ module Atlas
         request(method: :get, path: "/v1/instance/preflight", query: params.empty? ? nil : params)
       end
 
+      # +GET /v1/instance/preflight/acks+ — every preflight acknowledgement,
+      # lapsed ones included (+active: false+). Each has +code+, +reason+, +by+,
+      # +at+, +expires_at+ (epoch ms or nil) and +active+. A finding whose code is
+      # acknowledged is still listed by {#preflight}, with +acknowledged+
+      # (+reason+, +by+, +at+, +expires_at+): count only findings without it.
+      def list_preflight_acks
+        request(method: :get, path: "/v1/instance/preflight/acks")
+      end
+
+      # +PUT /v1/instance/preflight/acks/:code+ — acknowledge a known, accepted
+      # warning or info finding. +expires_at+ (epoch ms or ISO 8601, in the
+      # future; nil = no expiry) makes it lapse. A code that can be an error is
+      # refused (422 +VALIDATION_FAILED+): errors are fixed, never acknowledged.
+      # Replaces any earlier acknowledgement of the code.
+      #
+      #   atlas.instance.acknowledge_preflight("pkce_not_required", reason: "legacy native app", expires_at: "2027-01-01T00:00:00Z")
+      def acknowledge_preflight(code, reason:, expires_at: nil, dry_run: nil)
+        body = { reason: reason }
+        body[:expires_at] = expires_at unless expires_at.nil?
+        request(method: :put, path: "/v1/instance/preflight/acks/#{enc(code)}", body: body,
+                query: dry_run.nil? ? nil : { dry_run: dry_run })
+      end
+
+      # +DELETE /v1/instance/preflight/acks/:code+ — the findings with this code
+      # count again. 404 when the code has none.
+      def delete_preflight_ack(code)
+        request(method: :delete, path: "/v1/instance/preflight/acks/#{enc(code)}")
+      end
+
       # +POST /v1/instance/move_origin+ — move every URL that points at one
       # origin to another (a domain move), across the instance, its OAuth
       # clients, webhooks, redirect URLs and Sign in with Atlas apps.

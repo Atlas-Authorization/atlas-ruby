@@ -111,6 +111,14 @@ unless report["ok"]
 end
 ```
 
+A warning or info finding you know about and accept can be acknowledged with a reason (and an optional expiry). It is still listed, with `acknowledged`, and stops counting; errors are never acknowledged (422):
+
+```ruby
+atlas.instance.acknowledge_preflight("pkce_not_required", reason: "legacy native app", expires_at: "2027-01-01T00:00:00Z")
+atlas.instance.list_preflight_acks
+atlas.instance.delete_preflight_ack("pkce_not_required")
+```
+
 ## Sign-in page design
 
 ```ruby
@@ -167,6 +175,21 @@ For a first-party client, `skip_logout_confirmation: true` lets RP-initiated log
 
 ```ruby
 atlas.oauth_clients.update("oc_123", { skip_logout_confirmation: true })
+```
+
+To sign a user out of your app and of Atlas from your backend, pass the id_token's `sid`. This revokes the client's grants under that sid, ends the Atlas session and queues a back-channel logout to every other app signed in through it; no browser redirect to `/oauth2/logout` is needed (needs `oauth_clients:write` and `sessions:write`):
+
+```ruby
+out = atlas.oauth_clients.logout("oc_123", claims["sid"])
+out["session"] # => "revoked" or "already_ended"
+```
+
+`refresh_touches_session: true` (first-party) keeps the Atlas session alive on every refresh and makes the refresh fail (`invalid_grant`) once that session has ended. `add_redirect_origins: true` on create / update also adds the redirect URIs' origins to `allowed_origins`; the response lists them in `added_origins`.
+
+`require_verified_email: true` issues no authorization code for a user whose primary email is not verified. `create` takes your own `client_secret` (32-256 random printable characters) or generates one; a generated secret can be fetched once more within 10 minutes (the answer's `client_secret_reveal` names the path and deadline):
+
+```ruby
+atlas.oauth_clients.reveal_secret("oc_123")["client_secret"]
 ```
 
 Rotating a client secret keeps the previous one working for `overlap_seconds` (default 24 hours, at most 7 days), so you can deploy the new secret without downtime. Pass `0` to revoke the old one now, for example after a leak:

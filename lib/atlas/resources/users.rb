@@ -32,8 +32,13 @@ module Atlas
       # (Argon2id, bcrypt, PBKDF2/scrypt in Django or passlib form, ...) is stored
       # as given; any other is named with +password_hash_algorithm+ (+scrypt+,
       # +pbkdf2+, +md5+, +sha1+, +sha256+, +sha512+, +hmac_sha256+, ...) and
-      # +password_hash_params+ (salt, cost and so on). It upgrades to Argon2id
-      # on first sign-in.
+      # +password_hash_params+ (salt, cost, +salt_encoding+ and so on). A Node
+      # +scrypt$N$r$p$salt$key+ string whose salt is all digits is also a valid
+      # Django one: name it +scrypt_node+ or +scrypt_django+. It upgrades to
+      # Argon2id on first sign-in.
+      #
+      # User reads (and +user.*+ webhook payloads) carry +status+: +active+,
+      # +suspended+ or +banned+ (the ID token's +account_status+).
       def create(body, idempotency_key: nil)
         request(method: :post, path: "/v1/users", body: body, idempotency_key: idempotency_key)
       end

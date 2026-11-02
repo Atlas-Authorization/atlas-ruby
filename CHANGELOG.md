@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.23.0 — 2026-11-02
+
+### Added
+
+- **Back-channel sign-out from your backend.** `oauth_clients.logout(id, sid, idempotency_key:)` (`POST /v1/oauth_clients/{id}/logout`) signs the user out of your app and of Atlas in one call; the answer has `session` (`revoked` / `already_ended`), `grants_revoked` and `backchannel_logouts`.
+- OAuth clients: `refresh_touches_session` (first-party; a refresh keeps the Atlas session alive and fails once it has ended) on create, update and read; write-only `add_redirect_origins` on create and update, with the response's `added_origins`.
+- `instance_security.set_captcha_secret` takes `site_key`: storing the secret and switching `auth_config.captcha` to that provider happen in one atomic write; the answer has `switched` and `captcha`.
+- **Preflight acknowledgements.** `instance.list_preflight_acks`, `instance.acknowledge_preflight(code, reason:, expires_at:, dry_run:)` and `instance.delete_preflight_ack(code)` (`/v1/instance/preflight/acks`). An acknowledged warning or info finding is still listed, with `acknowledged`; errors are refused (422).
+- **OAuth client secret reveal.** `oauth_clients.reveal_secret(id)` (`POST /v1/oauth_clients/{id}/secret/reveal`): the generated secret once more within 10 minutes. `create` takes your own `client_secret`; create and rotate answers carry `client_secret_reveal` (`path`, `expires_at`). `require_verified_email` on create, update and read.
+- Webhook event constants: `WEBHOOK_EVENT_SESSION_EXPIRED` (`data.reason` `idle_expired` / `expired`), `WEBHOOK_EVENT_INVITATION_CREATED` / `_ACCEPTED` / `_REVOKED`.
+- Documented: `platform.apps.list` filters `name:`, `name_prefix:`, `external_ref:` and paging (`limit:`, `starting_after:`); `invitations.create` takes `expires_at` / `expires_in_days`; `user_hooks.update_before_user_create` takes `fail_closed` and the hook may deny a sign-up (`SIGN_UP_DENIED`); user reads and `user.*` payloads carry `status` (`active` / `suspended` / `banned`); webhook endpoint test results carry `url`; a messaging test success carries `accepted`, `provider`, `provider_message_id`; `password_hash_algorithm` `scrypt_node` / `scrypt_django` and `password_hash_params.salt_encoding`.
+
 ## 0.22.0 — 2026-11-01
 
 ### Added

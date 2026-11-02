@@ -164,6 +164,9 @@ module Atlas
         request(method: :delete, path: "/v1/messaging_providers/email/development")
       end
 
+      # Success: +ok+, +accepted+, +provider+ (the transport that took it),
+      # +provider_message_id+ and, for SMTP, +provider_response+. A provider
+      # refusal is a 502 whose error meta says what the provider answered.
       def test(channel, body)
         request(method: :post, path: "/v1/messaging_providers/#{enc(channel)}/test", body: body)
       end

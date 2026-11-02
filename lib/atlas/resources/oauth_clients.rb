@@ -16,6 +16,20 @@ module Atlas
     # straight back with +state+, without the confirmation page.
     #
     #   atlas.oauth_clients.update("oc_123", { skip_logout_confirmation: true })
+    #
+    # +refresh_touches_session+ (boolean, first-party only, same 422 otherwise):
+    # each refresh keeps the Atlas session it came from alive, and once that
+    # session has ended the refresh fails (+invalid_grant+).
+    # +add_redirect_origins: true+ (write-only, on {#create} and {#update}) also
+    # adds the redirect URIs' origins to the instance's +allowed_origins+ (append
+    # only); the response lists them in +added_origins+.
+    #
+    # +require_verified_email+ (boolean, create / update / read, default
+    # +false+): no authorization code is issued for a user whose primary email
+    # is not verified. {#create} also takes +client_secret+ (your own, 32-256
+    # random printable characters; omit and Atlas generates one). A generated
+    # secret's create or rotate answer carries +client_secret_reveal+
+    # (+path+, +expires_at+): see {#reveal_secret}.
     class OAuthClients < Base
       def list
         request(method: :get, path: "/v1/oauth_clients")
@@ -48,6 +62,14 @@ module Atlas
         request(method: :post, path: "/v1/oauth_clients/#{enc(id)}/rotate_secret", body: body, idempotency_key: idempotency_key)
       end
 
+      # +POST /v1/oauth_clients/:id/secret/reveal+ — the secret the latest
+      # create or rotate generated, once more: a single time, within 10 minutes,
+      # while it is still current (410 afterwards; rotate instead). Returns
+      # +client_id+, +client_secret+, +secret_prefix+ and +client_secret_expires_at+.
+      def reveal_secret(id)
+        request(method: :post, path: "/v1/oauth_clients/#{enc(id)}/secret/reveal")
+      end
+
       def delete(id)
         request(method: :delete, path: "/v1/oauth_clients/#{enc(id)}")
       end
@@ -58,6 +80,17 @@ module Atlas
       # +latency_ms+, +error+, +location+ (a 3xx is never followed) and +test+.
       def list_backchannel_deliveries(id, params = {})
         request(method: :get, path: "/v1/oauth_clients/#{enc(id)}/backchannel_deliveries", query: params)
+      end
+
+      # +POST /v1/oauth_clients/:id/logout+ — sign a user out of this app AND of
+      # Atlas in one call: revokes this client's grants under +sid+ (the
+      # id_token's +sid+) and the Atlas session itself; every other app gets a
+      # back-channel logout. +id+ is the client id or its public +client_id+.
+      # Needs +oauth_clients:write+ and +sessions:write+. Returns +session+
+      # (+"revoked"+ or +"already_ended"+), +grants_revoked+ and
+      # +backchannel_logouts+.
+      def logout(id, sid, idempotency_key: nil)
+        request(method: :post, path: "/v1/oauth_clients/#{enc(id)}/logout", body: { sid: sid }, idempotency_key: idempotency_key)
       end
 
       # +POST /v1/oauth_clients/:id/backchannel_logout/test+ — send a test
