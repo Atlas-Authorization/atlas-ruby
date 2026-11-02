@@ -93,10 +93,17 @@ module Atlas
     #   unless the entry has a +resolve_subject+). The claims then carry +sub+ =
     #   the Atlas id, +external_id+ and +legacy+ (+kind+, +issuer+, +sub+). See
     #   {Atlas::LegacyIssuerVerifier}. Atlas tokens are unaffected.
+    # @param previous_issuers [Array<String>, nil] earlier issuers of THIS
+    #   instance, also accepted: its old sign-in host while it moves to a new
+    #   one (a custom domain or a path mount going live). Same keys, so nothing
+    #   else changes. Discovery lists them in +atlas_previous_issuers+ with an
+    #   +accepted_until+; remove them after that.
     def initialize(jwks_url:, issuer:, authorized_parties: nil, secret_key: nil,
-                   bapi_base_url: nil, http: nil, fetch_impl: nil, now: nil, legacy_issuers: nil)
+                   bapi_base_url: nil, http: nil, fetch_impl: nil, now: nil, legacy_issuers: nil,
+                   previous_issuers: nil)
       require_jwt!
       @issuer = issuer
+      @accepted_issuers = previous_issuers.nil? || previous_issuers.empty? ? issuer : [issuer, *previous_issuers]
       @authorized_parties = authorized_parties
       @secret_key = secret_key
       @bapi_base_url = bapi_base_url
@@ -139,7 +146,7 @@ module Atlas
         payload, = JWT.decode(
           token, nil, true,
           algorithms: SIGNING_ALGS,
-          iss: @issuer,
+          iss: @accepted_issuers,
           verify_iss: true,
           jwks: jwk_set,
           # exp/nbf tolerance, matching the server's minting skew.

@@ -10,7 +10,10 @@ module Atlas
         request(method: :get, path: "/v1/scim_tokens")
       end
 
-      # Create reveals the usable secret exactly once.
+      # Create reveals the usable secret exactly once. The answer also carries
+      # +scim_base_url+ (give it to the identity provider with the secret) and
+      # +warnings+ (+no_sso_connection+ when the organization has no SSO
+      # connection yet).
       def create(body, idempotency_key: nil)
         request(method: :post, path: "/v1/scim_tokens", body: body, idempotency_key: idempotency_key)
       end

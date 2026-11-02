@@ -7,18 +7,48 @@ module Atlas
     # +/v1/organizations+ — orgs plus their memberships, invitations, domains,
     # hierarchy, policy, entitlements, and directory-group role grants.
     class Organizations < Base
+      # +params+: +limit+, +starting_after+, +external_id+ (your own id for the
+      # customer) and a +metadata:+ Hash of public_metadata equality filters
+      # (sent as +metadata[key]=value+, ANDed).
       def list(params = {})
-        request(method: :get, path: "/v1/organizations", query: params)
+        request(method: :get, path: "/v1/organizations", query: Atlas::Resources.metadata_query(params))
       end
 
+      # The organization plus its +sso+ block: +{ "connections" => [{ id, type,
+      # status }], "scim_base_url" }+.
       def get(id)
         request(method: :get, path: "/v1/organizations/#{enc(id)}")
       end
 
+      # +GET /v1/organizations/by_domain/:domain+ — the organization owning a
+      # domain (an email address works too: its domain is used). Verified
+      # domains only unless +include_unverified: true+. The answer adds
+      # +"domain"+ (+id+, +domain+, +status+, +verified_at+).
+      def find_by_domain(domain, include_unverified: false)
+        request(method: :get, path: "/v1/organizations/by_domain/#{enc(domain)}",
+                query: include_unverified ? { include_unverified: "true" } : nil)
+      end
+
+      # +GET /v1/organizations/:id/policy+ — +{ "object", "organization_id", "policy" }+.
+      def get_policy(id)
+        request(method: :get, path: "/v1/organizations/#{enc(id)}/policy")
+      end
+
+      # +body+: +name+, +slug+, and optionally +created_by+ (omit or nil for an
+      # organization your backend creates with no members yet), +external_id+
+      # (unique per instance; 409 with +param: external_id+ when taken),
+      # +public_metadata+, +private_metadata+, +owner_email+ (invites that
+      # address with the creator role; the answer carries +owner_invitation+),
+      # +role_mappings+ (role key => your product's name for it, echoed as the
+      # +org_role_mapped+ token claim) and +max_allowed_memberships+.
+      #
+      #   atlas.organizations.create({ name: "Acme", slug: "acme", external_id: "cus_42",
+      #                                owner_email: "it@acme.example", role_mappings: { "org:admin" => "owner" } })
       def create(body, idempotency_key: nil)
         request(method: :post, path: "/v1/organizations", body: body, idempotency_key: idempotency_key)
       end
 
+      # Also takes +external_id+ and +role_mappings+ (+nil+ clears either).
       def update(id, body)
         request(method: :patch, path: "/v1/organizations/#{enc(id)}", body: body)
       end
@@ -226,8 +256,23 @@ module Atlas
           request(method: :post, path: "/v1/organizations/#{enc(org_id)}/domains", body: body, idempotency_key: idempotency_key)
         end
 
-        def verify(org_id, domain_id)
-          request(method: :post, path: "/v1/organizations/#{enc(org_id)}/domains/#{enc(domain_id)}/verify")
+        # Check now. No +method:+ = the DNS TXT check (no body is sent);
+        # +"well_known"+ fetches the file in +verification_methods.well_known+;
+        # +"email"+ takes the +code+ from {#send_verification_email}.
+        def verify(org_id, domain_id, method: nil, code: nil)
+          body = { method: method, code: code }.compact
+          request(method: :post, path: "/v1/organizations/#{enc(org_id)}/domains/#{enc(domain_id)}/verify",
+                  body: body.empty? ? Atlas::Transport::OMIT : body)
+        end
+
+        # +POST .../domains/:domain_id/verification_email+ — email a 6-digit code
+        # to an administrative mailbox at the domain (+address:+ +"admin"+,
+        # +"administrator"+, +"hostmaster"+, +"postmaster"+ or +"webmaster"+),
+        # through your own email provider (422 EMAIL_DELIVERY_NOT_CONFIGURED
+        # without one). The code lasts 30 minutes. Answers the domain plus +sent_to+.
+        def send_verification_email(org_id, domain_id, address: nil)
+          request(method: :post, path: "/v1/organizations/#{enc(org_id)}/domains/#{enc(domain_id)}/verification_email",
+                  body: address.nil? ? {} : { address: address })
         end
 
         def delete(org_id, domain_id)

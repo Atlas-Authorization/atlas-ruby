@@ -49,6 +49,9 @@ module Atlas
     # @return [Array<Hash>, nil] Better Auth cutover: legacy issuers whose JWTs
     #   are also accepted for a bounded window (see {Atlas::LegacyIssuerVerifier}).
     attr_accessor :legacy_issuers
+    # @return [Array<String>, nil] earlier issuers of this instance, accepted
+    #   during a sign-in host move (see {Atlas::Backend#initialize}).
+    attr_accessor :previous_issuers
     # @return [Boolean, Hash, nil] Better Auth cutover: +true+ (or a Hash of
     #   +cookie_prefix+, +cookie_name+, +better_auth_cookie_domain+, +secure+,
     #   +sign_in_url+) makes {Atlas::Rails::Middleware} exchange a Better Auth
@@ -62,6 +65,7 @@ module Atlas
       @bapi_base_url      = resolve("ATLAS_BAPI_BASE_URL", :bapi_base_url)
       @authorized_parties = nil
       @legacy_issuers     = nil
+      @previous_issuers   = nil
       @better_auth_bridge = nil
       @backend            = nil
       @bridge             = nil
@@ -90,6 +94,7 @@ module Atlas
         secret_key: secret_key,
         bapi_base_url: bapi_base_url,
         legacy_issuers: legacy_issuers,
+        previous_issuers: previous_issuers,
       )
     end
 

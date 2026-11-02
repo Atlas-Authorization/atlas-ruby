@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.22.0 — 2026-11-01
+
+### Added
+
+- **Organizations for multi-tenant products.** `organizations.create` no longer needs `created_by` (omit it for an organization your backend creates) and takes `external_id`, `public_metadata` / `private_metadata`, `owner_email` (the answer carries `owner_invitation`) and `role_mappings`; `update` takes `external_id` and `role_mappings`. `organizations.list` filters by `external_id:` and a `metadata:` Hash (`metadata[key]=value`). New `organizations.find_by_domain(domain, include_unverified:)` (a domain or an email address) and `organizations.get_policy(id)`. `organizations.get` answers an `sso` block (`connections`, `scim_base_url`).
+- **Domain verification methods.** `organizations.domains.verify(org_id, domain_id, method:, code:)` (`dns_txt`, `well_known` or `email`; no arguments is the DNS check, as before) and `organizations.domains.send_verification_email(org_id, domain_id, address:)` (your own email provider). Domains carry `verification_methods` and `verification_method`.
+- **Trusted-JWT connections.** `jwt_connections` (`list`, `get`, `create`, `update`, `delete`).
+- **SSO setup links.** `sso_onboarding.list(name:)`; profiles and tickets take `return_url`; a ticket answers `effective_return_url`.
+- **Webhook endpoints.** `webhooks.endpoints.create` documents `active: false` and `secret` (your own `whsec_` signing secret); `rotate_secret(id, body, secret:)` rotates to a secret you chose. Test results document `event_type` and `error_kind`.
+- **Platform apps.** `platform.apps.reveal_initial_secret(id, dry_run:)`: show a new app's secret keys once more within 10 minutes of the create.
+- **Path-mount domains.** `domains.create({ method: "path", hostname:, base_path: })` serves the Frontend API under a path on a host you already run (no DNS); `domains.verify` answers `issuer` once it is live.
+- **Previous issuers.** `Atlas::Backend.new(previous_issuers: [...])` (and `previous_issuers` in the Rails config) also accepts tokens from the instance's earlier issuer during a sign-in host move.
+- Documented: SCIM token create answers `scim_base_url` and `warnings`; `users.create` and `import_export.import_users` take `password_hash_algorithm` and `password_hash_params`; referral settings `report_linked_atlas_id_signups` and `partner_portal_url`; cookie consent `host_aliases`.
+- Webhook event constants: `WEBHOOK_EVENT_SSO_CONNECTION_ACTIVATED`, `WEBHOOK_EVENT_SSO_ONBOARDING_TICKET_COMPLETED`, `WEBHOOK_EVENT_SCIM_GROUP_CREATED` / `_UPDATED` / `_DELETED` / `_MEMBER_ADDED` / `_MEMBER_REMOVED`.
+
 ## 0.21.0 — 2026-10-30
 
 ### Added

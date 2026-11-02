@@ -51,7 +51,11 @@ module Atlas
         end
 
         # Create reveals the signing secret (+whsec_...+) exactly once.
-        # +dry_run: true+ validates and writes nothing.
+        # +dry_run: true+ validates and writes nothing. +active: false+ creates it
+        # switched off (nothing is delivered until +update(id, { active: true })+;
+        # +test+ still works). +secret:+ sets your own signing secret instead of
+        # a generated one: +"whsec_"+ plus 32-256 of +[A-Za-z0-9+/=_-]+ (422
+        # +param: secret+ otherwise; HTTPS endpoints only).
         def create(body, idempotency_key: nil, dry_run: false)
           request(method: :post, path: "/v1/webhook_endpoints", body: body, idempotency_key: idempotency_key,
                   query: Atlas::Resources.dry_run_query(dry_run))
@@ -81,12 +85,20 @@ module Atlas
         # By default the old secret stops signing at once. With +{ overlap_seconds: }+ (at most 604800) every
         # delivery is signed with both until +previous_secret_expires_at+ (epoch ms), so a verifier holding
         # either passes. Choose an overlap only once every receiver accepts several signatures (0.7.0+).
-        def rotate_secret(id, body = Atlas::Transport::OMIT)
+        # +secret:+ rotates to a secret you chose (same rule as on create; must differ from the current one).
+        def rotate_secret(id, body = Atlas::Transport::OMIT, secret: nil)
+          unless secret.nil?
+            body = (body.equal?(Atlas::Transport::OMIT) ? {} : body).merge(secret: secret)
+          end
           request(method: :post, path: "/v1/webhook_endpoints/#{enc(id)}/rotate_secret", body: body)
         end
 
         # +POST /v1/webhook_endpoints/:id/test+ — send a synthetic webhook.test event to this endpoint only.
-        # +wait:+ (seconds) holds the call until the attempt finishes and returns its outcome.
+        # +wait:+ (seconds) holds the call until the attempt finishes and returns its outcome:
+        # +delivery_id+, +event_id+, +event_type+ (+"webhook.test"+), +status+, +http_status+,
+        # +latency_ms+, +response_snippet+, +error+, +error_kind+ (+non_2xx+, +redirect+,
+        # +timeout+, +tls+, +dns+, +connection_refused+, +network+, +url_blocked+; nil on
+        # success), +signature_header_sent+ and +will_retry+.
         def test(id, wait: nil)
           request(method: :post, path: "/v1/webhook_endpoints/#{enc(id)}/test", query: wait.nil? ? nil : { wait: wait })
         end

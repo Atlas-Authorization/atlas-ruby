@@ -23,6 +23,7 @@ require_relative "resources/webhooks"
 require_relative "resources/sign_in_tokens"
 require_relative "resources/audit_logs"
 require_relative "resources/jwt_templates"
+require_relative "resources/jwt_connections"
 require_relative "resources/api_keys"
 require_relative "resources/oauth_providers"
 require_relative "resources/sso_onboarding"
@@ -226,6 +227,7 @@ module Atlas
     def sign_in_tokens    = @sign_in_tokens ||= Resources::SignInTokens.new(@transport)
     def audit_logs        = @audit_logs ||= Resources::AuditLogs.new(@transport)
     def jwt_templates     = @jwt_templates ||= Resources::JwtTemplates.new(@transport)
+    def jwt_connections   = @jwt_connections ||= Resources::JwtConnections.new(@transport)
     def api_keys          = @api_keys ||= Resources::ApiKeys.new(@transport)
     def oauth_providers   = @oauth_providers ||= Resources::OAuthProviders.new(@transport)
     def custom_oauth_providers = @custom_oauth_providers ||= Resources::CustomOAuthProviders.new(@transport)

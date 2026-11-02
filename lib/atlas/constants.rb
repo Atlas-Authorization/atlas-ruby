@@ -48,6 +48,15 @@ module Atlas
   WEBHOOK_EVENT_STATUS_INCIDENT_CREATED = "status.incident.created"
   WEBHOOK_EVENT_STATUS_INCIDENT_UPDATED = "status.incident.updated"
   WEBHOOK_EVENT_STATUS_INCIDENT_RESOLVED = "status.incident.resolved"
+  # Enterprise SSO for multi-tenant products.
+  WEBHOOK_EVENT_SSO_CONNECTION_ACTIVATED = "sso_connection.activated"
+  WEBHOOK_EVENT_SSO_ONBOARDING_TICKET_COMPLETED = "sso_onboarding_ticket.completed"
+  # SCIM groups of an organization's directory (every payload carries +organization_id+).
+  WEBHOOK_EVENT_SCIM_GROUP_CREATED = "scim_group.created"
+  WEBHOOK_EVENT_SCIM_GROUP_UPDATED = "scim_group.updated"
+  WEBHOOK_EVENT_SCIM_GROUP_DELETED = "scim_group.deleted"
+  WEBHOOK_EVENT_SCIM_GROUP_MEMBER_ADDED = "scim_group.member_added"
+  WEBHOOK_EVENT_SCIM_GROUP_MEMBER_REMOVED = "scim_group.member_removed"
 
   # +since+ value for webhook replay / redelivery: from the start of the endpoint's last
   # failure streak.

@@ -8,7 +8,9 @@ module Atlas
     # jobs (the Auth0 +jobs+ parity surface).
     class ImportExport < Base
       # Import users through the same per-row path sign-up uses. +notify: false+
-      # (the default) guarantees the imported users are sent nothing.
+      # (the default) guarantees the imported users are sent nothing. Each row
+      # also takes +password_hash_algorithm+ and +password_hash_params+ for a
+      # hash that does not describe itself (see {Users#create}).
       def import_users(body, idempotency_key: nil)
         request(method: :post, path: "/v1/user_imports", body: body, idempotency_key: idempotency_key)
       end

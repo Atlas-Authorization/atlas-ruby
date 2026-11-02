@@ -27,6 +27,13 @@ module Atlas
 
       # +notify: false+ (the default) guarantees no email, SMS or push is sent to
       # the user as a consequence of the create.
+      # A password may be plaintext +password+, or an existing hash as
+      # +password_hash+ (alias +password_digest+): a self-describing hash
+      # (Argon2id, bcrypt, PBKDF2/scrypt in Django or passlib form, ...) is stored
+      # as given; any other is named with +password_hash_algorithm+ (+scrypt+,
+      # +pbkdf2+, +md5+, +sha1+, +sha256+, +sha512+, +hmac_sha256+, ...) and
+      # +password_hash_params+ (salt, cost and so on). It upgrades to Argon2id
+      # on first sign-in.
       def create(body, idempotency_key: nil)
         request(method: :post, path: "/v1/users", body: body, idempotency_key: idempotency_key)
       end

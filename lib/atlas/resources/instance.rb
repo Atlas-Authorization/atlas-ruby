@@ -203,6 +203,11 @@ module Atlas
       #   at most 10; values up to 200 chars). A link needs a preset or at
       #   least one attribute (400 otherwise). Optional +culture+: +"page"+
       #   (default; the script tag carries the page language) or +"browser"+.
+      #   Optional +host_aliases+: up to 10 bare hostnames the hosted pages are
+      #   served on that your consent manager's site is knowingly not registered
+      #   for (typically the default +<slug>-fapi.atlasauth.net+ host); clears
+      #   +cmp_site_domain_mismatch+ for them. +[]+ clears. A body of just
+      #   +{ host_aliases: [...] }+ changes only the aliases.
       #
       #   atlas.instance.set_cookie_consent(
       #     script_url: "https://consent.cookiebot.com/uc.js",

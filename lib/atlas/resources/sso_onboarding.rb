@@ -7,14 +7,17 @@ module Atlas
     # +/v1/sso_onboarding_profiles+ — self-service SSO onboarding profiles and
     # the one-time tickets they issue.
     class SsoOnboarding < Base
-      def list
-        request(method: :get, path: "/v1/sso_onboarding_profiles")
+      # +name:+ lists only the profiles with exactly that name ("find or create").
+      def list(name: nil)
+        request(method: :get, path: "/v1/sso_onboarding_profiles", query: name.nil? ? nil : { name: name })
       end
 
       def get(id)
         request(method: :get, path: "/v1/sso_onboarding_profiles/#{enc(id)}")
       end
 
+      # +body+ may carry +return_url+: where "Finish" on the hosted setup page
+      # sends the admin (https, on one of your allowed origins).
       def create(body, idempotency_key: nil)
         request(method: :post, path: "/v1/sso_onboarding_profiles", body: body, idempotency_key: idempotency_key)
       end
@@ -24,6 +27,9 @@ module Atlas
       end
 
       # Issue a one-time ticket for a profile. The token is returned once, here.
+      # +body+: +organization_id+, +expires_in_seconds+ (clamped to 300..2592000,
+      # default 3 days) and +return_url+ (overrides the profile's). The answer
+      # carries +effective_return_url+.
       def create_ticket(profile_id, body = {}, idempotency_key: nil)
         request(method: :post, path: "/v1/sso_onboarding_profiles/#{enc(profile_id)}/tickets", body: body, idempotency_key: idempotency_key)
       end

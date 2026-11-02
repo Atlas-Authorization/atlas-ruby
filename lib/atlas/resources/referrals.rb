@@ -27,7 +27,12 @@ module Atlas
       # +hold_until_email_verified+, +max_referred_signups_per_ip_hour+). Also
       # +tracking_token+, +code_lookup_url+ (an https URL template with
       # +{code}+), +signup_code_field+, +forward_lifecycle+ (default true),
-      # +mirror_to_public_metadata+ and +include_referral_claims+. Reads add
+      # +mirror_to_public_metadata+, +include_referral_claims+ (adds
+      # +referral_code+ and +referral_link+ claims), +report_linked_atlas_id_signups+
+      # (report the first sign-in of an Atlas ID account to a Sign in with Atlas
+      # app this instance manages as a sign-up) and +partner_portal_url+ (https;
+      # linked from the hosted account page's "Refer a friend" panel). An
+      # unknown field is 422 +UNKNOWN_FIELD+. Reads add
       # +connection.last_ping+ and +connection.alert+ (+signature_rejected+ or
       # +connection_paused+ while delivery is blocked).
       #

@@ -118,9 +118,23 @@ module Atlas
 
         # +POST /v1/platform/apps+ — provision a new app. Its secret key is returned once.
         # The body takes +external_ref+ and +metadata+; the response echoes them plus
-        # +idempotent_replay+. +dry_run: true+ validates and writes nothing.
+        # +idempotent_replay+. +dry_run: true+ validates and writes nothing. The
+        # answer carries +initial_secret_reveal+ (+path+, +expires_at+): see
+        # {#reveal_initial_secret}. An Idempotency-Key replay answers +secret+ nil
+        # and +secret_redacted: true+.
         def create(body = {}, idempotency_key: nil, dry_run: false)
           request(method: :post, path: "/v1/platform/apps", body: body, idempotency_key: idempotency_key,
+                  query: Atlas::Resources.dry_run_query(dry_run))
+        end
+
+        # +POST /v1/platform/apps/:id/initial_secret/reveal+ — show a new app's
+        # secret keys once more (+secret+ and +sibling_instance.secret+): works
+        # once, within 10 minutes of +create+ (its +initial_secret_reveal+ gives
+        # the deadline), for a script that lost the create response. 410 after
+        # that. Needs +platform:secrets:write+. +dry_run: true+ reports
+        # +available+ and +expires_at+ without using it up.
+        def reveal_initial_secret(id, dry_run: false)
+          request(method: :post, path: "/v1/platform/apps/#{enc(id)}/initial_secret/reveal",
                   query: Atlas::Resources.dry_run_query(dry_run))
         end
 
