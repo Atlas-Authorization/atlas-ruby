@@ -33,6 +33,12 @@ module Atlas
         request(method: :post, path: "/v1/instance/hooks/before_user_create/test")
       end
 
+      # +DELETE /v1/instance/hooks/before_user_create+ — turn the hook off and clear
+      # its url and signing secret. Idempotent; +timeout_ms+ and +fail_closed+ are kept.
+      def clear_before_user_create
+        request(method: :delete, path: "/v1/instance/hooks/before_user_create")
+      end
+
       # The hook's delivery log, newest first (kept 30 days). +params+: +limit+,
       # +status+ (+ok+, +failed+, +timeout+, +error+, +invalid_response+), +test+
       # and +starting_after+.

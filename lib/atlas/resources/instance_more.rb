@@ -28,6 +28,19 @@ module Atlas
             idempotency_key: idempotency_key
           )
         end
+
+        # +POST /v1/instance/integrations/:product/deliveries/redeliver+ - Re-send the events the
+        # integration's receiver never got, and switch a disabled receiver back on. Delivered events
+        # are not sent again. While +has_more+ is true, call again with +since+ set to +next_since+.
+        # Scope: instance:write. Body requires: since (ISO 8601, epoch ms or failing_since).
+        def redeliver_events(product, body, idempotency_key: nil)
+          request(
+            method: :post,
+            path: "/v1/instance/integrations/#{enc(product)}/deliveries/redeliver",
+            body: body,
+            idempotency_key: idempotency_key
+          )
+        end
       end
     end
   end

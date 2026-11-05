@@ -27,6 +27,23 @@ module Atlas
         request(method: :post, path: "/v1/instance/signing_keys/rotate", body: body)
       end
 
+      # +DELETE /v1/instance/signing_keys/next+ — cancel a staged rotation: the staged
+      # key leaves the JWKS and never signs. 404 when none is staged.
+      def cancel_staged_signing_key
+        request(method: :delete, path: "/v1/instance/signing_keys/next")
+      end
+
+      # +GET /v1/instance/signing_key_policy+ — +prepublish_days+ (nil = off).
+      def get_signing_key_policy
+        request(method: :get, path: "/v1/instance/signing_key_policy")
+      end
+
+      # +PATCH /v1/instance/signing_key_policy+ — stage every ordinary rotation this
+      # many days ahead (1..90); nil or 0 is off.
+      def set_signing_key_policy(prepublish_days)
+        request(method: :patch, path: "/v1/instance/signing_key_policy", body: { prepublish_days: prepublish_days })
+      end
+
       # +GET /v1/instance/signing_key_provider+ — the key management service the
       # signing key lives in (+"local"+ when none). Never carries credentials.
       def get_signing_key_provider

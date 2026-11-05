@@ -38,6 +38,13 @@ module Atlas
         request(method: :get, path: "/v1/sessions/#{enc(id)}")
       end
 
+      # +GET /v1/sessions/:id/status+ — cheap freshness check: +id+, +status+ (active,
+      # expired, revoked or ended), +user_id+, +expires_at+, +last_active_at+. Takes a
+      # session id or an ID token +sid+.
+      def status(id)
+        request(method: :get, path: "/v1/sessions/#{enc(id)}/status")
+      end
+
       def revoke(id)
         request(method: :post, path: "/v1/sessions/#{enc(id)}/revoke")
       end

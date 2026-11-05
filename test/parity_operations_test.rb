@@ -461,6 +461,15 @@ class ParityOperationsTest < Minitest::Test
     ["PATCH /v1/mcp_gateways/{}/budgets/{}", "PATCH", "/v1/mcp_gateways/a%2Fb/budgets/budget_id_1?dry_run=5", { "x" => 1 }, true, ->(c) { c.mcp_gateways.budgets.update("a/b", "budget_id_1", { "x" => 1 }, { "dry_run" => 5 }, idempotency_key: "idem_1") }],
     ["DELETE /v1/mcp_gateways/{}/budgets/{}", "DELETE", "/v1/mcp_gateways/a%2Fb/budgets/budget_id_1?dry_run=5", nil, true, ->(c) { c.mcp_gateways.budgets.delete("a/b", "budget_id_1", { "dry_run" => 5 }, idempotency_key: "idem_1") }],
     ["GET /v1/mcp_gateways/{}/budgets/{}/usage", "GET", "/v1/mcp_gateways/a%2Fb/budgets/budget_id_1/usage?agent_id=5", nil, false, ->(c) { c.mcp_gateways.budgets.usage("a/b", "budget_id_1", { "agent_id" => 5 }) }],
+    ["POST /v1/users/{}/account_claim", "POST", "/v1/users/a%2Fb/account_claim", { "password_policy" => "until_email_verified" }, true, ->(c) { c.users.protect_account_claim("a/b", idempotency_key: "idem_1") }],
+    ["GET /v1/machines/{}/grants", "GET", "/v1/machines/a%2Fb/grants", nil, false, ->(c) { c.machines.list_grants("a/b") }],
+    ["POST /v1/machines/{}/grants", "POST", "/v1/machines/a%2Fb/grants", { "resource_server_id" => "rs_1" }, false, ->(c) { c.machines.create_grant("a/b", { "resource_server_id" => "rs_1" }) }],
+    ["DELETE /v1/machines/{}/grants/{}", "DELETE", "/v1/machines/a%2Fb/grants/grant_1", nil, false, ->(c) { c.machines.delete_grant("a/b", "grant_1") }],
+    ["GET /v1/organizations/{}/machine_memberships", "GET", "/v1/organizations/a%2Fb/machine_memberships?limit=5", nil, false, ->(c) { c.machines.list_organization_members("a/b", { "limit" => 5 }) }],
+    ["POST /v1/organizations/{}/machine_memberships", "POST", "/v1/organizations/a%2Fb/machine_memberships", { "machine_id" => "mch_1" }, true, ->(c) { c.machines.add_to_organization("a/b", { "machine_id" => "mch_1" }, idempotency_key: "idem_1") }],
+    ["PATCH /v1/organizations/{}/machine_memberships/{}", "PATCH", "/v1/organizations/a%2Fb/machine_memberships/mch_1", { "role" => "org:admin" }, false, ->(c) { c.machines.update_organization_role("a/b", "mch_1", "org:admin") }],
+    ["DELETE /v1/organizations/{}/machine_memberships/{}", "DELETE", "/v1/organizations/a%2Fb/machine_memberships/mch_1", nil, false, ->(c) { c.machines.remove_from_organization("a/b", "mch_1") }],
+    ["POST /v1/instance/integrations/{}/deliveries/redeliver", "POST", "/v1/instance/integrations/a%2Fb/deliveries/redeliver", { "since" => "failing_since" }, true, ->(c) { c.instance.integrations.redeliver_events("a/b", { "since" => "failing_since" }, idempotency_key: "idem_1") }],
     ["POST /v1/instance/integrations/{}/events_secret/rotate", "POST", "/v1/instance/integrations/a%2Fb/events_secret/rotate?dry_run=5", { "x" => 1 }, true, ->(c) { c.instance.integrations.rotate_events_secret("a/b", { "x" => 1 }, { "dry_run" => 5 }, idempotency_key: "idem_1") }],
     ["POST /v1/integrations/{}/card/actions/{}", "POST", "/v1/integrations/a%2Fb/card/actions/action_1?dry_run=5", { "x" => 1 }, true, ->(c) { c.integrations.run_card_action("a/b", "action_1", { "x" => 1 }, { "dry_run" => 5 }, idempotency_key: "idem_1") }],
     ["GET /v1/instance/sign_in_with_atlas", "GET", "/v1/instance/sign_in_with_atlas", nil, false, ->(c) { c.instance.sign_in_with_atlas.get }],
@@ -491,6 +500,20 @@ class ParityOperationsTest < Minitest::Test
     ["POST /v1/organizations/{}/app_webhook_endpoints/{}/deliveries/{}/redeliver", "POST", "/v1/organizations/a%2Fb/app_webhook_endpoints/endpoint_id_1/deliveries/delivery_id_1/redeliver?dry_run=5", nil, true, ->(c) { c.app_events.endpoints.redeliver("a/b", "endpoint_id_1", "delivery_id_1", { "dry_run" => 5 }, idempotency_key: "idem_1") }],
     ["POST /v1/organizations/{}/app_webhook_endpoints/{}/replay", "POST", "/v1/organizations/a%2Fb/app_webhook_endpoints/endpoint_id_1/replay?dry_run=5", { "since" => "failing_since" }, true, ->(c) { c.app_events.endpoints.replay("a/b", "endpoint_id_1", { "since" => "failing_since" }, { "dry_run" => 5 }, idempotency_key: "idem_1") }],
     ["GET /v1/organizations/{}/app_event_types", "GET", "/v1/organizations/a%2Fb/app_event_types?limit=5", nil, false, ->(c) { c.app_events.endpoints.app_event_types("a/b", { "limit" => 5 }) }],
+    ["DELETE /v1/instance/hooks/before_user_create", "DELETE", "/v1/instance/hooks/before_user_create", nil, false, ->(c) { c.user_hooks.clear_before_user_create }],
+    ["DELETE /v1/instance/signing_keys/next", "DELETE", "/v1/instance/signing_keys/next", nil, false, ->(c) { c.instance_security.cancel_staged_signing_key }],
+    ["GET /v1/instance/signing_key_policy", "GET", "/v1/instance/signing_key_policy", nil, false, ->(c) { c.instance_security.get_signing_key_policy }],
+    ["PATCH /v1/instance/signing_key_policy", "PATCH", "/v1/instance/signing_key_policy", { "prepublish_days" => 7 }, false, ->(c) { c.instance_security.set_signing_key_policy(7) }],
+    ["POST /v1/partner_executor_keys/{}/{}", "POST", "/v1/partner_executor_keys/a%2Fb/i1", { "x" => 1 }, false, ->(c) { c.partner_platforms.mint_executor_key("a/b", "i1", '{"x":1}', "x-signature", "t=1") }],
+    ["DELETE /v1/partner_executor_keys/{}/{}", "DELETE", "/v1/partner_executor_keys/a%2Fb/i1", { "x" => 1 }, false, ->(c) { c.partner_platforms.revoke_executor_key("a/b", "i1", '{"x":1}', "x-signature", "t=1") }],
+    ["DELETE /v1/users/{}/password", "DELETE", "/v1/users/a%2Fb/password?sign_out_of_other_sessions=false", nil, false, ->(c) { c.users.remove_password("a/b", sign_out_of_other_sessions: false) }],
+    ["GET /v1/instance/storage_declaration", "GET", "/v1/instance/storage_declaration", nil, false, ->(c) { c.instance.storage_declaration }],
+    ["GET /v1/storage_declaration", "GET", "/v1/storage_declaration?publishable_key=pk_1", nil, false, ->(c) { c.instance.public_storage_declaration("pk_1") }],
+    ["GET /v1/sessions/{}/status", "GET", "/v1/sessions/a%2Fb/status", nil, false, ->(c) { c.sessions.status("a/b") }],
+    ["PATCH /v1/sso_onboarding_profiles/{}", "PATCH", "/v1/sso_onboarding_profiles/a%2Fb", { "x" => 1 }, false, ->(c) { c.sso_onboarding.update("a/b", { "x" => 1 }) }],
+    ["POST /v1/instance/referrals/accounts/resync", "POST", "/v1/instance/referrals/accounts/resync", { "starting_after" => "org_1" }, false, ->(c) { c.referrals.resync_accounts(starting_after: "org_1") }],
+    ["PUT /v1/organizations/by_external_id/{}", "PUT", "/v1/organizations/by_external_id/a%2Fb", { "x" => 1 }, false, ->(c) { c.organizations.upsert_by_external_id("a/b", { "x" => 1 }) }],
+    ["PUT /v1/sso_onboarding_profiles/by_name/{}", "PUT", "/v1/sso_onboarding_profiles/by_name/a%2Fb", { "x" => 1 }, false, ->(c) { c.sso_onboarding.upsert_by_name("a/b", { "x" => 1 }) }],
   ].freeze
 
   def test_every_listed_operation_has_a_row
@@ -498,6 +521,30 @@ class ParityOperationsTest < Minitest::Test
     keys = OPERATIONS.map(&:first)
     assert_equal listed.sort, keys.sort
     assert_equal keys.uniq.length, keys.length
+  end
+
+  def test_partner_executor_key_sends_the_signed_bytes_and_the_signature
+    raw = '{ "nonce":"n",  "iat":1 }'
+    http = Atlas::Test::StubRequester.new
+    http.enqueue(body: { "ok" => true })
+    Atlas::Client.new("sk_test_123", http: http).partner_platforms.mint_executor_key("p", "i", raw, "x-signature", "t=1")
+    assert_equal raw, http.last.body
+    assert_equal "t=1", http.last.headers["x-signature"]
+    assert_equal "application/json", http.last.headers["content-type"]
+  end
+
+  def test_storage_declaration_csv_asks_for_csv_and_returns_the_text
+    http = Atlas::Test::StubRequester.new
+    http.enqueue(body: "name,provider\r\n")
+    assert_equal "name,provider\r\n", Atlas::Client.new("sk_test_123", http: http).instance.storage_declaration_csv
+    assert_equal "https://api.atlasauth.net/v1/instance/storage_declaration?format=csv", http.last.url
+  end
+
+  def test_jwt_sign_in_url_encodes_both_values
+    assert_equal "https://a.test/j?token=t+k&redirect_url=https%3A%2F%2Fb.test%2F%3Fx%3D1",
+                 Atlas::Resources::JwtConnections.sign_in_url("https://a.test/j", "t k", "https://b.test/?x=1")
+    assert_equal "https://a.test/j?z=1&token=t&redirect_url=u",
+                 Atlas::Resources::JwtConnections.sign_in_url("https://a.test/j?z=1", "t", "u")
   end
 
   def test_every_operation_hits_its_route

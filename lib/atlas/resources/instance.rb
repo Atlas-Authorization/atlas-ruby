@@ -250,6 +250,29 @@ module Atlas
       def delete_cookie_consent
         request(method: :delete, path: "/v1/instance/cookie_consent")
       end
+
+      # +GET /v1/instance/storage_declaration+ — every cookie and browser-storage key
+      # of the hosted pages, as a declaration a consent manager can import.
+      def storage_declaration
+        request(method: :get, path: "/v1/instance/storage_declaration")
+      end
+
+      # {#storage_declaration} as CSV text, for a generic importer.
+      def storage_declaration_csv
+        request(method: :get, path: "/v1/instance/storage_declaration", query: { format: "csv" }, raw: true)
+      end
+
+      # +GET /v1/storage_declaration+ — the same declaration read by publishable key.
+      # Nothing in it is secret.
+      def public_storage_declaration(publishable_key)
+        request(method: :get, path: "/v1/storage_declaration", query: { publishable_key: publishable_key })
+      end
+
+      # {#public_storage_declaration} as CSV text.
+      def public_storage_declaration_csv(publishable_key)
+        request(method: :get, path: "/v1/storage_declaration",
+                query: { publishable_key: publishable_key, format: "csv" }, raw: true)
+      end
     end
   end
 end

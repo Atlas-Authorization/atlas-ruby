@@ -76,9 +76,55 @@ module Atlas
         request(method: :delete, path: "/v1/machine_enrolment_tokens/#{enc(id)}")
       end
 
-      # +POST /v1/m2m_tokens/verify+ — verify a presented machine secret: { valid, machine_id }.
+      # +POST /v1/m2m_tokens/verify+ — verify a presented machine secret or machine JWT: { valid, machine_id, ... }.
       def verify_token(token)
         request(method: :post, path: "/v1/m2m_tokens/verify", body: { token: token })
+      end
+
+      # +GET /v1/machines/:id/grants+ — the resource servers this machine may obtain tokens for.
+      def list_grants(id)
+        request(method: :get, path: "/v1/machines/#{enc(id)}/grants")
+      end
+
+      # +POST /v1/machines/:id/grants+ — authorize the machine for a resource server. Body: resource_server_id, scopes,
+      # scope_presets (names from the server's presets, unioned with scopes). A second grant on the same server is a 409.
+      def create_grant(id, body)
+        request(method: :post, path: "/v1/machines/#{enc(id)}/grants", body: body)
+      end
+
+      # +DELETE /v1/machines/:id/grants/:grantId+ — revoke a grant. A token already issued lasts until it expires.
+      def delete_grant(id, grant_id)
+        request(method: :delete, path: "/v1/machines/#{enc(id)}/grants/#{enc(grant_id)}")
+      end
+
+      # +GET /v1/organizations/:id/machine_memberships+ — the machines that are members of an organization.
+      # Query: limit, starting_after.
+      def list_organization_members(organization_id, params = {})
+        request(method: :get, path: "/v1/organizations/#{enc(organization_id)}/machine_memberships", query: params)
+      end
+
+      # +POST /v1/organizations/:id/machine_memberships+ — make a machine a member. Body: machine_id, role (default org:member).
+      def add_to_organization(organization_id, body, idempotency_key: nil)
+        request(
+          method: :post,
+          path: "/v1/organizations/#{enc(organization_id)}/machine_memberships",
+          body: body,
+          idempotency_key: idempotency_key
+        )
+      end
+
+      # +PATCH /v1/organizations/:id/machine_memberships/:machineId+ — change a machine's role. New tokens carry it.
+      def update_organization_role(organization_id, machine_id, role)
+        request(
+          method: :patch,
+          path: "/v1/organizations/#{enc(organization_id)}/machine_memberships/#{enc(machine_id)}",
+          body: { role: role }
+        )
+      end
+
+      # +DELETE /v1/organizations/:id/machine_memberships/:machineId+ — remove a machine from an organization.
+      def remove_from_organization(organization_id, machine_id)
+        request(method: :delete, path: "/v1/organizations/#{enc(organization_id)}/machine_memberships/#{enc(machine_id)}")
       end
     end
   end

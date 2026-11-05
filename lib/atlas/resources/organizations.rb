@@ -141,6 +141,13 @@ module Atlas
         request(method: :get, path: "/v1/organizations/by_slug/#{enc(slug)}")
       end
 
+      # +PUT /v1/organizations/by_external_id/:external_id+ — create or update the
+      # organization keyed by your own id: 201 when created, else 200 with only the
+      # fields sent changed. +name+ is required when it creates.
+      def upsert_by_external_id(external_id, body)
+        request(method: :put, path: "/v1/organizations/by_external_id/#{enc(external_id)}", body: body)
+      end
+
       # Whether a slug is valid and free: +{ slug:, valid:, available: }+.
       def check_slug(slug)
         request(method: :get, path: "/v1/organizations/check_slug", query: { slug: slug })

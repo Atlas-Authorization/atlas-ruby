@@ -75,6 +75,17 @@ module Atlas
         request(method: :post, path: "/v1/users/#{enc(id)}/lock", body: body)
       end
 
+      # +POST /v1/users/:id/account_claim+ — protect one existing unverified user, so a proof of its address reaches
+      # it instead of making a second account. A 409 ACCOUNT_NOT_CLAIMABLE names what else on the user signs in.
+      def protect_account_claim(id, idempotency_key: nil)
+        request(
+          method: :post,
+          path: "/v1/users/#{enc(id)}/account_claim",
+          body: { password_policy: "until_email_verified" },
+          idempotency_key: idempotency_key
+        )
+      end
+
       def unlock(id)
         request(method: :post, path: "/v1/users/#{enc(id)}/unlock")
       end
@@ -284,6 +295,14 @@ module Atlas
       # +POST /v1/users/:id/password+ — set (reset) the user's password. Pass sign_out_of_other_sessions: true to end their other sessions.
       def set_password(id, body, idempotency_key: nil)
         request(method: :post, path: "/v1/users/#{enc(id)}/password", body: body, idempotency_key: idempotency_key)
+      end
+
+      # +DELETE /v1/users/:id/password+ — remove the password, even when it is the only
+      # sign-in method. Idempotent. Signs the user out unless
+      # +sign_out_of_other_sessions:+ is false.
+      def remove_password(id, sign_out_of_other_sessions: nil)
+        request(method: :delete, path: "/v1/users/#{enc(id)}/password",
+                query: { sign_out_of_other_sessions: sign_out_of_other_sessions })
       end
 
       # +POST /v1/users/:id/phone_numbers+ — add a phone number (starts unverified).

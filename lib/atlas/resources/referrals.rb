@@ -114,6 +114,14 @@ module Atlas
         request(method: :get, path: "/v1/instance/referrals/backfill/#{enc(id)}")
       end
 
+      # +POST /v1/instance/referrals/accounts/resync+ — send every organization's owner
+      # to the referral platform once, up to 10,000 per call. When +truncated+, continue
+      # with +starting_after:+ = +next_starting_after+.
+      def resync_accounts(starting_after: nil)
+        request(method: :post, path: "/v1/instance/referrals/accounts/resync",
+                body: starting_after.nil? ? {} : { starting_after: starting_after })
+      end
+
       # +POST /v1/instance/referrals/:preset/install+ — install a provider preset
       # (body: +return_to+) and get the +ReferralInstall+ (where to finish the connection).
       #

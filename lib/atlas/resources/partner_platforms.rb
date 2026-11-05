@@ -11,6 +11,22 @@ module Atlas
     # stored once, encrypted, and never returned by any call (only +token_set+ and
     # +token_prefix+).
     class PartnerPlatforms < Base
+      # +POST /v1/partner_executor_keys/:partner/:instance_id+ — for the partner: mint
+      # its data-rights key for one instance. +raw_body+ is sent byte for byte because
+      # +signature+ (in +signature_header+) signs those bytes. Answers +secret+ and
+      # +executorUrl+; a second mint for the same site rotates.
+      def mint_executor_key(partner, instance_id, raw_body, signature_header, signature)
+        request(method: :post, path: "/v1/partner_executor_keys/#{enc(partner)}/#{enc(instance_id)}",
+                raw_body: raw_body, content_type: "application/json", headers: { signature_header => signature })
+      end
+
+      # +DELETE /v1/partner_executor_keys/:partner/:instance_id+ — for the partner: the
+      # link is gone, revoke the keys minted for that site. Answers +revoked+.
+      def revoke_executor_key(partner, instance_id, raw_body, signature_header, signature)
+        request(method: :delete, path: "/v1/partner_executor_keys/#{enc(partner)}/#{enc(instance_id)}",
+                raw_body: raw_body, content_type: "application/json", headers: { signature_header => signature })
+      end
+
       # +GET /v1/partner_platforms+ — the configured platforms plus the ready-made +presets+.
       def list
         request(method: :get, path: "/v1/partner_platforms")
