@@ -19,3 +19,13 @@ jobs:
           ruby-version: ${{ matrix.ruby }}
           bundler-cache: true
       - run: bundle exec rake test
+  generated:
+    # The generated catalog must match scripts/openapi.snapshot.json + scripts/catalog_pins.json.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Regenerate and fail on any diff
+        run: |
+          set -euo pipefail
+          python3 -I scripts/gen_catalog.py
+          git diff --exit-code -- lib/atlas/generated test/generated

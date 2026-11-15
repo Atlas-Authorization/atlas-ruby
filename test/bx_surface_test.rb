@@ -109,7 +109,7 @@ class BxSurfaceTest < Minitest::Test
     # ES256 over the RSA key's kid, and HS256, never verify.
     refute backend.verify(es256(session, kid: @rsa_jwk.kid)).ok?
     refute backend.verify(JWT.encode(session, "secret" * 8, "HS256", { kid: @ec_jwk.kid })).ok?
-    assert_equal %w[RS256 ES256], Atlas::SIGNING_ALGS
+    assert_equal %w[RS256 ES256 ES384 PS256 EdDSA], Atlas::SIGNING_ALGS
   end
 
   def access(extra = {})
