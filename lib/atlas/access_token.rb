@@ -8,6 +8,8 @@ require_relative "verifier"
 require_relative "dpop"
 require_relative "introspection"
 
+require_relative "jws"
+
 module Atlas
   # The verdict of {AccessTokenVerifier#verify}. On success +ok?+ is true and
   # +claims+, +scopes+, +subject+, +client_id+ and +dpop_bound+ are set.
@@ -151,10 +153,8 @@ module Atlas
         end
 
         begin
-          claims, = JWT.decode(token, nil, true, algorithms: SIGNING_ALGS, iss: @issuer, verify_iss: true,
-                                                 jwks: JWT::JWK::Set.new(keys), leeway: CLOCK_SKEW_SECONDS,
-                                                 required_claims: ["exp"])
-        rescue JWT::DecodeError, StandardError
+          claims, = JWS.decode(token, keys, algorithms: SIGNING_ALGS, iss: @issuer, leeway: CLOCK_SKEW_SECONDS, required: ["exp"])
+        rescue StandardError
           return deny.call(401, "invalid_token", invalid)
         end
       end

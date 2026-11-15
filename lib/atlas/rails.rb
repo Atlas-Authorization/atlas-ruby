@@ -185,4 +185,5 @@ end
 
 require_relative "rails/middleware"
 require_relative "rails/controller"
+require_relative "rails/relying_party"
 require_relative "rails/railtie"

@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require_relative "error"
+require_relative "jws"
 require_relative "jwks_cache"
 require_relative "verifier"
 
@@ -145,19 +146,12 @@ module Atlas
     private
 
     def decode(token, keys)
-      JWT.decode(
-        token, nil, true,
-        algorithms: SIGNING_ALGS,
-        jwks: JWT::JWK::Set.new(keys),
-        iss: @issuer, verify_iss: true,
-        aud: @client_id, verify_aud: true,
-        verify_expiration: false, verify_not_before: false, verify_iat: false
-      )
-    rescue JWT::InvalidIssuerError
+      JWS.decode(token, keys, algorithms: SIGNING_ALGS, iss: @issuer, aud: @client_id, verify_exp: false)
+    rescue JWS::InvalidIssuerError
       fail!(:wrong_issuer)
-    rescue JWT::InvalidAudError
+    rescue JWS::InvalidAudienceError
       fail!(:wrong_audience)
-    rescue JWT::DecodeError, StandardError
+    rescue StandardError
       fail!(:invalid_signature)
     end
 

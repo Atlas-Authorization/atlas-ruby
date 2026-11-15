@@ -5,6 +5,8 @@ require "net/http"
 require "uri"
 
 require_relative "error"
+require_relative "resilience"
+require_relative "telemetry"
 
 module Atlas
   # The default BAPI origin, overridable per instance via +api_url+.
@@ -55,7 +57,7 @@ module Atlas
 
     def initialize(secret_key:, api_url: DEFAULT_API_URL, http: nil,
                    open_timeout: 30, read_timeout: 30, strict: nil, on_unknown_fields: nil, traceparent: nil,
-                   secret_recipient: nil)
+                   secret_recipient: nil, retry_policy: nil, telemetry: nil)
       raise ConfigurationError, "Atlas::Client requires a secret_key." if secret_key.nil? || secret_key.empty?
 
       @secret_key = secret_key
@@ -65,12 +67,19 @@ module Atlas
       @on_unknown_fields = on_unknown_fields
       @traceparent = traceparent
       @secret_recipient = secret_recipient
+      @retry = retry_policy
+      @telemetry = telemetry
+      @base_url = @base
     end
+
+    # @return [Atlas::RetryPolicy, nil] retry settings (nil = never retry, the default).
+    def retry_policy = @retry
 
     # A copy of this transport with some settings replaced. The HTTP requester
     # (and its connection settings) is shared.
-    def with(strict: INHERIT, on_unknown_fields: INHERIT, traceparent: INHERIT, secret_recipient: INHERIT)
+    def with(strict: INHERIT, on_unknown_fields: INHERIT, traceparent: INHERIT, secret_recipient: INHERIT, retry_policy: INHERIT)
       copy = dup
+      copy.instance_variable_set(:@retry, retry_policy) unless retry_policy.equal?(INHERIT)
       copy.instance_variable_set(:@secret_recipient, secret_recipient) unless secret_recipient.equal?(INHERIT)
       copy.instance_variable_set(:@traceparent, traceparent) unless traceparent.equal?(INHERIT)
       copy.instance_variable_set(:@strict, strict) unless strict.equal?(INHERIT)
@@ -124,7 +133,7 @@ module Atlas
         headers["atlas-strict"] = effective_strict ? "true" : "false"
       end
 
-      status, text, response_headers = @http.call(verb, url, headers, payload)
+      status, text, response_headers = perform(verb, url, headers, payload, path)
 
       raise to_api_error(status, text) unless status.between?(200, 299)
 
@@ -137,6 +146,58 @@ module Atlas
     end
 
     private
+
+    # One HTTP exchange with the opt-in resilience: retries (honouring Retry-After, backing off on 429 / 502 / 503 /
+    # 504 and on network errors) for requests that are safe to repeat, an outage check against the status endpoint
+    # that stops retrying during a declared major outage, and an OpenTelemetry span when that gem is loaded.
+    def perform(verb, url, headers, payload, path)
+      Telemetry.trace(verb, path, enabled: @telemetry) do |span|
+        attempt = 0
+        loop do
+          begin
+            status, text, response_headers = @http.call(verb, url, headers, payload)
+          rescue StandardError => e
+            raise unless @retry&.retry_error?(e) && repeatable?(verb, headers) && attempt < @retry.max_retries
+
+            @retry.pause(@retry.delay(attempt, nil))
+            attempt += 1
+            span&.call(attempt)
+            next
+          end
+          if @retry&.retry_status?(status) && repeatable?(verb, headers) && attempt < @retry.max_retries &&
+             !(status >= 500 && @retry.status_aware && outage?)
+            @retry.pause(@retry.delay(attempt, header_value(response_headers || {}, "retry-after")))
+            attempt += 1
+            span&.call(attempt)
+            next
+          end
+          break [status, text, response_headers]
+        end
+      end
+    end
+
+    # GET / PUT / DELETE are repeatable; POST and PATCH only with an idempotency key.
+    def repeatable?(verb, headers)
+      %w[GET PUT DELETE HEAD].include?(verb) || headers.key?("idempotency-key")
+    end
+
+    # True while Atlas declares a major outage (+GET /v1/status+: the top level, or the +backend_api+ component).
+    # The answer is cached for 30 seconds; an unreachable or unreadable status endpoint is not an outage.
+    def outage?
+      now = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+      return @outage[:value] if @outage && now - @outage[:at] < 30
+
+      value = begin
+        st, body, = @http.call("GET", join_url(@base, "/v1/status"), { "accept" => "application/json" }, nil)
+        doc = st.between?(200, 299) ? JSON.parse(body) : nil
+        doc.is_a?(Hash) && (doc["status"] == "major_outage" ||
+          Array(doc["components"]).any? { |c| c.is_a?(Hash) && c["id"] == "backend_api" && c["status"] == "major_outage" })
+      rescue StandardError
+        false
+      end
+      @outage = { value: value, at: now }
+      value
+    end
 
     # Surface +Atlas-Unknown-Fields+ (body fields the endpoint ignored) to the
     # configured callback. Never raises: a broken callback must not turn a

@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require_relative "transport"
+require_relative "doctor"
 
 require_relative "resources/users"
 require_relative "resources/sessions"
@@ -176,16 +177,24 @@ module Atlas
     #   +X-Secret-Recipient+ on every request: each shown-once secret in an answer comes back
     #   sealed to it (+sealed_secret+, +sealed_client_secret+, +sealed_webhook_secret+, with
     #   +secrets_sealed+ naming the fields) and the plaintext field is absent.
+    # @param retry_policy [Atlas::RetryPolicy, Hash, Integer, nil] opt-in retries: an {Atlas::RetryPolicy}, a Hash of its
+    #   options, or a retry count. Honours +Retry-After+, backs off on 429 / 502 / 503 / 504 and network errors,
+    #   and (with +status_aware+) stops during a declared major outage. nil (the default) never retries.
+    # @param telemetry [Boolean, nil] OpenTelemetry spans for every call. nil (default) = on when the
+    #   +opentelemetry+ gem is loaded; false = off. Never loads the gem itself.
     def initialize(secret_key, api_url: DEFAULT_API_URL, http: nil,
                    open_timeout: 30, read_timeout: 30, strict: nil, on_unknown_fields: nil, traceparent: nil,
-                   secret_recipient: nil)
+                   secret_recipient: nil, retry_policy: nil, telemetry: nil)
       @transport = Transport.new(
         secret_key: secret_key, api_url: api_url, http: http,
         open_timeout: open_timeout, read_timeout: read_timeout,
         strict: strict, on_unknown_fields: on_unknown_fields, traceparent: traceparent,
-        secret_recipient: secret_recipient
+        secret_recipient: secret_recipient, retry_policy: RetryPolicy.coerce(retry_policy), telemetry: telemetry
       )
     end
+
+    # Check keys, clock skew, JWKS reachability, instance status and config. See {Atlas::Doctor}.
+    def doctor(**options) = Doctor.run(self, **options)
 
     # @return [Atlas::Transport] the underlying config-bound transport.
     attr_reader :transport
@@ -197,11 +206,12 @@ module Atlas
     #
     # @return [Atlas::Client]
     def with_options(strict: Transport::INHERIT, on_unknown_fields: Transport::INHERIT, traceparent: Transport::INHERIT,
-                     secret_recipient: Transport::INHERIT)
+                     secret_recipient: Transport::INHERIT, retry_policy: Transport::INHERIT)
       copy = self.class.allocate
       copy.instance_variable_set(:@transport, @transport.with(strict: strict, on_unknown_fields: on_unknown_fields,
                                                               traceparent: traceparent,
-                                                              secret_recipient: secret_recipient))
+                                                              secret_recipient: secret_recipient,
+                                                              retry_policy: retry_policy.equal?(Transport::INHERIT) ? retry_policy : RetryPolicy.coerce(retry_policy)))
       copy
     end
 

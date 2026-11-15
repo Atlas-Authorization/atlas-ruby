@@ -532,6 +532,63 @@ missed with `atlas.webhooks.endpoints.replay(id, { since: "failing_since" })`. F
 `org_*`, `orgs` and `sso_*` claims. `Atlas::AtlasIdTokens.fetch(...)` is the browser
 `atlas_id_tokens` route for Sign in with Atlas users.
 
+## Generated catalog, typed responses, pages
+
+Every operation of the Backend API is a method. Groups that have no hand-written namespace appear as `atlas.<group>`; the rest are added to the existing namespace.
+
+```ruby
+page = atlas.chat_integrations.list_chat_integrations(limit: 50)
+page.each { |integration| puts integration.name }          # walks every page
+atlas.chat_integrations.create_chat_integration(provider: "slack", name: "Ops", credentials: { bot_token: "..." }, idempotency_key: "k1")
+user = Atlas::Models.wrap("GET /v1/users/{id}", atlas.users.get("user_1"))   # a typed view of a hand-written call
+body = Atlas::Requests.body("POST /v1/users", email_address: "ada@example.com") # checked request Hash
+```
+
+Regenerate after an API change: copy a fresh `scripts/openapi.snapshot.json`, run `python3 scripts/gen_catalog.py`, review the diff. `scripts/catalog_pins.json` keeps published method names from moving.
+
+## Hosted sign-in (relying party)
+
+```ruby
+rp = Atlas::RelyingParty.new(
+  issuer: ENV["ATLAS_ISSUER"], client_id: ENV["ATLAS_CLIENT_ID"], client_secret: ENV["ATLAS_CLIENT_SECRET"],
+  redirect_uri: "https://app.example.com/auth/callback", secret: ENV["SESSION_SECRET"],   # 32+ characters
+  secret_key: ENV["ATLAS_SECRET_KEY"], post_logout_redirect_uri: "https://app.example.com/"
+)
+session = Atlas::RP::Session.new(secret: ENV["SESSION_SECRET"])
+
+# Rack / Sinatra / Rails (config.middleware.use)
+use Atlas::RP::Middleware, rp: rp, session: session     # /auth/sign-in, /auth/callback, /auth/sign-out
+```
+
+Rails: `include Atlas::Rails::RelyingPartyController` and `before_action :require_atlas_sign_in!`; `require_atlas_recent_auth!(300)` is the step-up guard. Sinatra: `register Atlas::RP::Sinatra`, `set :atlas_rp, rp`, `set :atlas_session, session`, `Atlas::RP::Sinatra.use!(self)`, then `atlas_require_sign_in!`. The signed-in user is `atlas_user` (a Hash: `sub`, `sid`, `email`, `name`, `org_id`, `auth_time`). Without your own session store, `rp.touch_if_due`, `rp.bind_session` + `on_backchannel_logout:` and `rp.sign_out` cover keep-alive and sign-out.
+
+## Verification primitives
+
+```ruby
+mirror = Atlas::KeyMirror.new(store: store, api_keys: atlas.api_keys, max_staleness_ms: 120_000)
+mirror.verify(presented_key, required_scopes: ["read"], client_ip: request.ip)   # no network call
+mirror.sync                                                                      # pull the revocation feed
+
+Atlas::ResourceRoleMirror.for_client(atlas, store: Atlas::MemoryResourceRoleMirrorStore.new).tap(&:sync)
+revoked = Atlas::SidRevocationList.new(secret_key: ENV["ATLAS_SECRET_KEY"], on_stale: :reject)
+machine = Atlas::MachineClient.new(issuer: ENV["ATLAS_ISSUER"], store: Atlas::FileMachineStore.new("/var/lib/app/machine.json"))
+Atlas::WebBotAuth::Verifier.new(allow: [{ directory: "https://bot.example.com", name: "ExampleBot" }]).verify(method: "GET", url: url, headers: headers)
+Atlas::WebhookDedupe.verify(body: raw, headers: headers, secret: secret, store: Atlas::MemoryWebhookStore.new)
+Atlas.verify_transaction_token(token, issuer: issuer, trust_domain: "example.com")
+Atlas.authenticated_within(claims, 300); Atlas.used_multi_factor(claims)
+```
+
+Machine keys need the `openssl` gem 3.0 or newer (Ruby 3.1+).
+
+## Retries, telemetry, doctor
+
+```ruby
+atlas = Atlas::Client.new(key, retry_policy: Atlas::RetryPolicy.new(max_retries: 3, status_aware: true))
+atlas.doctor(jwks_url: "https://auth.example.com/v1/jwks", issuer: "https://auth.example.com")  # => report, `puts report`
+```
+
+Retries are off unless you pass `retry_policy:`; they apply to GET, PUT, DELETE and to writes that carry an `idempotency_key`. When the `opentelemetry` API gem is loaded each call is a span (and records `atlas.client.request.duration`); `telemetry: false` turns it off.
+
 ## Resources
 
 Every Backend API operation is available on the client: `users`, `sessions`, `organizations` (with `memberships`, `invitations`, `domains`, `group_roles`, `audit_streams`, `end_users`, `reader_domain`, settings, design and branding), `roles`, `permissions`, `oauth_clients`, `resource_servers`, `sso_connections`, `scim_tokens`, `scim_provisioning`, `domains`, `waitlist`, `allowlist`, `blocklist`, `attack_protection`, `actor_tokens`, `invitations`, `webhooks`, `app_events` (with `types` and `endpoints`), `sign_in_tokens` (deprecated: use `sessions.create_browser_ticket`), `audit_logs`, `audit_events`, `jwt_templates`, `api_keys`, `oauth_providers`, `sso_onboarding`, `fga`, `openfga`, `rate_limit_policy`, `risk_based_mfa` (incl. the `list_events` / `event_metrics` / `event_feedback` risk-event timeline and `fraud_lookup`), `bot_signals`, `network_acls`, `managed_waf`, `log_streams`, `branding`, `design`, `email_templates`, `sms_templates`, `localizations`, `actions`, `billing`, `messaging`, `import_export`, `data_subject_requests`, `radius_clients`, `lti_platforms`, `instance` (incl. `preflight`, cookie consent, `sign_in_with_atlas` and `hosted_pages`), `instance_security`, `tokens`, `email_addresses`, `organization_settings_schema`, `entitlement_overrides`, `machines` (incl. enrolment tokens), `connectors`, `directory`, `diagnostics`, `config_changelog`, `events`, `usage`, `legacy_auth_connection`, `mcp`, `mcp_connector`, `notifications` (with `categories` and `templates`), `org_ldap_connections`, `policies` (with `versions` and `settings`), `policy_source`, `pca`, `redirect_urls`, `session_exchange_apps`, `tickets`, `captcha`, `whoami`, `secret_keys`, `keys`, `partner_links`, `partner_platforms`, `privacy` (incl. `integration.connect`), `integrations`, `status`, `notices`, `security_advisories`, `audit_exports`, `sub_processors`, `entitlements`, `integration_health`, `embed`, `openapi`, `delivery_health`, `meta`, `testing` (development-instance helpers), and `platform` (`apps`, `atlas_id_apps`, `design_assets`; needs a platform key).

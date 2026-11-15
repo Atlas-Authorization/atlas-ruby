@@ -4,6 +4,8 @@ require_relative "error"
 require_relative "authorization"
 require_relative "jwks_cache"
 
+require_relative "jws"
+
 module Atlas
   # §7.3: five seconds either side, matching the server's minting tolerance.
   CLOCK_SKEW_SECONDS = 5
@@ -11,7 +13,8 @@ module Atlas
   # The JWS algorithms Atlas signs tokens with: an instance key is RS256 (the
   # default) or ES256, and an API may use either. Every verifier here is pinned
   # to exactly this list — +none+ and HMAC never verify.
-  SIGNING_ALGS = %w[RS256 ES256].freeze
+  # Every algorithm an instance may sign with; the key type must fit the token's alg, and none / HS* are refused.
+  SIGNING_ALGS = %w[RS256 ES256 ES384 PS256 EdDSA].freeze
 
   # The outcome of a verification. A success carries the claims and the bound
   # +has?+ / +protect+ helpers; a failure carries a coarse +reason+.
@@ -142,18 +145,9 @@ module Atlas
       return VerifyResult.failure(:no_keys) if keys.nil? || keys["keys"].nil? || keys["keys"].empty?
 
       begin
-        jwk_set = JWT::JWK::Set.new(keys)
-        payload, = JWT.decode(
-          token, nil, true,
-          algorithms: SIGNING_ALGS,
-          iss: @accepted_issuers,
-          verify_iss: true,
-          jwks: jwk_set,
-          # exp/nbf tolerance, matching the server's minting skew.
-          leeway: CLOCK_SKEW_SECONDS
-        )
-        claims = payload
-      rescue JWT::DecodeError, StandardError
+        # exp/nbf tolerance, matching the server's minting skew.
+        claims, = JWS.decode(token, keys, algorithms: SIGNING_ALGS, iss: @accepted_issuers, leeway: CLOCK_SKEW_SECONDS)
+      rescue StandardError
         # One reason for every failure — telling a caller which check failed
         # helps a forger more than a developer.
         return VerifyResult.failure(:invalid)
