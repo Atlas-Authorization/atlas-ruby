@@ -21,7 +21,7 @@ Gem::Specification.new do |spec|
   spec.required_ruby_version = ">= 3.0"
 
   spec.metadata["homepage_uri"]      = spec.homepage
-  spec.metadata["source_code_uri"]   = "https://github.com/alphajew420/ssoly/tree/main/sdks/ruby"
+  spec.metadata["source_code_uri"]   = "https://github.com/Atlas-Authorization/atlas-ruby"
   spec.metadata["documentation_uri"] = "https://atlasauth.net/docs/sdks/ruby"
   spec.metadata["rubygems_mfa_required"] = "true"
 
