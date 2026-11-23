@@ -1,17 +1,23 @@
 # frozen_string_literal: true
 
 require "digest"
+require "base64"
 require "ipaddr"
+require "json"
+require "openssl"
 
 module Atlas
   # What the mirror keeps per end-user API key. Never the secret: only its sha256 (hex). Times are epoch ms.
   MirroredApiKey = Struct.new(:id, :hash_hex, :prefix, :subject_type, :subject_id, :name, :scopes, :allowed_ips,
-                              :expires_at, :revoked_at, :organization_id, :revoked_reason, keyword_init: true)
+                              :expires_at, :revoked_at, :organization_id, :revoked_reason,
+                              # +enabled+ false = refused like an unknown key (nil = enabled). A key-pair row has no secret
+                              # hash (+hash_hex+ is a placeholder nothing matches); its assertions verify against +public_key_pem+.
+                              :enabled, :credential, :public_key_pem, :audience, :max_token_lifetime_seconds, keyword_init: true)
 
   # The answer of {KeyMirror#verify}. +code+ is +nil+ when valid, otherwise +:insufficient_scope+, +:ip_not_allowed+,
   # +:client_ip_required+, +:membership_unresolved+ or +:stale+.
   KeyVerification = Struct.new(:valid, :key, :effective_scopes, :organization, :stale, :code, :missing_scopes, :last_sync_at,
-                               keyword_init: true) do
+                               :credential, :jti, :exp, keyword_init: true) do
     def valid? = valid == true
   end
 
@@ -98,6 +104,8 @@ module Atlas
       @membership = membership
       @now = now
       @memory_sync_at = nil
+      @used_jtis = {}
+      @jti_mutex = Mutex.new
     end
 
     # sha256 of the full secret, lowercase hex.
@@ -130,7 +138,7 @@ module Atlas
     # @return [Hash] the create answer (it carries the one-time +secret+).
     def mint(body, idempotency_key: nil)
       created = @api_keys.create(body, idempotency_key: idempotency_key)
-      @store.put(to_mirrored(created, self.class.hash_secret(created["secret"])))
+      @store.put(to_mirrored(created, key_hash(created)))
       created
     end
 
@@ -139,7 +147,7 @@ module Atlas
       raise ArgumentError, "rotate needs an api_keys client with rotate." unless @api_keys.respond_to?(:rotate)
 
       rotated = @api_keys.rotate(id, **options)
-      @store.put(to_mirrored(rotated, self.class.hash_secret(rotated["secret"])))
+      @store.put(to_mirrored(rotated, key_hash(rotated)))
       old = @store.get(id)
       if old
         previous = rotated["previous_key"] || {}
@@ -190,17 +198,9 @@ module Atlas
     def verify(secret, required_scopes: [], client_ip: nil)
       return KeyVerification.new(valid: false) unless secret.is_a?(String) && !secret.empty?
 
-      served_stale = false
-      if @max_staleness_ms
-        synced = last_sync_at
-        behind = synced.nil? ? Float::INFINITY : now - synced - @max_staleness_ms
-        if behind.positive?
-          return KeyVerification.new(valid: false, code: :stale, last_sync_at: synced) if synced.nil? || behind > @serve_stale_for_ms
+      refusal, served_stale = freshness
+      return refusal if refusal
 
-          served_stale = true
-          @on_serve_stale&.call(last_sync_at: synced, stale_for_ms: behind)
-        end
-      end
       hash = self.class.hash_secret(secret)
       key = @store.get_by_hash(hash)
       if key.nil? && @verify_at_atlas && @api_keys.respond_to?(:verify) && @api_keys.respond_to?(:get)
@@ -210,7 +210,7 @@ module Atlas
           @store.put(key)
         end
       end
-      return KeyVerification.new(valid: false) if key.nil? || !key.revoked_at.nil?
+      return KeyVerification.new(valid: false) if key.nil? || !key.revoked_at.nil? || key.enabled == false
       return KeyVerification.new(valid: false) if key.expires_at && key.expires_at <= now
 
       if key.allowed_ips && !key.allowed_ips.empty?
@@ -242,6 +242,82 @@ module Atlas
       return KeyVerification.new(valid: false, code: :insufficient_scope, missing_scopes: missing) unless missing.empty?
 
       KeyVerification.new(valid: true, key: key, effective_scopes: effective, organization: organization, stale: served_stale ? true : nil)
+    end
+
+    # Verify a key-pair assertion ({Atlas.sign_api_key_assertion}) locally with the checks Atlas verify makes: the
+    # signature with the stored public key (+alg+ must fit its type), +iss+ = +kid+, +aud+, +iat+, +exp+ and the
+    # lifetime cap, +nbf+, +scope+ (a subset of the key's, narrows the result), revocation, expiry, the IP allowlist,
+    # then the single-use +jti+. A refusal carries the server's +code+ (a symbol); a key the mirror does not hold
+    # answers +valid: false+ with no code. The +jti+ is claimed through the store's optional
+    # +claim_assertion_jti(key_id, jti, expires_at_ms)+ (false = replay), else in this process's memory.
+    # @return [Atlas::KeyVerification]
+    def verify_assertion(token, required_scopes: [], client_ip: nil)
+      refusal, served_stale = freshness
+      return refusal if refusal
+
+      parsed = parse_assertion(token)
+      return refuse(:invalid_assertion) unless parsed
+
+      header, claims, input, signature = parsed
+      kid = header["kid"]
+      return refuse(:invalid_assertion) unless kid.is_a?(String) && !kid.empty?
+
+      key = @store.get(kid)
+      return KeyVerification.new(valid: false) unless key
+      return refuse(:invalid_assertion) unless key.credential == "key_pair" && key.public_key_pem
+      return refuse(:invalid_assertion) unless assertion_signature?(header["alg"], input, signature, key.public_key_pem) && claims["iss"] == kid
+      return refuse(:invalid_assertion) if key.enabled == false
+      return KeyVerification.new(valid: false) unless key.revoked_at.nil?
+
+      now_ms = now
+      return KeyVerification.new(valid: false) if key.expires_at && key.expires_at <= now_ms
+
+      now_s = now_ms / 1000
+      aud = claims["aud"]
+      return refuse(:wrong_audience) unless aud.is_a?(String) ? aud == key.audience : aud.is_a?(Array) && aud.include?(key.audience)
+
+      num = ->(v) { v.is_a?(Numeric) }
+      iat = claims["iat"]
+      exp = claims["exp"]
+      nbf = claims["nbf"]
+      jti = claims["jti"]
+      scope = claims["scope"]
+      return refuse(:invalid_assertion) unless num.call(iat) && num.call(exp) && (!claims.key?("nbf") || num.call(nbf))
+      return refuse(:invalid_assertion) if claims.key?("jti") && !(jti.is_a?(String) && !jti.empty?)
+      return refuse(:invalid_assertion) if claims.key?("scope") && !scope.is_a?(String)
+      return refuse(:assertion_not_yet_valid) if iat > now_s + 60 || (claims.key?("nbf") && nbf > now_s + 60)
+      return refuse(:assertion_expired) if exp <= now_s - 30
+      return refuse(:assertion_lifetime_too_long) if exp - iat > [key.max_token_lifetime_seconds || 3600, 86_400].min
+
+      if key.allowed_ips && !key.allowed_ips.empty?
+        return refuse(:client_ip_required) if client_ip.nil? || client_ip.empty?
+        return refuse(:ip_not_allowed) unless self.class.ip_in_allowlist?(client_ip, key.allowed_ips)
+      end
+      effective = expand(key.scopes || [])
+      organization = nil
+      if key.subject_type == "user" && key.organization_id
+        return refuse(:membership_unresolved) unless @membership
+
+        organization = @membership.call(key.subject_id, key.organization_id)
+        return KeyVerification.new(valid: false) unless organization
+
+        effective = self.class.intersect_scopes_with_permissions(effective, organization["permissions"] || organization[:permissions] || [])
+      end
+      if scope.is_a?(String) && !scope.strip.empty?
+        asked = scope.split
+        not_granted = asked.reject { |x| effective.include?(x) }
+        return KeyVerification.new(valid: false, code: :scope_not_granted, missing_scopes: not_granted) unless not_granted.empty?
+
+        effective = effective.select { |x| asked.include?(x) }
+      end
+      missing = Array(required_scopes).reject { |x| effective.include?(x) }
+      return KeyVerification.new(valid: false, code: :insufficient_scope, missing_scopes: missing) unless missing.empty?
+
+      # Last, so a refused assertion never burns its jti.
+      return refuse(:assertion_replayed) if jti.is_a?(String) && !claim_jti(key.id, jti, (exp * 1000).to_i, now_ms)
+
+      KeyVerification.new(valid: true, key: key, effective_scopes: effective, organization: organization, stale: served_stale ? true : nil,
+                          credential: "key_pair", jti: (jti if jti.is_a?(String)), exp: exp.to_i)
     end
 
     # Pull the revocation feed and apply it. @return [Hash] +{ revoked: n }+
@@ -303,6 +379,7 @@ module Atlas
         held.scopes = data["scopes"] if data.key?("scopes")
         held.allowed_ips = data["allowed_ips"] if data.key?("allowed_ips")
         held.expires_at = data["expires_at"] if data.key?("expires_at")
+        held.enabled = data["enabled"] if data.key?("enabled")
         @store.put(held)
         return true
       end
@@ -310,6 +387,68 @@ module Atlas
     end
 
     private
+
+    # [a refusal when the mirror is too stale to answer, whether the answer is served stale]
+    def freshness
+      return [nil, false] unless @max_staleness_ms
+
+      synced = last_sync_at
+      behind = synced.nil? ? Float::INFINITY : now - synced - @max_staleness_ms
+      return [nil, false] unless behind.positive?
+      return [KeyVerification.new(valid: false, code: :stale, last_sync_at: synced), false] if synced.nil? || behind > @serve_stale_for_ms
+
+      @on_serve_stale&.call(last_sync_at: synced, stale_for_ms: behind)
+      [nil, true]
+    end
+
+    def refuse(code) = KeyVerification.new(valid: false, code: code)
+
+    # The secret's sha256; a key-pair key has no secret, so its row carries a placeholder nothing can match.
+    def key_hash(key) = key["secret"] ? self.class.hash_secret(key["secret"]) : "key_pair:#{key["id"]}"
+
+    def parse_assertion(token)
+      parts = token.is_a?(String) ? token.split(".", -1) : []
+      return nil unless parts.size == 3
+
+      raw = parts.map { |p| Base64.urlsafe_decode64(p) }
+      header = JSON.parse(raw[0])
+      claims = JSON.parse(raw[1])
+      return nil unless header.is_a?(Hash) && claims.is_a?(Hash)
+
+      [header, claims, "#{parts[0]}.#{parts[1]}", raw[2]]
+    rescue ArgumentError, JSON::ParserError
+      nil
+    end
+
+    def assertion_signature?(alg, input, signature, public_pem)
+      pkey = OpenSSL::PKey.read(public_pem)
+      if alg == "ES256" && pkey.is_a?(OpenSSL::PKey::EC) && pkey.group.curve_name == "prime256v1"
+        return false unless signature.bytesize == 64
+
+        der = OpenSSL::ASN1::Sequence([OpenSSL::ASN1::Integer(OpenSSL::BN.new(signature.byteslice(0, 32), 2)),
+                                       OpenSSL::ASN1::Integer(OpenSSL::BN.new(signature.byteslice(32, 32), 2))]).to_der
+        pkey.verify("SHA256", der, input)
+      elsif alg == "EdDSA" && pkey.respond_to?(:oid) && pkey.oid == "ED25519"
+        pkey.verify(nil, signature, input)
+      else
+        false
+      end
+    rescue OpenSSL::PKey::PKeyError
+      false
+    end
+
+    def claim_jti(key_id, jti, until_ms, now_ms)
+      return @store.claim_assertion_jti(key_id, jti, until_ms) if @store.respond_to?(:claim_assertion_jti)
+
+      @jti_mutex.synchronize do
+        @used_jtis.delete_if { |_, t| t <= now_ms }
+        id = "#{key_id}\n#{jti}"
+        next false if @used_jtis.key?(id)
+
+        @used_jtis[id] = until_ms
+        true
+      end
+    end
 
     def now = (@now ? @now.call : (Time.now.to_f * 1000)).to_i
 
@@ -339,7 +478,9 @@ module Atlas
       MirroredApiKey.new(id: key["id"], hash_hex: hash, prefix: key["prefix"], subject_type: key["subject_type"],
                          subject_id: key["subject_id"], name: key["name"], scopes: key["scopes"], allowed_ips: key["allowed_ips"],
                          expires_at: key["expires_at"], revoked_at: key["revoked_at"], organization_id: key["organization_id"],
-                         revoked_reason: key["revoked_reason"])
+                         revoked_reason: key["revoked_reason"], enabled: key["enabled"], credential: key["credential"] || "secret",
+                         public_key_pem: key["public_key"], audience: key["audience"],
+                         max_token_lifetime_seconds: key["max_token_lifetime_seconds"])
     end
   end
 end

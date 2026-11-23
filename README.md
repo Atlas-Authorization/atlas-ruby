@@ -421,6 +421,22 @@ BACKEND = Atlas::Backend.new(
 
 Then verify in a `before_action` and branch on `BACKEND.authenticate_request(request.headers)`.
 
+## Key-pair API keys
+
+A key-pair key has no shared secret: Atlas returns a PKCS#8 private key once and keeps only the public key. Sign a short-lived assertion and present it where you would present a secret.
+
+```ruby
+key = atlas.api_keys.create({ subject_type: "user", subject_id: "user_123",
+                              credential: "key_pair", audience: "https://api.example.com" })
+assertion = Atlas.sign_api_key_assertion(key["private_key"], key["key_id"], "https://api.example.com")
+atlas.api_keys.verify(token: assertion)
+atlas.api_keys.mint_token({ assertion: assertion })
+```
+
+ES256 (P-256) and EdDSA (Ed25519, needs the `openssl` gem 3.0 or newer) keys are supported.
+
+`mirror.verify_assertion(assertion)` checks an assertion against the mirrored public key with no network call, with the same refusal codes Atlas answers.
+
 ## API key spend caps
 
 Give an end-user API key caps in your own units, then meter what your API consumed against them. A refused debit records nothing and is not an error, so you enforce it inside your own transaction:

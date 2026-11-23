@@ -16,7 +16,9 @@ module Atlas
       # per-key spend caps, metered with #record_usage. +scopes+ sets the key's
       # scopes; +import: { secret_hash:, hash_algorithm: ("sha256" | "sha256_hex"),
       # prefix: }+ brings over a key minted elsewhere (no secret is returned). A
-      # verify result carries +effective_scopes+.
+      # verify result carries +effective_scopes+. +credential: "key_pair"+ (with
+      # optional +audience:+ and +public_key:+) mints a key with no shared secret;
+      # the response has +key_id+ and, for a generated pair, +private_key+ once.
       def create(body, idempotency_key: nil)
         request(method: :post, path: "/v1/api_keys", body: body, idempotency_key: idempotency_key)
       end
@@ -28,8 +30,11 @@ module Atlas
       # +required_scopes:+ must all be on the key. A LIVE key refused by its own
       # policy answers +valid: false+ with a +code+: +insufficient_scope+
       # (+missing_scopes+), +rate_limited+ (+retry_after_ms+) or +usage_exhausted+.
-      def verify(secret, required_scopes: nil)
-        body = { secret: secret }
+      #
+      # A key-pair key has no secret: pass the signed assertion as +token:+
+      # (see Atlas.sign_api_key_assertion) instead of +secret+.
+      def verify(secret = nil, required_scopes: nil, token: nil)
+        body = token ? { token: token } : { secret: secret }
         body[:required_scopes] = required_scopes if required_scopes
         request(method: :post, path: "/v1/api_keys/verify", body: body)
       end
@@ -75,7 +80,7 @@ module Atlas
         request(method: :get, path: "/v1/api_keys/#{enc(id)}/usage")
       end
 
-      # +POST /v1/api_keys/token+ — mint a short-lived access JWT for an API key (secret, ttl_seconds, audience).
+      # +POST /v1/api_keys/token+ — mint a short-lived access JWT for an API key (secret or key-pair +assertion+, ttl_seconds, audience).
       def mint_token(body)
         request(method: :post, path: "/v1/api_keys/token", body: body)
       end
