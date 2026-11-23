@@ -155,7 +155,7 @@ module Atlas
         attempt = 0
         loop do
           begin
-            status, text, response_headers = @http.call(verb, url, headers, payload)
+            status, text, response_headers = call_once(verb, url, headers, payload)
           rescue StandardError => e
             raise unless @retry&.retry_error?(e) && repeatable?(verb, headers) && attempt < @retry.max_retries
 
@@ -176,9 +176,23 @@ module Atlas
       end
     end
 
+    # Connection-level failures before any response; never timeouts (the request may have been applied).
+    RESET_ERRORS = [Errno::ECONNRESET, Errno::EPIPE, Errno::ECONNREFUSED, EOFError].freeze
+
+    # One call, plus a single retry after a short jittered delay when an idle pooled socket was closed by the
+    # server (a reset before any response) and the request is safe to repeat.
+    def call_once(verb, url, headers, payload)
+      @http.call(verb, url, headers, payload)
+    rescue *RESET_ERRORS
+      raise unless repeatable?(verb, headers)
+
+      sleep(0.025 + (rand * 0.1))
+      @http.call(verb, url, headers, payload)
+    end
+
     # GET / PUT / DELETE are repeatable; POST and PATCH only with an idempotency key.
     def repeatable?(verb, headers)
-      %w[GET PUT DELETE HEAD].include?(verb) || headers.key?("idempotency-key")
+      %w[GET PUT DELETE HEAD OPTIONS].include?(verb) || headers.key?("idempotency-key")
     end
 
     # True while Atlas declares a major outage (+GET /v1/status+: the top level, or the +backend_api+ component).
