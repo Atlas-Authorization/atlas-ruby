@@ -178,6 +178,14 @@ class GeneratedCatalogTest < Minitest::Test
     call("DELETE", "/v1/allowlist_identifiers/p1") { |c| c.allowlist_identifiers.delete_allowlist_identifier("p1") }
   end
 
+  def test_get_v1_analytics_captcha
+    call("GET", "/v1/analytics/captcha") { |c| c.analytics.list_captcha() }
+  end
+
+  def test_get_v1_analytics_sms
+    call("GET", "/v1/analytics/sms") { |c| c.analytics.list_sms() }
+  end
+
   def test_get_v1_api_keys_posture
     call("GET", "/v1/api_keys/posture") { |c| c.api_keys.list_posture() }
   end
@@ -598,6 +606,10 @@ class GeneratedCatalogTest < Minitest::Test
     call("PUT", "/v1/connection_provider_topics") { |c| c.connection_provider_topics.set_connection_provider_topic(topics: {}) }
   end
 
+  def test_get_v1_connection_providers_policies
+    call("GET", "/v1/connection_providers/policies") { |c| c.connection_providers.list_policies() }
+  end
+
   def test_get_v1_connection_providers_provider_policy
     call("GET", "/v1/connection_providers/p1/policy") { |c| c.connection_providers.get_policy("p1") }
   end
@@ -618,12 +630,20 @@ class GeneratedCatalogTest < Minitest::Test
     call("PUT", "/v1/connection_reconnect_settings") { |c| c.connection_reconnect_settings.set_connection_reconnect_setting() }
   end
 
+  def test_get_v1_connection_templates
+    call("GET", "/v1/connection_templates") { |c| c.connection_templates.list_connection_templates() }
+  end
+
   def test_post_v1_connections_oauth_complete
     call("POST", "/v1/connections/oauth/complete") { |c| c.connections.complete_oauth(code: "x", state: "x") }
   end
 
   def test_post_v1_connections_oauth_clients_register
     call("POST", "/v1/connections/oauth_clients/register") { |c| c.connections.register_oauth_client(provider: "x", registration_endpoint: "x") }
+  end
+
+  def test_post_v1_connections_rehome
+    call("POST", "/v1/connections/rehome") { |c| c.connections.rehome(from_client: "x", to_client: "x") }
   end
 
   def test_get_v1_connections_relay_limits
@@ -874,6 +894,14 @@ class GeneratedCatalogTest < Minitest::Test
     call("GET", "/v1/diagnostics/traces/p1") { |c| c.diagnostics.get_trace("p1") }
   end
 
+  def test_get_v1_domains_id
+    call("GET", "/v1/domains/p1") { |c| c.domains.get_domain("p1") }
+  end
+
+  def test_post_v1_domains_id_verification_rotate
+    call("POST", "/v1/domains/p1/verification/rotate") { |c| c.domains.rotate_verification("p1", {}) }
+  end
+
   def test_get_v1_dsr_console_requests
     call("GET", "/v1/dsr_console/requests") { |c| c.dsr_console.list_requests() }
   end
@@ -1068,6 +1096,10 @@ class GeneratedCatalogTest < Minitest::Test
 
   def test_put_v1_fraud_email_risk_settings
     call("PUT", "/v1/fraud/email_risk/settings") { |c| c.fraud.set_settings() }
+  end
+
+  def test_get_v1_grants
+    call("GET", "/v1/grants") { |c| c.grants.list_grants() }
   end
 
   def test_post_v1_grants_granttype_id_consume
@@ -1282,6 +1314,22 @@ class GeneratedCatalogTest < Minitest::Test
     call("POST", "/v1/instance/exports/p1/revoke_links") { |c| c.instance.create_revoke_link("p1") }
   end
 
+  def test_get_v1_instance_hooks_before_first_session
+    call("GET", "/v1/instance/hooks/before_first_session") { |c| c.instance.get_before_first_session() }
+  end
+
+  def test_patch_v1_instance_hooks_before_first_session
+    call("PATCH", "/v1/instance/hooks/before_first_session") { |c| c.instance.update_before_first_session() }
+  end
+
+  def test_delete_v1_instance_hooks_before_first_session
+    call("DELETE", "/v1/instance/hooks/before_first_session") { |c| c.instance.delete_before_first_session() }
+  end
+
+  def test_post_v1_instance_hooks_before_first_session_test
+    call("POST", "/v1/instance/hooks/before_first_session/test") { |c| c.instance.test_before_first_session() }
+  end
+
   def test_get_v1_instance_impersonation_policy
     call("GET", "/v1/instance/impersonation_policy") { |c| c.instance.get_impersonation_policy() }
   end
@@ -1302,12 +1350,32 @@ class GeneratedCatalogTest < Minitest::Test
     call("GET", "/v1/instance/imports/p1") { |c| c.instance.get_import("p1") }
   end
 
+  def test_get_v1_instance_integrations_forwarding_destination
+    call("GET", "/v1/instance/integrations/forwarding/p1") { |c| c.instance.get_forwarding("p1") }
+  end
+
+  def test_put_v1_instance_integrations_forwarding_destination
+    call("PUT", "/v1/instance/integrations/forwarding/p1") { |c| c.instance.set_forwarding("p1") }
+  end
+
+  def test_delete_v1_instance_integrations_forwarding_destination
+    call("DELETE", "/v1/instance/integrations/forwarding/p1") { |c| c.instance.delete_forwarding("p1") }
+  end
+
+  def test_get_v1_instance_integrations_health
+    call("GET", "/v1/instance/integrations/health") { |c| c.instance.list_health() }
+  end
+
   def test_get_v1_instance_integrations_product_mints
     call("GET", "/v1/instance/integrations/p1/mints") { |c| c.instance.list_mints("p1") }
   end
 
   def test_post_v1_instance_integrations_product_test
     call("POST", "/v1/instance/integrations/p1/test") { |c| c.instance.test_integration("p1") }
+  end
+
+  def test_get_v1_instance_issuers
+    call("GET", "/v1/instance/issuers") { |c| c.instance.get_issuers() }
   end
 
   def test_get_v1_instance_op_keys
@@ -1378,6 +1446,26 @@ class GeneratedCatalogTest < Minitest::Test
     call("DELETE", "/v1/instance/signing_key_schedule") { |c| c.instance.delete_signing_key_schedule() }
   end
 
+  def test_get_v1_instance_staging_copies
+    call("GET", "/v1/instance/staging_copies") { |c| c.instance.list_staging_copies() }
+  end
+
+  def test_post_v1_instance_staging_copies
+    call("POST", "/v1/instance/staging_copies") { |c| c.instance.create_staging_copy(mode: "clone") }
+  end
+
+  def test_get_v1_instance_staging_copies_id
+    call("GET", "/v1/instance/staging_copies/p1") { |c| c.instance.get_staging_copy("p1") }
+  end
+
+  def test_delete_v1_instance_staging_copies_id
+    call("DELETE", "/v1/instance/staging_copies/p1") { |c| c.instance.delete_staging_copy("p1") }
+  end
+
+  def test_post_v1_instance_staging_copies_id_refresh
+    call("POST", "/v1/instance/staging_copies/p1/refresh") { |c| c.instance.refresh_staging_copy("p1") }
+  end
+
   def test_get_v1_instance_user_traits_schema
     call("GET", "/v1/instance/user_traits_schema") { |c| c.instance.get_user_traits_schema() }
   end
@@ -1440,6 +1528,10 @@ class GeneratedCatalogTest < Minitest::Test
 
   def test_post_v1_machine_trust_policies_id_test
     call("POST", "/v1/machine_trust_policies/p1/test") { |c| c.machine_trust_policies.test_op("p1") }
+  end
+
+  def test_get_v1_machines_revoked
+    call("GET", "/v1/machines/revoked") { |c| c.machines.list_revoked() }
   end
 
   def test_post_v1_mcp_elevations
@@ -1518,6 +1610,10 @@ class GeneratedCatalogTest < Minitest::Test
     call("POST", "/v1/mcp_registry/p1/decide") { |c| c.mcp_registry.decide("p1", status: "approved") }
   end
 
+  def test_post_v1_message_links
+    call("POST", "/v1/message_links") { |c| c.message_links.create_message_link(email: "x", type: "unsubscribe") }
+  end
+
   def test_get_v1_message_receivers
     call("GET", "/v1/message_receivers") { |c| c.message_receivers.list_message_receivers() }
   end
@@ -1532,6 +1628,10 @@ class GeneratedCatalogTest < Minitest::Test
 
   def test_get_v1_messages
     call("GET", "/v1/messages") { |c| c.messages.list_messages() }
+  end
+
+  def test_post_v1_messages
+    call("POST", "/v1/messages") { |c| c.messages.create_message(to: "x") }
   end
 
   def test_get_v1_messages_summary
@@ -1642,12 +1742,52 @@ class GeneratedCatalogTest < Minitest::Test
     call("GET", "/v1/migrations/status") { |c| c.migrations.get_status() }
   end
 
+  def test_post_v1_migrations_source_sessions
+    call("POST", "/v1/migrations/p1/sessions") { |c| c.migrations.create_session("p1", sessions: []) }
+  end
+
   def test_post_v1_migrations_source_verify
     call("POST", "/v1/migrations/p1/verify") { |c| c.migrations.verify("p1", token: "x") }
   end
 
+  def test_get_v1_native_apps
+    call("GET", "/v1/native_apps") { |c| c.native_apps.list_native_apps() }
+  end
+
+  def test_post_v1_native_apps
+    call("POST", "/v1/native_apps") { |c| c.native_apps.create_native_app() }
+  end
+
+  def test_get_v1_native_apps_publishable_key
+    call("GET", "/v1/native_apps/publishable_key") { |c| c.native_apps.get_publishable_key() }
+  end
+
+  def test_put_v1_native_apps_publishable_key
+    call("PUT", "/v1/native_apps/publishable_key") { |c| c.native_apps.set_publishable_key(app_ids: []) }
+  end
+
+  def test_get_v1_native_apps_id
+    call("GET", "/v1/native_apps/p1") { |c| c.native_apps.get_native_app("p1") }
+  end
+
+  def test_patch_v1_native_apps_id
+    call("PATCH", "/v1/native_apps/p1") { |c| c.native_apps.update_native_app("p1") }
+  end
+
+  def test_delete_v1_native_apps_id
+    call("DELETE", "/v1/native_apps/p1") { |c| c.native_apps.delete_native_app("p1") }
+  end
+
   def test_get_v1_oauth_application_types
     call("GET", "/v1/oauth_application_types") { |c| c.oauth_application_types.list_oauth_application_types() }
+  end
+
+  def test_get_v1_oauth_clients_id_consents
+    call("GET", "/v1/oauth_clients/p1/consents") { |c| c.oauth_clients.list_consents("p1") }
+  end
+
+  def test_post_v1_oauth_clients_id_consents_revoke
+    call("POST", "/v1/oauth_clients/p1/consents/revoke") { |c| c.oauth_clients.revoke_consent("p1") }
   end
 
   def test_put_v1_oauth_clients_id_organization_access
@@ -1688,6 +1828,22 @@ class GeneratedCatalogTest < Minitest::Test
 
   def test_delete_v1_oauth_clients_id_webhook
     call("DELETE", "/v1/oauth_clients/p1/webhook") { |c| c.oauth_clients.delete_webhook("p1") }
+  end
+
+  def test_put_v1_oauth_consent_requests_switch_account
+    call("PUT", "/v1/oauth_consent_requests/switch_account") { |c| c.oauth_consent_requests.set_switch_account(consent_challenge: "x") }
+  end
+
+  def test_get_v1_oauth_device_requests
+    call("GET", "/v1/oauth_device_requests") { |c| c.oauth_device_requests.get_oauth_device_requests(device_challenge: "x") }
+  end
+
+  def test_put_v1_oauth_device_requests_accept
+    call("PUT", "/v1/oauth_device_requests/accept") { |c| c.oauth_device_requests.set_accept(device_challenge: "x") }
+  end
+
+  def test_put_v1_oauth_device_requests_reject
+    call("PUT", "/v1/oauth_device_requests/reject") { |c| c.oauth_device_requests.set_reject(device_challenge: "x") }
   end
 
   def test_post_v1_oauth_grants_import
@@ -1808,6 +1964,10 @@ class GeneratedCatalogTest < Minitest::Test
 
   def test_post_v1_organization_connections_id_accept
     call("POST", "/v1/organization_connections/p1/accept") { |c| c.organization_connections.accept("p1", token: "x") }
+  end
+
+  def test_get_v1_organization_invitations
+    call("GET", "/v1/organization_invitations") { |c| c.organization_invitations.list_organization_invitations() }
   end
 
   def test_get_v1_organizations_id_app_webhook_endpoints_endpointid
@@ -1950,6 +2110,282 @@ class GeneratedCatalogTest < Minitest::Test
     call("DELETE", "/v1/passkey_campaigns/p1") { |c| c.passkey_campaigns.delete_passkey_campaign("p1") }
   end
 
+  def test_get_v1_pca_action_registry
+    call("GET", "/v1/pca/action-registry") { |c| c.pca.get_action_registry() }
+  end
+
+  def test_get_v1_pca_action_registry_actions
+    call("GET", "/v1/pca/action-registry/actions") { |c| c.pca.list_actions() }
+  end
+
+  def test_get_v1_pca_action_registry_actions_verb
+    call("GET", "/v1/pca/action-registry/actions/p1") { |c| c.pca.get_action("p1") }
+  end
+
+  def test_post_v1_pca_action_registry_actions_verb_review
+    call("POST", "/v1/pca/action-registry/actions/p1/review") { |c| c.pca.review_action("p1", {}) }
+  end
+
+  def test_get_v1_pca_action_registry_drafts
+    call("GET", "/v1/pca/action-registry/drafts") { |c| c.pca.list_drafts() }
+  end
+
+  def test_get_v1_pca_action_registry_drafts_verb
+    call("GET", "/v1/pca/action-registry/drafts/p1") { |c| c.pca.get_draft("p1") }
+  end
+
+  def test_patch_v1_pca_action_registry_drafts_verb
+    call("PATCH", "/v1/pca/action-registry/drafts/p1") { |c| c.pca.update_draft("p1") }
+  end
+
+  def test_delete_v1_pca_action_registry_drafts_verb
+    call("DELETE", "/v1/pca/action-registry/drafts/p1") { |c| c.pca.delete_draft("p1") }
+  end
+
+  def test_post_v1_pca_action_registry_drafts_verb_confirm
+    call("POST", "/v1/pca/action-registry/drafts/p1/confirm") { |c| c.pca.confirm_draft("p1", attestation: {}, assertion: {}) }
+  end
+
+  def test_post_v1_pca_action_registry_imports
+    call("POST", "/v1/pca/action-registry/imports") { |c| c.pca.create_import(ns: "x", from: "openapi") }
+  end
+
+  def test_get_v1_pca_action_registry_namespaces_ns_diff
+    call("GET", "/v1/pca/action-registry/namespaces/p1/diff") { |c| c.pca.get_diff("p1", from: "x", to: "x") }
+  end
+
+  def test_put_v1_pca_action_registry_namespaces_ns_pin
+    call("PUT", "/v1/pca/action-registry/namespaces/p1/pin") { |c| c.pca.set_pin("p1", version: "x") }
+  end
+
+  def test_delete_v1_pca_action_registry_namespaces_ns_pin
+    call("DELETE", "/v1/pca/action-registry/namespaces/p1/pin") { |c| c.pca.delete_pin("p1") }
+  end
+
+  def test_get_v1_pca_action_registry_namespaces_ns_versions
+    call("GET", "/v1/pca/action-registry/namespaces/p1/versions") { |c| c.pca.list_versions("p1") }
+  end
+
+  def test_get_v1_pca_action_registry_namespaces_ns_versions_version
+    call("GET", "/v1/pca/action-registry/namespaces/p1/versions/p2") { |c| c.pca.get_version("p1", "p2") }
+  end
+
+  def test_post_v1_pca_action_registry_packs
+    call("POST", "/v1/pca/action-registry/packs") { |c| c.pca.create_pack(pack: {}) }
+  end
+
+  def test_post_v1_pca_action_registry_publish
+    call("POST", "/v1/pca/action-registry/publish") { |c| c.pca.publish_action_registry(ns: "x") }
+  end
+
+  def test_post_v1_pca_action_registry_publisher_keys
+    call("POST", "/v1/pca/action-registry/publisher-keys") { |c| c.pca.create_publisher_key(kid: "x", pk: "x") }
+  end
+
+  def test_delete_v1_pca_action_registry_publisher_keys_kid
+    call("DELETE", "/v1/pca/action-registry/publisher-keys/p1") { |c| c.pca.delete_publisher_key("p1") }
+  end
+
+  def test_get_v1_pca_action_registry_reviewers
+    call("GET", "/v1/pca/action-registry/reviewers") { |c| c.pca.list_reviewers() }
+  end
+
+  def test_post_v1_pca_action_registry_reviewers_enrolments
+    call("POST", "/v1/pca/action-registry/reviewers/enrolments") { |c| c.pca.create_enrolment() }
+  end
+
+  def test_delete_v1_pca_action_registry_reviewers_id
+    call("DELETE", "/v1/pca/action-registry/reviewers/p1") { |c| c.pca.delete_reviewer("p1") }
+  end
+
+  def test_get_v1_pca_action_registry_sources
+    call("GET", "/v1/pca/action-registry/sources") { |c| c.pca.list_sources() }
+  end
+
+  def test_post_v1_pca_action_registry_sources
+    call("POST", "/v1/pca/action-registry/sources") { |c| c.pca.create_source(ns: "x", from: "openapi", url: "x") }
+  end
+
+  def test_patch_v1_pca_action_registry_sources_id
+    call("PATCH", "/v1/pca/action-registry/sources/p1") { |c| c.pca.update_source("p1") }
+  end
+
+  def test_delete_v1_pca_action_registry_sources_id
+    call("DELETE", "/v1/pca/action-registry/sources/p1") { |c| c.pca.delete_source("p1") }
+  end
+
+  def test_post_v1_pca_action_registry_sources_id_sync
+    call("POST", "/v1/pca/action-registry/sources/p1/sync") { |c| c.pca.sync_source("p1", {}) }
+  end
+
+  def test_get_v1_pca_action_registry_templates
+    call("GET", "/v1/pca/action-registry/templates") { |c| c.pca.list_templates() }
+  end
+
+  def test_post_v1_pca_action_registry_templates_id_apply
+    call("POST", "/v1/pca/action-registry/templates/p1/apply") { |c| c.pca.apply_template("p1") }
+  end
+
+  def test_get_v1_pca_approvals_settings
+    call("GET", "/v1/pca/approvals/settings") { |c| c.pca.get_settings() }
+  end
+
+  def test_put_v1_pca_approvals_settings
+    call("PUT", "/v1/pca/approvals/settings") { |c| c.pca.set_settings() }
+  end
+
+  def test_get_v1_pca_approvers
+    call("GET", "/v1/pca/approvers") { |c| c.pca.list_approvers() }
+  end
+
+  def test_post_v1_pca_approvers_enrolments
+    call("POST", "/v1/pca/approvers/enrolments") { |c| c.pca.create_approvers_enrolment() }
+  end
+
+  def test_get_v1_pca_approvers_id
+    call("GET", "/v1/pca/approvers/p1") { |c| c.pca.get_approver("p1") }
+  end
+
+  def test_patch_v1_pca_approvers_id
+    call("PATCH", "/v1/pca/approvers/p1") { |c| c.pca.update_approver("p1") }
+  end
+
+  def test_delete_v1_pca_approvers_id_credentials_credentialid
+    call("DELETE", "/v1/pca/approvers/p1/credentials/p2") { |c| c.pca.delete_credential("p1", "p2") }
+  end
+
+  def test_patch_v1_pca_approvers_id_members_memberid
+    call("PATCH", "/v1/pca/approvers/p1/members/p2") { |c| c.pca.update_member("p1", "p2") }
+  end
+
+  def test_post_v1_pca_beacons
+    call("POST", "/v1/pca/beacons") { |c| c.pca.create_beacon() }
+  end
+
+  def test_get_v1_pca_bond_accounts
+    call("GET", "/v1/pca/bond-accounts") { |c| c.pca.get_bond_accounts(account: "x") }
+  end
+
+  def test_post_v1_pca_bond_accounts
+    call("POST", "/v1/pca/bond-accounts") { |c| c.pca.create_bond_account(account: "x", amount: 1) }
+  end
+
+  def test_post_v1_pca_constitutions
+    call("POST", "/v1/pca/constitutions") { |c| c.pca.create_constitution(grant_ref: "x", constitution: {}) }
+  end
+
+  def test_get_v1_pca_grants
+    call("GET", "/v1/pca/grants") { |c| c.pca.list_grants() }
+  end
+
+  def test_get_v1_pca_grants_grantref
+    call("GET", "/v1/pca/grants/p1") { |c| c.pca.get_grant("p1") }
+  end
+
+  def test_delete_v1_pca_grants_grantref
+    call("DELETE", "/v1/pca/grants/p1") { |c| c.pca.delete_grant("p1") }
+  end
+
+  def test_post_v1_pca_grants_grantref_amend
+    call("POST", "/v1/pca/grants/p1/amend") { |c| c.pca.amend_grant("p1", action: "narrow", authority: {}) }
+  end
+
+  def test_put_v1_pca_grants_grantref_authority
+    call("PUT", "/v1/pca/grants/p1/authority") { |c| c.pca.set_authority("p1", authority: {}, sig: "x") }
+  end
+
+  def test_get_v1_pca_grants_grantref_needs
+    call("GET", "/v1/pca/grants/p1/needs") { |c| c.pca.list_needs("p1") }
+  end
+
+  def test_post_v1_pca_grants_grantref_needs
+    call("POST", "/v1/pca/grants/p1/needs") { |c| c.pca.create_need("p1", needs: []) }
+  end
+
+  def test_post_v1_pca_grants_grantref_step_up
+    call("POST", "/v1/pca/grants/p1/step-up") { |c| c.pca.step_up_grant("p1", {}) }
+  end
+
+  def test_post_v1_pca_grants_grantref_step_up_challengeid_approve
+    call("POST", "/v1/pca/grants/p1/step-up/p2/approve") { |c| c.pca.approve_step_up("p1", "p2", sig: "x") }
+  end
+
+  def test_post_v1_pca_guardian_rotate
+    call("POST", "/v1/pca/guardian/rotate") { |c| c.pca.rotate_guardian({}) }
+  end
+
+  def test_get_v1_pca_intent_maps_digest_observations
+    call("GET", "/v1/pca/intent/maps/p1/observations") { |c| c.pca.list_observations("p1") }
+  end
+
+  def test_post_v1_pca_intent_schemas
+    call("POST", "/v1/pca/intent/schemas") { |c| c.pca.create_schema(schema: {}, keys: []) }
+  end
+
+  def test_post_v1_pca_needs_needid_approve
+    call("POST", "/v1/pca/needs/p1/approve") { |c| c.pca.approve_need("p1", approved: [], sig: "x") }
+  end
+
+  def test_post_v1_pca_needs_needid_deny
+    call("POST", "/v1/pca/needs/p1/deny") { |c| c.pca.deny_need("p1") }
+  end
+
+  def test_delete_v1_pca_pq_pins_identity
+    call("DELETE", "/v1/pca/pq-pins/p1") { |c| c.pca.delete_pq_pin("p1") }
+  end
+
+  def test_get_v1_pca_principals
+    call("GET", "/v1/pca/principals") { |c| c.pca.list_principals() }
+  end
+
+  def test_post_v1_pca_principals
+    call("POST", "/v1/pca/principals") { |c| c.pca.create_principal(principal_pub: "x", subject_type: "user", subject_id: "x") }
+  end
+
+  def test_delete_v1_pca_principals_principalpub
+    call("DELETE", "/v1/pca/principals/p1") { |c| c.pca.delete_principal("p1") }
+  end
+
+  def test_post_v1_pca_undo_records
+    call("POST", "/v1/pca/undo/records") { |c| c.pca.create_record(record: {}) }
+  end
+
+  def test_get_v1_pca_undo_records_id
+    call("GET", "/v1/pca/undo/records/p1") { |c| c.pca.get_record("p1") }
+  end
+
+  def test_put_v1_pca_undo_records_id
+    call("PUT", "/v1/pca/undo/records/p1") { |c| c.pca.set_record("p1", record: {}) }
+  end
+
+  def test_get_v1_pca_undo_vetoes
+    call("GET", "/v1/pca/undo/vetoes") { |c| c.pca.list_vetoes() }
+  end
+
+  def test_post_v1_pca_workflow_receipts
+    call("POST", "/v1/pca/workflow-receipts") { |c| c.pca.create_workflow_receipt(grant_ref: "x", workflow: {}, step: "x", outcome: "ok", params_digest: "x", outputs: {}) }
+  end
+
+  def test_get_v1_permission_aliases
+    call("GET", "/v1/permission_aliases") { |c| c.permission_aliases.list_permission_aliases() }
+  end
+
+  def test_post_v1_permission_aliases
+    call("POST", "/v1/permission_aliases") { |c| c.permission_aliases.create_permission_aliase(alias_: "x", permission_key: "x") }
+  end
+
+  def test_put_v1_permission_aliases_alias
+    call("PUT", "/v1/permission_aliases/p1") { |c| c.permission_aliases.set_permission_aliase("p1", permission_key: "x") }
+  end
+
+  def test_delete_v1_permission_aliases_alias
+    call("DELETE", "/v1/permission_aliases/p1") { |c| c.permission_aliases.delete_permission_aliase("p1") }
+  end
+
+  def test_post_v1_permissions_id_rename
+    call("POST", "/v1/permissions/p1/rename") { |c| c.permissions.rename("p1", key: "x") }
+  end
+
   def test_get_v1_platform_apps_id_instances_instanceid_clones
     call("GET", "/v1/platform/apps/p1/instances/p2/clones") { |c| c.platform.list_clones("p1", "p2") }
   end
@@ -1966,8 +2402,16 @@ class GeneratedCatalogTest < Minitest::Test
     call("DELETE", "/v1/platform/apps/p1/instances/p2/clones/p3") { |c| c.platform.delete_clone("p1", "p2", "p3") }
   end
 
+  def test_post_v1_platform_apps_id_instances_instanceid_clones_cloneid_refresh
+    call("POST", "/v1/platform/apps/p1/instances/p2/clones/p3/refresh") { |c| c.platform.refresh_clone("p1", "p2", "p3") }
+  end
+
   def test_post_v1_platform_apps_id_narrow_secret_keys
     call("POST", "/v1/platform/apps/p1/narrow_secret_keys") { |c| c.platform.create_narrow_secret_key("p1") }
+  end
+
+  def test_post_v1_platform_apps_id_provisioning_key_renew
+    call("POST", "/v1/platform/apps/p1/provisioning_key/renew") { |c| c.platform.renew_provisioning_key("p1") }
   end
 
   def test_get_v1_platform_atlas_id_apps_id_adoption_codes
@@ -2098,6 +2542,14 @@ class GeneratedCatalogTest < Minitest::Test
     call("GET", "/v1/resource_servers/p1/revoked_tokens") { |c| c.resource_servers.list_revoked_tokens("p1") }
   end
 
+  def test_get_v1_revocations
+    call("GET", "/v1/revocations") { |c| c.revocations.list_revocations() }
+  end
+
+  def test_get_v1_revocations_stream
+    call("GET", "/v1/revocations/stream") { |c| c.revocations.get_stream() }
+  end
+
   def test_post_v1_risk_based_mfa_replay
     call("POST", "/v1/risk_based_mfa/replay") { |c| c.risk_based_mfa.replay() }
   end
@@ -2218,6 +2670,10 @@ class GeneratedCatalogTest < Minitest::Test
     call("GET", "/v1/sessions/revoke_jobs/p1") { |c| c.sessions.get_revoke_job("p1") }
   end
 
+  def test_put_v1_sessions_id_active_organization
+    call("PUT", "/v1/sessions/p1/active_organization") { |c| c.sessions.set_active_organization("p1", organization_id: "x") }
+  end
+
   def test_get_v1_sessions_id_binding
     call("GET", "/v1/sessions/p1/binding") { |c| c.sessions.get_binding("p1") }
   end
@@ -2234,8 +2690,40 @@ class GeneratedCatalogTest < Minitest::Test
     call("GET", "/v1/sessions/p1/risk") { |c| c.sessions.get_risk("p1") }
   end
 
+  def test_post_v1_ssf_add_subject
+    call("POST", "/v1/ssf/add_subject") { |c| c.ssf.add_subject_all(stream_id: "x", subject: {}) }
+  end
+
+  def test_get_v1_ssf_configuration
+    call("GET", "/v1/ssf/configuration") { |c| c.ssf.get_configuration() }
+  end
+
+  def test_post_v1_ssf_configuration
+    call("POST", "/v1/ssf/configuration") { |c| c.ssf.configuration() }
+  end
+
+  def test_put_v1_ssf_configuration
+    call("PUT", "/v1/ssf/configuration") { |c| c.ssf.set_configuration(stream_id: "x") }
+  end
+
+  def test_patch_v1_ssf_configuration
+    call("PATCH", "/v1/ssf/configuration") { |c| c.ssf.update_configuration(stream_id: "x") }
+  end
+
+  def test_delete_v1_ssf_configuration
+    call("DELETE", "/v1/ssf/configuration") { |c| c.ssf.delete_configuration({}, stream_id: "x") }
+  end
+
   def test_post_v1_ssf_events
     call("POST", "/v1/ssf/events") { |c| c.ssf.create_event() }
+  end
+
+  def test_get_v1_ssf_metadata
+    call("GET", "/v1/ssf/metadata") { |c| c.ssf.get_metadata() }
+  end
+
+  def test_post_v1_ssf_remove_subject
+    call("POST", "/v1/ssf/remove_subject") { |c| c.ssf.remove_subject_all(stream_id: "x", subject: {}) }
   end
 
   def test_get_v1_ssf_status
@@ -2250,12 +2738,20 @@ class GeneratedCatalogTest < Minitest::Test
     call("GET", "/v1/ssf/streams/p1/subjects") { |c| c.ssf.list_subjects("p1") }
   end
 
+  def test_post_v1_ssf_streams_streamid_poll
+    call("POST", "/v1/ssf/streams/p1/poll") { |c| c.ssf.poll_stream("p1") }
+  end
+
   def test_post_v1_ssf_subjects_add
     call("POST", "/v1/ssf/subjects/add") { |c| c.ssf.add_subject() }
   end
 
   def test_post_v1_ssf_subjects_remove
     call("POST", "/v1/ssf/subjects/remove") { |c| c.ssf.remove_subject() }
+  end
+
+  def test_post_v1_ssf_verification
+    call("POST", "/v1/ssf/verification") { |c| c.ssf.verification(stream_id: "x") }
   end
 
   def test_post_v1_ssf_verify
@@ -2346,6 +2842,14 @@ class GeneratedCatalogTest < Minitest::Test
     call("POST", "/v1/users/bulk_actions/p1/cancel") { |c| c.users.cancel_bulk_action("p1") }
   end
 
+  def test_put_v1_users_by_external_id_external_id
+    call("PUT", "/v1/users/by_external_id/p1") { |c| c.users.set_by_external_id("p1") }
+  end
+
+  def test_get_v1_users_deleted
+    call("GET", "/v1/users/deleted") { |c| c.users.list_deleted(since: "x") }
+  end
+
   def test_post_v1_users_deleted_addresses
     call("POST", "/v1/users/deleted_addresses") { |c| c.users.create_deleted_address(addresses: []) }
   end
@@ -2396,6 +2900,10 @@ class GeneratedCatalogTest < Minitest::Test
 
   def test_delete_v1_users_id_cookie_consents
     call("DELETE", "/v1/users/p1/cookie_consents") { |c| c.users.delete_cookie_consent("p1") }
+  end
+
+  def test_post_v1_users_id_delegation_tokens
+    call("POST", "/v1/users/p1/delegation_tokens") { |c| c.users.create_delegation_token("p1", audience: "x", scopes: [], actor: {}) }
   end
 
   def test_post_v1_users_id_deletion_reconfirm
@@ -2454,6 +2962,22 @@ class GeneratedCatalogTest < Minitest::Test
     call("POST", "/v1/users/p1/release") { |c| c.users.release("p1") }
   end
 
+  def test_get_v1_users_id_risk_signals
+    call("GET", "/v1/users/p1/risk_signals") { |c| c.users.list_risk_signals("p1") }
+  end
+
+  def test_post_v1_users_id_risk_signals
+    call("POST", "/v1/users/p1/risk_signals") { |c| c.users.create_risk_signal("p1", signal_type: "x", severity: "low") }
+  end
+
+  def test_delete_v1_users_id_risk_signals
+    call("DELETE", "/v1/users/p1/risk_signals") { |c| c.users.delete_risk_signal("p1") }
+  end
+
+  def test_get_v1_users_id_security_summary
+    call("GET", "/v1/users/p1/security_summary") { |c| c.users.get_security_summary("p1") }
+  end
+
   def test_get_v1_users_id_temporary_access
     call("GET", "/v1/users/p1/temporary_access") { |c| c.users.list_temporary_access("p1") }
   end
@@ -2500,6 +3024,10 @@ class GeneratedCatalogTest < Minitest::Test
 
   def test_delete_v1_web_bot_auth_directories_id
     call("DELETE", "/v1/web_bot_auth/directories/p1") { |c| c.web_bot_auth.delete_directory("p1") }
+  end
+
+  def test_get_v1_webhook_dlq
+    call("GET", "/v1/webhook_dlq") { |c| c.webhook_dlq.list_webhook_dlq() }
   end
 
   def test_get_v1_webhook_endpoints_id_dlq

@@ -247,8 +247,6 @@ def model_for(schema, hint):
     s = deref(raw)
     ref = raw.get('$ref')
     key = ref or json.dumps(s, sort_keys=True)
-    if key in BY_KEY:
-        return BY_KEY[key]
     obj = (collect_props(s).get('object') or {})
     obj = deref(obj).get('const')
     if ref:
@@ -258,12 +256,15 @@ def model_for(schema, hint):
     else:
         base = camel(hint)
     name = base or 'Value'
+    # a name already published (pinned) is emitted even when a new op reached this shape first
+    if key in BY_KEY and not (name in PINS.get('models', []) and name not in MODELS):
+        return BY_KEY[key]
     if name in MODELS or name in ('Model', 'Page'):
         i = 2
         while f'{name}{i}' in MODELS:
             i += 1
         name = f'{name}{i}'
-    BY_KEY[key] = name
+    BY_KEY.setdefault(key, name)
     MODELS[name] = None   # reserve so recursion sees it
     attrs, used = [], set()
     for jk, ps in collect_props(s).items():
@@ -744,6 +745,7 @@ if '--pin' in sys.argv:
     merged = dict(PINS.get('names', {}))
     merged.update(new_pins)
     PINS['names'] = dict(sorted(merged.items()))
+    PINS['models'] = sorted(set(PINS.get('models', [])) | set(MODELS))
     with open(os.path.join(HERE, 'catalog_pins.json'), 'w') as f:
         json.dump(PINS, f, indent=1)
         f.write('\n')

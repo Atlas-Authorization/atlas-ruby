@@ -363,7 +363,7 @@ module Atlas
       attribute :object, "object", :string
       attribute :id, "id", :string
       attribute :account_id, "account_id", :string
-      attribute :actor, "actor", "ConfigChangelogEntryActor"
+      attribute :actor, "actor", "GetMachinesRevokedResponseItemRevokedBy"
       attribute :action, "action", :string
       attribute :target, "target", "AccountAuditLogTarget"
       attribute :instance_id, "instance_id", :string
@@ -1034,7 +1034,7 @@ module Atlas
 
     class AnalyticsBreakdown < Atlas::Model
       attribute :object, "object", :string
-      attribute :window, "window", "AnalyticsActiveUsersWindow"
+      attribute :window, "window", "AnalyticsCaptchaWindow"
       attribute :dimension, "dimension", :string
       attribute :total, "total", :integer
       attribute :data, "data", ["AnalyticsBreakdownDataItem"]
@@ -1046,9 +1046,27 @@ module Atlas
       attribute :share, "share", :number
     end
 
+    class AnalyticsCaptcha < Atlas::Model
+      attribute :object, "object", :string
+      attribute :window, "window", "AnalyticsCaptchaWindow"
+      attribute :issued, "issued", :integer
+      attribute :passed, "passed", :integer
+      attribute :failed, "failed", :integer
+      attribute :blocked, "blocked", :integer
+      attribute :solve_rate, "solve_rate", :number
+      attribute :data, "data", ["GetAnalyticsCaptchaResponseItem"]
+    end
+
+    class AnalyticsCaptchaWindow < Atlas::Model
+      attribute :from, "from", :integer
+      attribute :to, "to", :integer
+      attribute :granularity, "granularity", :string
+      attribute :organization_id, "organization_id", :string
+    end
+
     class AnalyticsFailures < Atlas::Model
       attribute :object, "object", :string
-      attribute :window, "window", "AnalyticsActiveUsersWindow"
+      attribute :window, "window", "AnalyticsCaptchaWindow"
       attribute :total, "total", :integer
       attribute :data, "data", ["AnalyticsFailuresDataItem"]
     end
@@ -1063,7 +1081,7 @@ module Atlas
 
     class AnalyticsFunnel < Atlas::Model
       attribute :object, "object", :string
-      attribute :window, "window", "AnalyticsActiveUsersWindow"
+      attribute :window, "window", "AnalyticsCaptchaWindow"
       attribute :data, "data", ["AnalyticsFunnelDataItem"]
     end
 
@@ -1081,7 +1099,7 @@ module Atlas
 
     class AnalyticsJourneyFunnel < Atlas::Model
       attribute :object, "object", :string
-      attribute :window, "window", "AnalyticsActiveUsersWindow"
+      attribute :window, "window", "AnalyticsCaptchaWindow"
       attribute :journey_id, "journey_id", :string
       attribute :journey_name, "journey_name", :string
       attribute :data, "data", ["AnalyticsJourneyFunnelDataItem"]
@@ -1098,7 +1116,7 @@ module Atlas
 
     class AnalyticsPasskeyAdoption < Atlas::Model
       attribute :object, "object", :string
-      attribute :window, "window", "AnalyticsActiveUsersWindow"
+      attribute :window, "window", "AnalyticsCaptchaWindow"
       attribute :users, "users", :integer
       attribute :users_with_passkey, "users_with_passkey", :integer
       attribute :adoption_rate, "adoption_rate", :number
@@ -1114,7 +1132,7 @@ module Atlas
 
     class AnalyticsReportAccessByApp < Atlas::Model
       attribute :object, "object", :string
-      attribute :window, "window", "AnalyticsActiveUsersWindow"
+      attribute :window, "window", "AnalyticsCaptchaWindow"
       attribute :data, "data", ["AnalyticsReportAccessByAppDataItem"]
     end
 
@@ -1128,7 +1146,7 @@ module Atlas
 
     class AnalyticsReportInactiveUsers < Atlas::Model
       attribute :object, "object", :string
-      attribute :window, "window", "AnalyticsActiveUsersWindow"
+      attribute :window, "window", "AnalyticsCaptchaWindow"
       attribute :inactive_days, "inactive_days", :integer
       attribute :cutoff, "cutoff", :string
       attribute :has_more, "has_more", :boolean
@@ -1145,7 +1163,7 @@ module Atlas
 
     class AnalyticsReportMfaCoverage < Atlas::Model
       attribute :object, "object", :string
-      attribute :window, "window", "AnalyticsActiveUsersWindow"
+      attribute :window, "window", "AnalyticsCaptchaWindow"
       attribute :total_users, "total_users", :integer
       attribute :data, "data", ["AnalyticsReportMfaCoverageDataItem"]
     end
@@ -1154,6 +1172,13 @@ module Atlas
       attribute :protection, "protection", :string
       attribute :users, "users", :integer
       attribute :share, "share", :number
+    end
+
+    class AnalyticsSms < Atlas::Model
+      attribute :object, "object", :string
+      attribute :window, "window", "AnalyticsCaptchaWindow"
+      attribute :total, "total", :integer
+      attribute :data, "data", ["GetAnalyticsSmsResponseItem"]
     end
 
     class ApiDeprecation < Atlas::Model
@@ -1185,6 +1210,9 @@ module Atlas
       attribute :max_token_lifetime_seconds, "max_token_lifetime_seconds", :integer
       attribute :public_key, "public_key", :string
       attribute :public_key_jkt, "public_key_jkt", :string
+      attribute :credential, "credential", :string
+      attribute :audience, "audience", :string
+      attribute :key_id, "key_id", :string
       attribute :limits, "limits", ["ApiKeyLimit"]
       attribute :usage, "usage", ["ApiKeyLimitState"]
       attribute :enabled, "enabled", :boolean
@@ -1197,6 +1225,11 @@ module Atlas
       attribute :revoked_reason, "revoked_reason", :string
       attribute :organization_id, "organization_id", :string
       attribute :created_by_user_id, "created_by_user_id", :string
+      attribute :end_reason, "end_reason", :string
+      attribute :ended_at, "ended_at", :integer
+      attribute :revoked_by, "revoked_by", "ApiKeyRevokedBy"
+      attribute :dies_with, "dies_with", :string
+      attribute :metadata, "metadata", :hash
       attribute :created_at, "created_at", :integer
     end
 
@@ -1237,6 +1270,9 @@ module Atlas
       attribute :max_token_lifetime_seconds, "max_token_lifetime_seconds", :integer
       attribute :public_key, "public_key", :string
       attribute :public_key_jkt, "public_key_jkt", :string
+      attribute :credential, "credential", :string
+      attribute :audience, "audience", :string
+      attribute :key_id, "key_id", :string
       attribute :limits, "limits", ["ApiKeyLimit"]
       attribute :usage, "usage", ["ApiKeyLimitState"]
       attribute :enabled, "enabled", :boolean
@@ -1249,8 +1285,14 @@ module Atlas
       attribute :revoked_reason, "revoked_reason", :string
       attribute :organization_id, "organization_id", :string
       attribute :created_by_user_id, "created_by_user_id", :string
+      attribute :end_reason, "end_reason", :string
+      attribute :ended_at, "ended_at", :integer
+      attribute :revoked_by, "revoked_by", "ApiKeyRevokedBy"
+      attribute :dies_with, "dies_with", :string
+      attribute :metadata, "metadata", :hash
       attribute :created_at, "created_at", :integer
       attribute :secret, "secret", :string
+      attribute :private_key, "private_key", :string
       attribute :note, "note", :string
     end
 
@@ -1320,6 +1362,11 @@ module Atlas
       attribute :window_seconds, "window_seconds", :integer
     end
 
+    class ApiKeyRevokedBy < Atlas::Model
+      attribute :type, "type", :string
+      attribute :id, "id", :string
+    end
+
     class ApiKeyToken < Atlas::Model
       attribute :object, "object", :string
       attribute :token, "token", :string
@@ -1385,6 +1432,10 @@ module Atlas
       attribute :name, "name", :string
       attribute :claims, "claims", :hash
       attribute :scopes, "scopes", [:string]
+      attribute :credential, "credential", :string
+      attribute :audience, "audience", :string
+      attribute :jti, "jti", :string
+      attribute :exp, "exp", :integer
       attribute :effective_scopes, "effective_scopes", [:string]
       attribute :organization, "organization", "ApiKeyVerificationOrganization"
       attribute :created_by_user_id, "created_by_user_id", :string
@@ -1513,6 +1564,11 @@ module Atlas
       attribute :secret_key_scopes, "secret_key_scopes", [:string]
       attribute :onboarding_secret, "onboarding_secret", :string
       attribute :onboarding_key_id, "onboarding_key_id", :string
+      attribute :runtime_secret, "runtime_secret", :string
+      attribute :runtime_key_id, "runtime_key_id", :string
+      attribute :runtime_secret_scopes, "runtime_secret_scopes", [:string]
+      attribute :secret_key_label, "secret_key_label", :string
+      attribute :secret_expires_at, "secret_expires_at", :integer
       attribute :onboarding_secret_expires_at, "onboarding_secret_expires_at", :integer
       attribute :warnings, "warnings", ["LocalizationCheckResultsItemProblemsItem"]
       attribute :note, "note", :string
@@ -1561,6 +1617,11 @@ module Atlas
       attribute :secret_key_scopes, "secret_key_scopes", [:string]
       attribute :onboarding_secret, "onboarding_secret", :string
       attribute :onboarding_key_id, "onboarding_key_id", :string
+      attribute :runtime_secret, "runtime_secret", :string
+      attribute :runtime_key_id, "runtime_key_id", :string
+      attribute :runtime_secret_scopes, "runtime_secret_scopes", [:string]
+      attribute :secret_key_label, "secret_key_label", :string
+      attribute :secret_expires_at, "secret_expires_at", :integer
       attribute :onboarding_secret_expires_at, "onboarding_secret_expires_at", :integer
       attribute :warnings, "warnings", ["LocalizationCheckResultsItemProblemsItem"]
       attribute :note, "note", :string
@@ -1639,6 +1700,19 @@ module Atlas
     class AppPresetParamsItem < Atlas::Model
       attribute :key, "key", :string
       attribute :label, "label", :string
+    end
+
+    class AppProvisioningKeyRenewed < Atlas::Model
+      attribute :object, "object", :string
+      attribute :app_id, "app_id", :string
+      attribute :instance_id, "instance_id", :string
+      attribute :renewed, "renewed", ["AppProvisioningKeyRenewedRenewedItem"]
+      attribute :expires_at, "expires_at", :integer
+    end
+
+    class AppProvisioningKeyRenewedRenewedItem < Atlas::Model
+      attribute :key_id, "key_id", :string
+      attribute :prefix, "prefix", :string
     end
 
     class AppRequest < Atlas::Model
@@ -2605,11 +2679,13 @@ module Atlas
       attribute :change_feed, "changeFeed", "AuthConfigChangeFeed"
       attribute :compliance, "compliance", "AuthConfigCompliance"
       attribute :dangerously_report_skipped_emails_as_verified, "dangerouslyReportSkippedEmailsAsVerified", :boolean
+      attribute :delegation_tokens, "delegationTokens", "AuthConfigDelegationTokens"
       attribute :deleted_user_return, "deletedUserReturn", :string
       attribute :end_user_api_keys, "endUserApiKeys", "AuthConfigEndUserApiKeys"
       attribute :entitlements, "entitlements", "AuthConfigEntitlements"
       attribute :external_jwt, "externalJwt", "AuthConfigExternalJwt"
       attribute :identity_traits, "identityTraits", "AuthConfigIdentityTraits"
+      attribute :issuer_aliases, "issuerAliases", ["AuthConfigIssuerAliasesItem"]
       attribute :jwt_templates, "jwtTemplates", { map: { map: :string } }
       attribute :jwt_template_settings, "jwtTemplateSettings", { map: "AuthConfigJwtTemplateSettingsValue" }
       attribute :kerberos, "kerberos", "AuthConfigKerberos"
@@ -2625,6 +2701,7 @@ module Atlas
       attribute :password_policy, "passwordPolicy", "AuthConfigPasswordPolicy"
       attribute :pca, "pca", "AuthConfigPca"
       attribute :phone_channels, "phoneChannels", "AuthConfigPhoneChannels"
+      attribute :previous_issuer_overlap_days, "previousIssuerOverlapDays", :number
       attribute :qr_sign_in, "qrSignIn", "AuthConfigQrSignIn"
       attribute :rate_limit, "rateLimit", "AuthConfigRateLimit"
       attribute :require_email_verification, "requireEmailVerification", :boolean
@@ -2651,8 +2728,10 @@ module Atlas
       attribute :email_verification, "emailVerification", :string
       attribute :impersonation, "impersonation", "AuthConfigAccountUxImpersonation"
       attribute :last_sign_in_method, "lastSignInMethod", "AttackProtectionBreachedPassword"
+      attribute :linking, "linking", "AuthConfigAccountUxLinking"
       attribute :passkey_adoption, "passkeyAdoption", "AuthConfigAccountUxPasskeyAdoption"
       attribute :passkey_sign_up, "passkeySignUp", "AuthConfigAccountUxPasskeySignUp"
+      attribute :password_import, "passwordImport", "AuthConfigAccountUxPasswordImport"
       attribute :password_reset, "passwordReset", :string
       attribute :security_notifications, "securityNotifications", "AuthConfigAccountUxSecurityNotifications"
       attribute :username, "username", "AuthConfigAccountUxUsername"
@@ -2669,6 +2748,10 @@ module Atlas
 
     class AuthConfigAccountUxImpersonation < Atlas::Model
       attribute :notify_user, "notifyUser", :boolean
+    end
+
+    class AuthConfigAccountUxLinking < Atlas::Model
+      attribute :require_external_id, "requireExternalId", :boolean
     end
 
     class AuthConfigAccountUxPasskeyAdoption < Atlas::Model
@@ -2719,6 +2802,10 @@ module Atlas
       attribute :preferred, "preferred", :boolean
     end
 
+    class AuthConfigAccountUxPasswordImport < Atlas::Model
+      attribute :imported_password_policy, "importedPasswordPolicy", :string
+    end
+
     class AuthConfigAccountUxSecurityNotifications < Atlas::Model
       attribute :account_changes, "accountChanges", :boolean
       attribute :new_device_sign_in, "newDeviceSignIn", :boolean
@@ -2744,6 +2831,7 @@ module Atlas
 
     class AuthConfigAppApproval < Atlas::Model
       attribute :first_factor, "firstFactor", :boolean
+      attribute :reveal_no_account, "revealNoAccount", :boolean
       attribute :step_up, "stepUp", :boolean
       attribute :ttl_seconds, "ttlSeconds", :number
     end
@@ -2994,8 +3082,22 @@ module Atlas
       attribute :deletion_reminders, "deletionReminders", [:string]
       attribute :dsr_due_days, "dsrDueDays", :number
       attribute :erasure_grace_days, "erasureGraceDays", :number
+      attribute :max_pauses, "maxPauses", :number
       attribute :ownership_transfer, "ownershipTransfer", :string
       attribute :require_final_notice, "requireFinalNotice", :boolean
+    end
+
+    class AuthConfigDelegationTokens < Atlas::Model
+      attribute :audiences, "audiences", ["AuthConfigDelegationTokensAudiencesItem"]
+      attribute :default_ttl_seconds, "defaultTtlSeconds", :number
+      attribute :enabled, "enabled", :boolean
+      attribute :exchange_client_ids, "exchangeClientIds", [:string]
+      attribute :max_ttl_seconds, "maxTtlSeconds", :number
+    end
+
+    class AuthConfigDelegationTokensAudiencesItem < Atlas::Model
+      attribute :audience, "audience", :string
+      attribute :scopes, "scopes", [:string]
     end
 
     class AuthConfigEndUserApiKeys < Atlas::Model
@@ -3088,6 +3190,11 @@ module Atlas
       attribute :equals, "equals", :string
       attribute :in_, "in", [:string]
       attribute :key, "key", :string
+    end
+
+    class AuthConfigIssuerAliasesItem < Atlas::Model
+      attribute :accepted_until, "acceptedUntil", :string
+      attribute :issuer, "issuer", :string
     end
 
     class AuthConfigJwtTemplateSettingsValue < Atlas::Model
@@ -3248,11 +3355,33 @@ module Atlas
     class AuthConfigNativeApps < Atlas::Model
       attribute :android_apps, "androidApps", ["AuthConfigNativeAppsAndroidAppsItem"]
       attribute :apple_app_ids, "appleAppIds", [:string]
+      attribute :apps, "apps", ["AuthConfigNativeAppsAppsItem"]
+      attribute :publishable_key_app_ids, "publishableKeyAppIds", [:string]
+      attribute :unregistered, "unregistered", :string
+      attribute :unregistered_session, "unregisteredSession", "AuthConfigNativeAppsUnregisteredSession"
     end
 
     class AuthConfigNativeAppsAndroidAppsItem < Atlas::Model
       attribute :package_name, "packageName", :string
       attribute :sha256_cert_fingerprints, "sha256CertFingerprints", [:string]
+    end
+
+    class AuthConfigNativeAppsAppsItem < Atlas::Model
+      attribute :allowed_users, "allowed_users", [:string]
+      attribute :bundle_id, "bundle_id", :string
+      attribute :callback_urls, "callback_urls", [:string]
+      attribute :created_at, "created_at", :number
+      attribute :expires_at, "expires_at", :number
+      attribute :id, "id", :string
+      attribute :package_name, "package_name", :string
+      attribute :platform, "platform", :string
+      attribute :sha256_cert_fingerprints, "sha256_cert_fingerprints", [:string]
+      attribute :team_id, "team_id", :string
+    end
+
+    class AuthConfigNativeAppsUnregisteredSession < Atlas::Model
+      attribute :absolute_ms, "absoluteMs", :number
+      attribute :require_mfa, "requireMfa", :boolean
     end
 
     class AuthConfigOauthProvider < Atlas::Model
@@ -3357,7 +3486,9 @@ module Atlas
       attribute :descriptions, "descriptions", { map: :string }
       attribute :labels, "labels", { map: :string }
       attribute :name, "name", :string
+      attribute :owner_exempt, "ownerExempt", :boolean
       attribute :parameters, "parameters", [:string]
+      attribute :requires_client_level, "requiresClientLevel", :string
       attribute :requires_verified_client, "requiresVerifiedClient", :boolean
       attribute :sensitive, "sensitive", :boolean
     end
@@ -3430,9 +3561,71 @@ module Atlas
     end
 
     class AuthConfigPca < Atlas::Model
+      attribute :allowed_suites, "allowedSuites", [:string]
+      attribute :beacons, "beacons", :string
       attribute :enabled, "enabled", :boolean
       attribute :max_plan_nodes, "maxPlanNodes", :number
+      attribute :objective_risk, "objectiveRisk", "AuthConfigPcaObjectiveRisk"
+      attribute :optimistic, "optimistic", :boolean
       attribute :public_rate_limit_per_min, "publicRateLimitPerMin", :number
+      attribute :quotas, "quotas", "AuthConfigPcaQuotas"
+      attribute :undo_signer, "undoSigner", :string
+    end
+
+    class AuthConfigPcaObjectiveRisk < Atlas::Model
+      attribute :allow_heuristic_fallback, "allow_heuristic_fallback", :boolean
+      attribute :calibration, "calibration", [:number]
+      attribute :graph, "graph", "AuthConfigPcaObjectiveRiskGraph"
+      attribute :registry, "registry", "AuthConfigPcaObjectiveRiskRegistry"
+    end
+
+    class AuthConfigPcaObjectiveRiskGraph < Atlas::Model
+      attribute :edges, "edges", ["AuthConfigPcaObjectiveRiskGraphEdgesItem"]
+      attribute :nodes, "nodes", ["AuthConfigPcaObjectiveRiskGraphNodesItem"]
+    end
+
+    class AuthConfigPcaObjectiveRiskGraphEdgesItem < Atlas::Model
+      attribute :from, "from", :string
+      attribute :kind, "kind", :string
+      attribute :to, "to", :string
+    end
+
+    class AuthConfigPcaObjectiveRiskGraphNodesItem < Atlas::Model
+      attribute :harm, "harm", { map: :number }
+      attribute :id, "id", :string
+    end
+
+    class AuthConfigPcaObjectiveRiskRegistry < Atlas::Model
+      attribute :entries, "entries", ["AuthConfigPcaObjectiveRiskRegistryEntriesItem"]
+      attribute :trusted_verifiers, "trusted_verifiers", [:string]
+    end
+
+    class AuthConfigPcaObjectiveRiskRegistryEntriesItem < Atlas::Model
+      attribute :fidelity, "fidelity", :string
+      attribute :inverse_kind, "inverse_kind", :string
+      attribute :verb, "verb", :string
+      attribute :verification, "verification", "AuthConfigPcaObjectiveRiskRegistryEntriesItemVerification"
+    end
+
+    class AuthConfigPcaObjectiveRiskRegistryEntriesItemVerification < Atlas::Model
+      attribute :evidence_digest, "evidence_digest", :string
+      attribute :verifier_id, "verifier_id", :string
+    end
+
+    class AuthConfigPcaQuotas < Atlas::Model
+      attribute :grant_actions_per_min, "grantActionsPerMin", :number
+      attribute :instance_actions_per_min, "instanceActionsPerMin", :number
+      attribute :max_active_grants, "maxActiveGrants", :number
+      attribute :max_active_grants_per_principal, "maxActiveGrantsPerPrincipal", :number
+      attribute :max_plans_per_grant, "maxPlansPerGrant", :number
+      attribute :max_revocations_per_grant, "maxRevocationsPerGrant", :number
+      attribute :max_stepups_per_grant, "maxStepupsPerGrant", :number
+      attribute :max_unverified_grants, "maxUnverifiedGrants", :number
+      attribute :max_unverified_grants_per_key, "maxUnverifiedGrantsPerKey", :number
+      attribute :pq_verify_units_per_source_per_min, "pqVerifyUnitsPerSourcePerMin", :number
+      attribute :public_per_network_per_min, "publicPerNetworkPerMin", :number
+      attribute :public_pre_auth_global_per_min, "publicPreAuthGlobalPerMin", :number
+      attribute :unverified_registrations_per_min, "unverifiedRegistrationsPerMin", :number
     end
 
     class AuthConfigPhoneChannels < Atlas::Model
@@ -3589,7 +3782,10 @@ module Atlas
     class AuthConfigSession < Atlas::Model
       attribute :absolute_ms, "absoluteMs", :number
       attribute :audience, "audience", :any
+      attribute :browser_handoff, "browserHandoff", :boolean
+      attribute :cookie_domain, "cookieDomain", :string
       attribute :cross_subdomain_cookies, "crossSubdomainCookies", :boolean
+      attribute :csrf_cookie, "csrfCookie", :boolean
       attribute :custom_data, "customData", "AuthConfigSessionCustomData"
       attribute :device_bound_sessions, "deviceBoundSessions", :boolean
       attribute :idle_ms, "idleMs", :number
@@ -3598,6 +3794,7 @@ module Atlas
       attribute :include_email_claim, "includeEmailClaim", :boolean
       attribute :include_end_user_pool_claim, "includeEndUserPoolClaim", :boolean
       attribute :include_orgs_claim, "includeOrgsClaim", :boolean
+      attribute :include_resource_role_claims, "includeResourceRoleClaims", :boolean
       attribute :include_risk_claim, "includeRiskClaim", :boolean
       attribute :jwt_ttl_seconds, "jwtTtlSeconds", :number
       attribute :long_lived, "longLived", :boolean
@@ -3605,8 +3802,10 @@ module Atlas
       attribute :multi_session, "multiSession", :boolean
       attribute :non_persistent_absolute_ms, "nonPersistentAbsoluteMs", :number
       attribute :non_persistent_idle_ms, "nonPersistentIdleMs", :number
+      attribute :refresh_grace_seconds, "refreshGraceSeconds", :number
       attribute :refresh_rotation, "refreshRotation", :boolean
       attribute :remember_me, "rememberMe", :boolean
+      attribute :resource_role_claims_max, "resourceRoleClaimsMax", :number
       attribute :revoke_on_password_change, "revokeOnPasswordChange", :boolean
       attribute :token_included_settings_keys, "tokenIncludedSettingsKeys", [:string]
       attribute :token_strategy, "tokenStrategy", :string
@@ -3970,6 +4169,23 @@ module Atlas
       attribute :location, "location", :string
       attribute :blocked_reason, "blocked_reason", :string
       attribute :body_excerpt, "body_excerpt", :string
+    end
+
+    class BeforeFirstSessionHook < Atlas::Model
+      attribute :object, "object", :string
+      attribute :enabled, "enabled", :boolean
+      attribute :url, "url", :string
+      attribute :signing_secret_set, "signing_secret_set", :boolean
+      attribute :timeout_ms, "timeout_ms", :integer
+      attribute :last_call, "last_call", "BeforeFirstSessionHookLastCall"
+      attribute :failed_calls, "failed_calls", :integer
+      attribute :updated_at, "updated_at", :integer
+    end
+
+    class BeforeFirstSessionHookLastCall < Atlas::Model
+      attribute :at, "at", :integer
+      attribute :status, "status", :string
+      attribute :error, "error", :string
     end
 
     class BeforeUserCreateHook < Atlas::Model
@@ -5088,6 +5304,8 @@ module Atlas
     class ConfigLimitsLimitsPermissions < Atlas::Model
       attribute :max_implied_per_permission, "max_implied_per_permission", :integer
       attribute :key_max_length, "key_max_length", :integer
+      attribute :max_parts, "max_parts", :integer
+      attribute :part_max_length, "part_max_length", :integer
     end
 
     class ConfigLimitsLimitsResourceTypes < Atlas::Model
@@ -5336,9 +5554,29 @@ module Atlas
       attribute :count, "count", :integer
       attribute :has_more, "has_more", :boolean
       attribute :next_cursor, "next_cursor", :string
-      attribute :connections, "connections", [:hash]
+      attribute :connections, "connections", ["ConnectionExportConnectionsItem"]
       attribute :recipient_key_id, "recipient_key_id", :string
       attribute :bundle, "bundle", :string
+    end
+
+    class ConnectionExportConnectionsItem < Atlas::Model
+      attribute :kind, "kind", :string
+      attribute :config, "config", :hash
+      attribute :provider, "provider", :string
+      attribute :owner, "owner", "ConnectionOwner"
+      attribute :external_id, "external_id", :string
+      attribute :environment, "environment", :any
+      attribute :host_params, "host_params", { map: :string }
+      attribute :scopes, "scopes", [:string]
+      attribute :metadata, "metadata", { map: :string }
+      attribute :name, "name", :string
+      attribute :allowed_hosts, "allowed_hosts", [:string]
+      attribute :status, "status", :string
+      attribute :expires_at, "expires_at", :integer
+      attribute :token_family, "token_family", :string
+      attribute :refresh_token, "refresh_token", :string
+      attribute :access_token, "access_token", :string
+      attribute :credentials, "credentials", :hash
     end
 
     class ConnectionImport < Atlas::Model
@@ -5351,6 +5589,8 @@ module Atlas
       attribute :would_create, "would_create", :integer
       attribute :would_update, "would_update", :integer
       attribute :failed, "failed", :integer
+      attribute :errors, "errors", ["OauthGrantImportErrorsItem"]
+      attribute :would_return, "would_return", :hash
       attribute :data, "data", ["ConnectionImportDataItem"]
     end
 
@@ -5397,6 +5637,7 @@ module Atlas
       attribute :scopes, "scopes", [:string]
       attribute :host_params, "host_params", { map: :string }
       attribute :enabled, "enabled", :boolean
+      attribute :ru_name, "ru_name", :string
       attribute :redirect_uri, "redirect_uri", :string
       attribute :callback_url, "callback_url", :string
       attribute :forward_url, "forward_url", :string
@@ -5507,6 +5748,19 @@ module Atlas
       attribute :providers, "providers", [:string]
     end
 
+    class ConnectionRehome < Atlas::Model
+      attribute :object, "object", :string
+      attribute :from_client, "from_client", :string
+      attribute :to_client, "to_client", :string
+      attribute :dry_run, "dry_run", :boolean
+      attribute :same_app, "same_app", :boolean
+      attribute :moved, "moved", :integer
+      attribute :would_move, "would_move", :integer
+      attribute :failed, "failed", :integer
+      attribute :skipped, "skipped", :integer
+      attribute :data, "data", ["PostConnectionsRehomeResponseItem"]
+    end
+
     class ConnectionRelayLimits < Atlas::Model
       attribute :object, "object", :string
       attribute :request_bytes, "request_bytes", :integer
@@ -5556,6 +5810,20 @@ module Atlas
       attribute :authorization, "authorization", :string
       attribute :method_, "method", :string
       attribute :url, "url", :string
+    end
+
+    class ConnectionTemplate < Atlas::Model
+      attribute :object, "object", :string
+      attribute :provider, "provider", :string
+      attribute :name, "name", :string
+      attribute :kind, "kind", :string
+      attribute :flow, "flow", :any
+      attribute :secrets, "secrets", [:string]
+      attribute :config, "config", :hash
+      attribute :allowed_hosts, "allowed_hosts", [:string]
+      attribute :host_params, "host_params", [:string]
+      attribute :signature, "signature", :string
+      attribute :note, "note", :string
     end
 
     class ConnectionToken < Atlas::Model
@@ -6022,6 +6290,24 @@ module Atlas
       attribute :token, "token", :string
       attribute :content, "content", :string
       attribute :instructions, "instructions", :string
+      attribute :previous_url, "previous_url", :string
+      attribute :previous_valid_until, "previous_valid_until", :integer
+      attribute :last_observation, "last_observation", "CustomDomainVerificationLastObservation"
+    end
+
+    class CustomDomainVerificationLastObservation < Atlas::Model
+      attribute :status, "status", :integer
+      attribute :content_type, "content_type", :string
+      attribute :bytes, "bytes", :integer
+      attribute :bytes_capped, "bytes_capped", :boolean
+      attribute :body_prefix, "body_prefix", :string
+      attribute :final_url, "final_url", :string
+      attribute :redirect_to, "redirect_to", :string
+      attribute :age, "age", :integer
+      attribute :cache_status, "cache_status", :string
+      attribute :is_html, "is_html", :boolean
+      attribute :served_from_cache, "served_from_cache", :boolean
+      attribute :checked_at, "checked_at", :integer
     end
 
     class CustomOauthProvider < Atlas::Model
@@ -6184,6 +6470,24 @@ module Atlas
       attribute :atlas_id_app_id, "atlas_id_app_id", :string
     end
 
+    class DelegationToken < Atlas::Model
+      attribute :object, "object", :string
+      attribute :token, "token", :string
+      attribute :token_type, "token_type", :string
+      attribute :user_id, "user_id", :string
+      attribute :audience, "audience", :string
+      attribute :scopes, "scopes", [:string]
+      attribute :actor, "actor", "DelegationTokenActor"
+      attribute :jti, "jti", :string
+      attribute :expires_at, "expires_at", :string
+      attribute :expires_in, "expires_in", :integer
+    end
+
+    class DelegationTokenActor < Atlas::Model
+      attribute :sub, "sub", :string
+      attribute :type, "type", :string
+    end
+
     class DeleteAuditExportsResponse < Atlas::Model
       attribute :object, "object", :string
       attribute :id, "id", :string
@@ -6257,6 +6561,13 @@ module Atlas
       attribute :already_remembered, "already_remembered", :integer
       attribute :invalid, "invalid", :integer
       attribute :invalid_indexes, "invalid_indexes", [:integer]
+    end
+
+    class DeletedUser < Atlas::Model
+      attribute :object, "object", :string
+      attribute :id, "id", :string
+      attribute :external_id, "external_id", :string
+      attribute :deleted_at, "deleted_at", :integer
     end
 
     class DeletionReceipt < Atlas::Model
@@ -7444,6 +7755,24 @@ module Atlas
       attribute :metrics, "metrics", :hash
     end
 
+    class GetAnalyticsCaptchaResponseItem < Atlas::Model
+      attribute :provider, "provider", :string
+      attribute :flow, "flow", :string
+      attribute :issued, "issued", :integer
+      attribute :passed, "passed", :integer
+      attribute :failed, "failed", :integer
+      attribute :blocked, "blocked", :integer
+      attribute :solve_rate, "solve_rate", :number
+    end
+
+    class GetAnalyticsSmsResponseItem < Atlas::Model
+      attribute :country, "country", :string
+      attribute :messages, "messages", :integer
+      attribute :delivered, "delivered", :integer
+      attribute :failed, "failed", :integer
+      attribute :estimated_cost, "estimated_cost", :number
+    end
+
     class GetAppCatalogResponseList < Atlas::Model
       attribute :object, "object", :string
       attribute :total, "total", :integer
@@ -7467,6 +7796,8 @@ module Atlas
       attribute :binding_, "binding", :string
       attribute :require_signature, "require_signature", :boolean
       attribute :require_trusted_device, "require_trusted_device", :boolean
+      attribute :exclude_requester, "exclude_requester", :boolean
+      attribute :step_up_policy, "step_up_policy", :string
       attribute :approvers, "approvers", "GetApprovalRequestsResponseItemApprovers"
       attribute :digest, "digest", :string
       attribute :canonical, "canonical", :string
@@ -7481,6 +7812,8 @@ module Atlas
       attribute :user_ids, "user_ids", [:string]
       attribute :organization_id, "organization_id", :string
       attribute :role, "role", :string
+      attribute :roles, "roles", [:string]
+      attribute :group_id, "group_id", :string
       attribute :required, "required", :integer
     end
 
@@ -7488,6 +7821,7 @@ module Atlas
       attribute :approver_user_id, "approver_user_id", :string
       attribute :decision, "decision", :string
       attribute :method_, "method", :string
+      attribute :note, "note", :string
       attribute :key_id, "key_id", :string
       attribute :trusted_device_id, "trusted_device_id", :string
       attribute :decided_at, "decided_at", :integer
@@ -7670,6 +8004,34 @@ module Atlas
     class GetInstanceDeprecationsResponseListPolicy < Atlas::Model
       attribute :window_months, "window_months", :integer
       attribute :headers, "headers", [:string]
+    end
+
+    class GetInstanceIntegrationsHealthResponseItem < Atlas::Model
+      attribute :kind, "kind", :string
+      attribute :id, "id", :string
+      attribute :name, "name", :string
+      attribute :url, "url", :string
+      attribute :managed_by, "managed_by", :string
+      attribute :destination, "destination", :string
+      attribute :state, "state", :string
+      attribute :last_success_at, "last_success_at", :integer
+      attribute :last_failure, "last_failure", "GetInstanceIntegrationsHealthResponseItemLastFailure"
+      attribute :consecutive_failures, "consecutive_failures", :integer
+      attribute :last_minted_at, "last_minted_at", :integer
+    end
+
+    class GetInstanceIntegrationsHealthResponseItemLastFailure < Atlas::Model
+      attribute :at, "at", :integer
+      attribute :status, "status", :integer
+      attribute :error, "error", :string
+    end
+
+    class GetInstanceIntegrationsHealthResponseList < Atlas::Model
+      attribute :object, "object", :string
+      attribute :data, "data", ["GetInstanceIntegrationsHealthResponseItem"]
+      attribute :has_more, "has_more", :boolean
+      attribute :unhealthy_count, "unhealthy_count", :integer
+      attribute :generated_at, "generated_at", :integer
     end
 
     class GetInstanceIntegrationsResponseItem < Atlas::Model
@@ -7862,6 +8224,13 @@ module Atlas
       attribute :sign_in_url, "sign_in_url", :string
     end
 
+    class GetInstanceIssuersResponse < Atlas::Model
+      attribute :active, "active", :string
+      attribute :planned, "planned", :string
+      attribute :previous, "previous", [:string]
+      attribute :jwks_uri, "jwks_uri", :string
+    end
+
     class GetInstanceNoticesResponseList < Atlas::Model
       attribute :object, "object", :string
       attribute :data, "data", ["GetInstanceNoticesResponseListDataItem"]
@@ -7895,6 +8264,9 @@ module Atlas
       attribute :description, "description", { map: :string }
       attribute :sensitive, "sensitive", :boolean
       attribute :requires_verified_client, "requires_verified_client", :boolean
+      attribute :requires_client_level, "requires_client_level", :string
+      attribute :owner_exempt, "owner_exempt", :boolean
+      attribute :wildcard, "wildcard", :boolean
     end
 
     class GetInstanceSecretKeysResponseItem < Atlas::Model
@@ -8000,6 +8372,23 @@ module Atlas
       attribute :created_at, "created_at", :integer
     end
 
+    class GetMachinesRevokedResponseItem < Atlas::Model
+      attribute :object, "object", :string
+      attribute :id, "id", :string
+      attribute :machine_id, "machine_id", :string
+      attribute :audience, "audience", :string
+      attribute :revoked_at, "revoked_at", :integer
+      attribute :revoked_reason, "revoked_reason", :string
+      attribute :revoked_by, "revoked_by", "GetMachinesRevokedResponseItemRevokedBy"
+      attribute :owner_user_id, "owner_user_id", :string
+      attribute :organization_id, "organization_id", :string
+    end
+
+    class GetMachinesRevokedResponseItemRevokedBy < Atlas::Model
+      attribute :type, "type", :string
+      attribute :id, "id", :string
+    end
+
     class GetMessagingProvidersEmailDevelopmentResponse < Atlas::Model
       attribute :object, "object", :any
       attribute :configured, "configured", :any
@@ -8091,6 +8480,7 @@ module Atlas
       attribute :status, "status", :string
       attribute :config, "config", { map: :string }
       attribute :secrets_set, "secrets_set", { map: :boolean }
+      attribute :secret_fingerprints, "secret_fingerprints", { map: :string }
       attribute :updated_at, "updated_at", :integer
       attribute :message, "message", :string
     end
@@ -8111,8 +8501,22 @@ module Atlas
       attribute :subject, "subject", :string
       attribute :body, "body", :string
       attribute :category, "category", :string
+      attribute :locales, "locales", { map: "GetNotificationTemplatesResponseItemLocalesValue" }
       attribute :created_at, "created_at", :integer
       attribute :updated_at, "updated_at", :integer
+    end
+
+    class GetNotificationTemplatesResponseItemLocalesValue < Atlas::Model
+      attribute :subject, "subject", :string
+      attribute :body, "body", :string
+    end
+
+    class GetOauthClientsConsentsResponseList < Atlas::Model
+      attribute :object, "object", :string
+      attribute :client_id, "client_id", :string
+      attribute :data, "data", ["OauthClientConsent"]
+      attribute :has_more, "has_more", :boolean
+      attribute :next_cursor, "next_cursor", :string
     end
 
     class GetOauthClientsOrganizationsResponseList < Atlas::Model
@@ -8128,6 +8532,7 @@ module Atlas
       attribute :token_issuances, "token_issuances", :integer
       attribute :active_users, "active_users", :integer
       attribute :errors, "errors", :integer
+      attribute :errors_by_code, "errors_by_code", { map: :integer }
       attribute :rate_limited, "rate_limited", :integer
     end
 
@@ -8195,6 +8600,54 @@ module Atlas
       attribute :presets, "presets", [:hash]
     end
 
+    class GetPcaActionRegistryActionsResponseItem < Atlas::Model
+      attribute :verb, "verb", :string
+      attribute :ns, "ns", :string
+      attribute :version, "version", :string
+      attribute :title, "title", :string
+      attribute :state, "state", :string
+      attribute :traits, "traits", [:string]
+      attribute :risk, "risk", :integer
+      attribute :rules_text, "rules_text", [:string]
+    end
+
+    class GetPcaActionRegistryNamespacesDiffResponse < Atlas::Model
+      attribute :ok, "ok", :boolean
+      attribute :from, "from", :string
+      attribute :to, "to", :string
+      attribute :code, "code", :string
+      attribute :message, "message", :string
+      attribute :verbs, "verbs", [:string]
+      attribute :changes, "changes", ["GetPcaActionRegistryNamespacesDiffResponseChangesItem"]
+    end
+
+    class GetPcaActionRegistryNamespacesDiffResponseChangesItem < Atlas::Model
+      attribute :verb, "verb", :string
+      attribute :class_, "class", :string
+      attribute :reasons, "reasons", [:string]
+      attribute :rules, "rules", "PcaActionHistoryItemRules"
+      attribute :reviewed, "reviewed", :boolean
+    end
+
+    class GetPcaActionRegistryNamespacesVersionsResponseItem < Atlas::Model
+      attribute :version, "version", :string
+      attribute :digest, "digest", :string
+      attribute :prev, "prev", :string
+      attribute :status, "status", :string
+      attribute :published_by, "published_by", :string
+      attribute :created_at, "created_at", :string
+      attribute :changes, "changes", ["GetPcaActionRegistryNamespacesDiffResponseChangesItem"]
+    end
+
+    class GetPcaActionRegistryTemplatesResponseItem < Atlas::Model
+      attribute :id, "id", :string
+      attribute :title, "title", :string
+      attribute :description, "description", :string
+      attribute :ns, "ns", :string
+      attribute :actions, "actions", :integer
+      attribute :traits, "traits", [:string]
+    end
+
     class GetPlatformAtlasIdAppsProvisionedAccountsResponseList < Atlas::Model
       attribute :object, "object", :string
       attribute :data, "data", ["AtlasIdProvisionedAccount"]
@@ -8241,6 +8694,18 @@ module Atlas
       attribute :server_time, "server_time", :integer
       attribute :window_start, "window_start", :integer
       attribute :retention_seconds, "retention_seconds", :integer
+    end
+
+    class GetRevocationsResponseList < Atlas::Model
+      attribute :object, "object", :string
+      attribute :data, "data", ["Revocation"]
+      attribute :has_more, "has_more", :boolean
+      attribute :next_cursor, "next_cursor", :string
+      attribute :retention, "retention", "GetRevocationsResponseListRetention"
+    end
+
+    class GetRevocationsResponseListRetention < Atlas::Model
+      attribute :days, "days", :integer
     end
 
     class GetScimProvisioningPresetsResponseItem < Atlas::Model
@@ -8345,6 +8810,14 @@ module Atlas
       attribute :last_active_at, "last_active_at", :integer
     end
 
+    class GetSsfMetadataResponse < Atlas::Model
+      attribute :issuer, "issuer", :string
+      attribute :delivery_methods_supported, "delivery_methods_supported", [:string]
+      attribute :configuration_endpoint, "configuration_endpoint", :string
+      attribute :status_endpoint, "status_endpoint", :string
+      attribute :verification_endpoint, "verification_endpoint", :string
+    end
+
     class GetSsfStatusResponse < Atlas::Model
       attribute :stream_id, "stream_id", :string
       attribute :status, "status", :string
@@ -8400,12 +8873,21 @@ module Atlas
       attribute :id, "id", :string
     end
 
+    class GetUsersApprovalRequestsResponseItem < Atlas::Model
+      attribute :object, "object", :string
+      attribute :kind, "kind", :string
+      attribute :id, "id", :string
+      attribute :status, "status", :string
+    end
+
     class GetUsersGrantsResponseItem < Atlas::Model
       attribute :object, "object", :string
       attribute :id, "id", :string
+      attribute :type, "type", :string
       attribute :client_id, "client_id", :string
       attribute :client_name, "client_name", :string
       attribute :scopes, "scopes", [:string]
+      attribute :metadata, "metadata", :hash
       attribute :granted_at, "granted_at", :integer
       attribute :updated_at, "updated_at", :integer
     end
@@ -8472,6 +8954,19 @@ module Atlas
       attribute :next_cursor, "next_cursor", :string
     end
 
+    class GetWebhookDlqResponseItem < Atlas::Model
+      attribute :endpoint_id, "endpoint_id", :string
+    end
+
+    class GetWebhookDlqResponseList < Atlas::Model
+      attribute :object, "object", :string
+      attribute :data, "data", ["GetWebhookDlqResponseItem"]
+      attribute :has_more, "has_more", :boolean
+      attribute :next_cursor, "next_cursor", :string
+      attribute :max_attempts, "max_attempts", :integer
+      attribute :retention, "retention", :hash
+    end
+
     class GetWebhookEndpointsDlqResponseList < Atlas::Model
       attribute :object, "object", :string
       attribute :data, "data", ["WebhookDelivery"]
@@ -8514,6 +9009,28 @@ module Atlas
     class Grant < Atlas::Model
       attribute :object, "object", :string
       attribute :id, "id", :string
+      attribute :type, "type", :string
+      attribute :client_id, "client_id", :string
+      attribute :client_name, "client_name", :string
+      attribute :user_id, "user_id", :string
+      attribute :organization_id, "organization_id", :string
+      attribute :status, "status", :string
+      attribute :scopes, "scopes", [:string]
+      attribute :resource, "resource", :string
+      attribute :authorization_details, "authorization_details", [:hash]
+      attribute :revision, "revision", :integer
+      attribute :metadata, "metadata", :hash
+      attribute :created_at, "created_at", :integer
+      attribute :updated_at, "updated_at", :integer
+      attribute :last_used_at, "last_used_at", :integer
+      attribute :revoked_at, "revoked_at", :integer
+      attribute :revoked_by, "revoked_by", :string
+    end
+
+    class Grant2 < Atlas::Model
+      attribute :object, "object", :string
+      attribute :id, "id", :string
+      attribute :type, "type", :string
       attribute :deleted, "deleted", :boolean
       attribute :tokens_revoked, "tokens_revoked", :integer
     end
@@ -8708,6 +9225,8 @@ module Atlas
       attribute :provider, "provider", :string
       attribute :status, "status", :string
       attribute :reason, "reason", :string
+      attribute :last_error, "last_error", "IdentityVerificationLastError"
+      attribute :attempts, "attempts", :integer
       attribute :imported, "imported", :boolean
       attribute :verified_at, "verified_at", :integer
       attribute :verified_attributes_status, "verified_attributes_status", :string
@@ -8724,6 +9243,8 @@ module Atlas
       attribute :provider, "provider", :string
       attribute :status, "status", :string
       attribute :reason, "reason", :string
+      attribute :last_error, "last_error", "IdentityVerificationLastError"
+      attribute :attempts, "attempts", :integer
       attribute :imported, "imported", :boolean
       attribute :verified_at, "verified_at", :integer
       attribute :verified_attributes_status, "verified_attributes_status", :string
@@ -8740,6 +9261,11 @@ module Atlas
       attribute :birth_month, "birth_month", :integer
       attribute :age_over, "age_over", { map: :boolean }
       attribute :document_country, "document_country", :string
+    end
+
+    class IdentityVerificationLastError < Atlas::Model
+      attribute :code, "code", :string
+      attribute :reason, "reason", :string
     end
 
     class IdentityVerificationSettings < Atlas::Model
@@ -9344,6 +9870,8 @@ module Atlas
       attribute :warnings, "warnings", ["InstanceWarningsItem"]
       attribute :inactive_methods, "inactive_methods", ["InstanceInactiveMethodsItem"]
       attribute :limited_methods, "limited_methods", ["InstanceLimitedMethodsItem"]
+      attribute :signup_usable, "signup_usable", :boolean
+      attribute :signup_unusable_reason, "signup_unusable_reason", :string
       attribute :created_at, "created_at", :integer
     end
 
@@ -9561,6 +10089,23 @@ module Atlas
       attribute :overlap_seconds, "overlap_seconds", :integer
       attribute :previous_secret_expires_at, "previous_secret_expires_at", :integer
       attribute :warning, "warning", :string
+    end
+
+    class IntegrationForwarding < Atlas::Model
+      attribute :object, "object", :string
+      attribute :forwarding, "forwarding", :string
+      attribute :event, "event", :string
+      attribute :id, "id", :string
+      attribute :active, "active", :boolean
+    end
+
+    class IntegrationForwarding2 < Atlas::Model
+      attribute :object, "object", :string
+      attribute :forwarding, "forwarding", :string
+      attribute :event, "event", :string
+      attribute :created, "created", :boolean
+      attribute :id, "id", :string
+      attribute :secret, "secret", :string
     end
 
     class IntegrationHealth < Atlas::Model
@@ -10247,6 +10792,10 @@ module Atlas
       attribute :metadata, "metadata", :hash
       attribute :enrolled_at, "enrolled_at", :integer
       attribute :last_token_at, "last_token_at", :integer
+      attribute :revoked_reason, "revoked_reason", :string
+      attribute :revoked_by, "revoked_by", "MachineRevokedBy"
+      attribute :ended_at, "ended_at", :integer
+      attribute :dies_with, "dies_with", :string
       attribute :created_at, "created_at", :integer
       attribute :updated_at, "updated_at", :integer
     end
@@ -10298,6 +10847,11 @@ module Atlas
       attribute :constraints, "constraints", :hash
       attribute :expires_at, "expires_at", :integer
       attribute :expired, "expired", :boolean
+      attribute :dies_with, "dies_with", :string
+      attribute :revoked_at, "revoked_at", :integer
+      attribute :ended_at, "ended_at", :integer
+      attribute :revoked_reason, "revoked_reason", :string
+      attribute :revoked_by, "revoked_by", "RevokedApiKeyRevokedBy"
       attribute :created_at, "created_at", :integer
       attribute :updated_at, "updated_at", :integer
     end
@@ -10323,6 +10877,11 @@ module Atlas
       attribute :object, "object", :string
       attribute :id, "id", :string
       attribute :deleted, "deleted", :boolean
+    end
+
+    class MachineRevokedBy < Atlas::Model
+      attribute :type, "type", :string
+      attribute :id, "id", :string
     end
 
     class MachineTrustPolicy < Atlas::Model
@@ -10379,6 +10938,10 @@ module Atlas
       attribute :metadata, "metadata", :hash
       attribute :enrolled_at, "enrolled_at", :integer
       attribute :last_token_at, "last_token_at", :integer
+      attribute :revoked_reason, "revoked_reason", :string
+      attribute :revoked_by, "revoked_by", "MachineRevokedBy"
+      attribute :ended_at, "ended_at", :integer
+      attribute :dies_with, "dies_with", :string
       attribute :created_at, "created_at", :integer
       attribute :updated_at, "updated_at", :integer
       attribute :secret, "secret", :string
@@ -10447,6 +11010,7 @@ module Atlas
       attribute :resource, "resource", :string
       attribute :authorization_details, "authorization_details", [:hash]
       attribute :revision, "revision", :integer
+      attribute :metadata, "metadata", :hash
       attribute :created_at, "created_at", :integer
       attribute :updated_at, "updated_at", :integer
       attribute :revoked_at, "revoked_at", :integer
@@ -10458,6 +11022,7 @@ module Atlas
       attribute :id, "id", :string
       attribute :deleted, "deleted", :boolean
       attribute :tokens_ended, "tokens_ended", :integer
+      attribute :tokens_revoked, "tokens_revoked", :integer
     end
 
     class ManagedWaf < Atlas::Model
@@ -10696,6 +11261,9 @@ module Atlas
       attribute :channel, "channel", :string
       attribute :template, "template", :string
       attribute :recipient_masked, "recipient_masked", :string
+      attribute :category, "category", :string
+      attribute :message_category, "message_category", :string
+      attribute :tags, "tags", { map: :string }
       attribute :recipient_hash, "recipient_hash", :string
       attribute :country, "country", :string
       attribute :status, "status", :string
@@ -10712,6 +11280,12 @@ module Atlas
       attribute :provider, "provider", :string
       attribute :ok, "ok", :boolean
       attribute :error, "error", :string
+    end
+
+    class MessageLink < Atlas::Model
+      attribute :object, "object", :string
+      attribute :type, "type", :string
+      attribute :url, "url", :string
     end
 
     class MessageReceiver < Atlas::Model
@@ -10797,6 +11371,7 @@ module Atlas
       attribute :status, "status", :string
       attribute :config, "config", { map: :string }
       attribute :secrets_set, "secrets_set", { map: :boolean }
+      attribute :secret_fingerprints, "secret_fingerprints", { map: :string }
       attribute :updated_at, "updated_at", :integer
     end
 
@@ -11039,6 +11614,23 @@ module Atlas
       attribute :notes, "notes", :hash
     end
 
+    class MigrationSessionImport < Atlas::Model
+      attribute :object, "object", :string
+      attribute :source, "source", :string
+      attribute :dry_run, "dry_run", :boolean
+      attribute :received, "received", :integer
+      attribute :imported, "imported", :integer
+      attribute :failed, "failed", :integer
+      attribute :errors, "errors", ["MigrationSessionImportErrorsItem"]
+      attribute :bridge_mode, "bridge_mode", :string
+    end
+
+    class MigrationSessionImportErrorsItem < Atlas::Model
+      attribute :index, "index", :integer
+      attribute :code, "code", :string
+      attribute :message, "message", :string
+    end
+
     class MigrationSource < Atlas::Model
       attribute :object, "object", :string
       attribute :source, "source", :string
@@ -11101,6 +11693,32 @@ module Atlas
       attribute :method_, "method", :string
       attribute :level, "level", :string
       attribute :expires_at, "expires_at", :integer
+    end
+
+    class NativeApp < Atlas::Model
+      attribute :object, "object", :string
+      attribute :id, "id", :string
+      attribute :platform, "platform", :string
+      attribute :allowed_users, "allowed_users", [:string]
+      attribute :expires_at, "expires_at", :integer
+      attribute :expired, "expired", :boolean
+      attribute :bundle_id, "bundle_id", :string
+      attribute :team_id, "team_id", :string
+      attribute :package_name, "package_name", :string
+      attribute :sha256_cert_fingerprints, "sha256_cert_fingerprints", [:string]
+      attribute :callback_urls, "callback_urls", [:string]
+      attribute :created_at, "created_at", :integer
+    end
+
+    class NativeApp2 < Atlas::Model
+      attribute :object, "object", :string
+      attribute :id, "id", :string
+      attribute :deleted, "deleted", :boolean
+    end
+
+    class NativeAppKeyRestriction < Atlas::Model
+      attribute :object, "object", :string
+      attribute :app_ids, "app_ids", [:string]
     end
 
     class NetworkAcl < Atlas::Model
@@ -11185,7 +11803,9 @@ module Atlas
       attribute :default_scopes, "default_scopes", [:string]
       attribute :api_scopes, "api_scopes", [:string]
       attribute :credential_fields, "credential_fields", [:hash]
+      attribute :modes, "modes", "OAuthProviderModes"
       attribute :settings, "settings", [:hash]
+      attribute :connection_extras, "connection_extras", ["OAuthProviderConnectionExtrasItem"]
       attribute :setting_values, "setting_values", { map: :string }
       attribute :native, "native", :boolean
       attribute :mode, "mode", :string
@@ -11194,6 +11814,7 @@ module Atlas
       attribute :atlas_callback, "atlas_callback", :string
       attribute :native_client_ids, "native_client_ids", [:string]
       attribute :custom_redirect_uri, "custom_redirect_uri", :string
+      attribute :hosted_id_token, "hosted_id_token", "OAuthProviderHostedIdToken"
       attribute :configured, "configured", :boolean
       attribute :client_id, "client_id", :string
       attribute :has_secret, "has_secret", :boolean
@@ -11203,6 +11824,29 @@ module Atlas
       attribute :scopes, "scopes", [:string]
       attribute :icon_url, "icon_url", :string
       attribute :updated_at, "updated_at", :integer
+    end
+
+    class OAuthProviderConnectionExtrasItem < Atlas::Model
+      attribute :key, "key", :string
+      attribute :label, "label", :string
+      attribute :required, "required", :boolean
+      attribute :pattern, "pattern", :string
+      attribute :description, "description", :string
+    end
+
+    class OAuthProviderHostedIdToken < Atlas::Model
+      attribute :available, "available", :boolean
+      attribute :redirect_uri, "redirect_uri", :string
+    end
+
+    class OAuthProviderModes < Atlas::Model
+      attribute :native, "native", "OAuthProviderModesNative"
+      attribute :redirect, "redirect", "OAuthProviderModesNative"
+    end
+
+    class OAuthProviderModesNative < Atlas::Model
+      attribute :credential_fields, "credential_fields", [:hash]
+      attribute :hint, "hint", :string
     end
 
     class OauthApplicationOrgPolicy < Atlas::Model
@@ -11240,6 +11884,8 @@ module Atlas
       attribute :profile, "profile", :string
       attribute :login_url, "login_url", :string
       attribute :consent_url, "consent_url", :string
+      attribute :delegate_consent, "delegate_consent", :string
+      attribute :device_url, "device_url", :string
       attribute :discovery_source, "discovery_source", :string
       attribute :post_logout_redirect_uris, "post_logout_redirect_uris", [:string]
       attribute :claims_redirect_uris, "claims_redirect_uris", [:string]
@@ -11255,7 +11901,13 @@ module Atlas
       attribute :testers, "testers", [:string]
       attribute :approved_scopes, "approved_scopes", [:string]
       attribute :rate_limit_per_minute, "rate_limit_per_minute", :integer
+      attribute :default_scopes, "default_scopes", [:string]
+      attribute :default_resource, "default_resource", :string
+      attribute :require_openid, "require_openid", :boolean
+      attribute :certified, "certified", :boolean
+      attribute :certified_at, "certified_at", :integer
       attribute :subject_type, "subject_type", :string
+      attribute :subject_fallback, "subject_fallback", :string
       attribute :sector_identifier_uri, "sector_identifier_uri", :string
       attribute :client_secret_expires_at, "client_secret_expires_at", :integer
       attribute :access_token_format, "access_token_format", :string
@@ -11293,6 +11945,8 @@ module Atlas
       attribute :profile, "profile", :string
       attribute :login_url, "login_url", :string
       attribute :consent_url, "consent_url", :string
+      attribute :delegate_consent, "delegate_consent", :string
+      attribute :device_url, "device_url", :string
       attribute :discovery_source, "discovery_source", :string
       attribute :post_logout_redirect_uris, "post_logout_redirect_uris", [:string]
       attribute :claims_redirect_uris, "claims_redirect_uris", [:string]
@@ -11308,7 +11962,13 @@ module Atlas
       attribute :testers, "testers", [:string]
       attribute :approved_scopes, "approved_scopes", [:string]
       attribute :rate_limit_per_minute, "rate_limit_per_minute", :integer
+      attribute :default_scopes, "default_scopes", [:string]
+      attribute :default_resource, "default_resource", :string
+      attribute :require_openid, "require_openid", :boolean
+      attribute :certified, "certified", :boolean
+      attribute :certified_at, "certified_at", :integer
       attribute :subject_type, "subject_type", :string
+      attribute :subject_fallback, "subject_fallback", :string
       attribute :sector_identifier_uri, "sector_identifier_uri", :string
       attribute :client_secret_expires_at, "client_secret_expires_at", :integer
       attribute :access_token_format, "access_token_format", :string
@@ -11365,11 +12025,32 @@ module Atlas
       attribute :expires_at, "expires_at", :integer
     end
 
+    class OauthClientConsent < Atlas::Model
+      attribute :object, "object", :string
+      attribute :user_id, "user_id", :string
+      attribute :scopes, "scopes", [:string]
+      attribute :grant_id, "grant_id", :string
+      attribute :metadata, "metadata", :hash
+      attribute :status, "status", :string
+      attribute :created_at, "created_at", :integer
+      attribute :last_used_at, "last_used_at", :integer
+      attribute :revoked_at, "revoked_at", :integer
+    end
+
+    class OauthClientConsentsRevocation < Atlas::Model
+      attribute :object, "object", :string
+      attribute :client_id, "client_id", :string
+      attribute :consents_revoked, "consents_revoked", :integer
+      attribute :tokens_revoked, "tokens_revoked", :integer
+    end
+
     class OauthClientDelegatedUi < Atlas::Model
       attribute :object, "object", :string
       attribute :client_id, "client_id", :string
       attribute :login_url, "login_url", :string
       attribute :consent_url, "consent_url", :string
+      attribute :delegate_consent, "delegate_consent", :string
+      attribute :device_url, "device_url", :string
     end
 
     class OauthClientLogout < Atlas::Model
@@ -11438,7 +12119,14 @@ module Atlas
       attribute :since, "since", :string
       attribute :until_, "until", :string
       attribute :totals, "totals", "OauthClientUsageTotals"
+      attribute :latest_error, "latest_error", "OauthClientUsageLatestError"
       attribute :data, "data", ["GetOauthClientsUsageResponseItem"]
+    end
+
+    class OauthClientUsageLatestError < Atlas::Model
+      attribute :code, "code", :string
+      attribute :endpoint, "endpoint", :string
+      attribute :at, "at", :integer
     end
 
     class OauthClientUsageTotals < Atlas::Model
@@ -11483,10 +12171,35 @@ module Atlas
       attribute :authorization_details, "authorization_details", [:hash]
       attribute :organization_id, "organization_id", :string
       attribute :redirect_uri, "redirect_uri", :string
+      attribute :request_url, "request_url", :string
+      attribute :prompt, "prompt", [:string]
+      attribute :max_age, "max_age", :integer
       attribute :expires_at, "expires_at", :integer
     end
 
     class OauthConsentRequestClient < Atlas::Model
+      attribute :id, "id", :string
+      attribute :client_id, "client_id", :string
+      attribute :name, "name", :string
+      attribute :first_party, "first_party", :boolean
+    end
+
+    class OauthDeviceRedirect < Atlas::Model
+      attribute :object, "object", :string
+      attribute :redirect_to, "redirect_to", :string
+    end
+
+    class OauthDeviceRequest < Atlas::Model
+      attribute :object, "object", :string
+      attribute :subject, "subject", :string
+      attribute :user_code, "user_code", :string
+      attribute :client, "client", "OauthDeviceRequestClient"
+      attribute :requested_scope, "requested_scope", [:string]
+      attribute :audience, "audience", :string
+      attribute :expires_at, "expires_at", :integer
+    end
+
+    class OauthDeviceRequestClient < Atlas::Model
       attribute :id, "id", :string
       attribute :client_id, "client_id", :string
       attribute :name, "name", :string
@@ -11518,6 +12231,7 @@ module Atlas
       attribute :failed, "failed", :integer
       attribute :refresh_tokens, "refresh_tokens", :integer
       attribute :results, "results", ["OauthGrantImportResultsItem"]
+      attribute :data, "data", ["PostOauthGrantsImportResponseItem"]
       attribute :errors, "errors", ["OauthGrantImportErrorsItem"]
       attribute :note, "note", :string
     end
@@ -11564,13 +12278,17 @@ module Atlas
 
     class OauthLoginRequest < Atlas::Model
       attribute :object, "object", :string
-      attribute :client, "client", "OauthConsentRequestClient"
+      attribute :client, "client", "OauthDeviceRequestClient"
       attribute :requested_scope, "requested_scope", [:string]
       attribute :audience, "audience", :string
       attribute :page, "page", :string
       attribute :session_subject, "session_subject", :string
       attribute :ui_locales, "ui_locales", :string
       attribute :login_hint, "login_hint", :string
+      attribute :request_url, "request_url", :string
+      attribute :prompt, "prompt", [:string]
+      attribute :select_account, "select_account", :boolean
+      attribute :max_age, "max_age", :integer
       attribute :expires_at, "expires_at", :integer
     end
 
@@ -12834,9 +13552,306 @@ module Atlas
       attribute :options, "options", :hash
     end
 
+    class PcaAction < Atlas::Model
+      attribute :object, "object", :string
+      attribute :verb, "verb", :string
+      attribute :ns, "ns", :string
+      attribute :version, "version", :string
+      attribute :state, "state", :string
+      attribute :def_, "def", :hash
+      attribute :def_digest, "def_digest", :string
+      attribute :card, "card", "PcaActionCard"
+      attribute :effective, "effective", :hash
+      attribute :rules, "rules", :any
+      attribute :rules_text, "rules_text", [:string]
+      attribute :compiled_rules, "compiled_rules", :any
+      attribute :history, "history", ["PcaActionHistoryItem"]
+    end
+
+    class PcaActionCard < Atlas::Model
+      attribute :text, "text", :string
+      attribute :lines, "lines", [:hash]
+    end
+
+    class PcaActionDraft < Atlas::Model
+      attribute :object, "object", :string
+      attribute :verb, "verb", :string
+      attribute :deleted, "deleted", :boolean
+    end
+
+    class PcaActionHead < Atlas::Model
+      attribute :object, "object", :string
+      attribute :ns, "ns", :string
+      attribute :active_version, "active_version", :string
+      attribute :pinned, "pinned", :boolean
+      attribute :changes, "changes", ["GetPcaActionRegistryNamespacesDiffResponseChangesItem"]
+    end
+
+    class PcaActionHistoryItem < Atlas::Model
+      attribute :version, "version", :string
+      attribute :class_, "class", :string
+      attribute :reasons, "reasons", [:string]
+      attribute :rules, "rules", "PcaActionHistoryItemRules"
+    end
+
+    class PcaActionHistoryItemRules < Atlas::Model
+      attribute :class_, "class", :string
+      attribute :reasons, "reasons", [:string]
+    end
+
+    class PcaActionImport < Atlas::Model
+      attribute :object, "object", :string
+      attribute :imported, "imported", :integer
+      attribute :verbs, "verbs", [:string]
+      attribute :todo, "todo", ["PcaActionImportTodoItem"]
+      attribute :source_id, "source_id", :string
+    end
+
+    class PcaActionImportTodoItem < Atlas::Model
+      attribute :where, "where", :string
+      attribute :code, "code", :string
+      attribute :message, "message", :string
+    end
+
+    class PcaActionPublisherKey < Atlas::Model
+      attribute :object, "object", :string
+      attribute :kid, "kid", :string
+      attribute :pk, "pk", :string
+      attribute :display_name, "display_name", :string
+    end
+
+    class PcaActionRegistry < Atlas::Model
+      attribute :object, "object", :string
+      attribute :registry_mode, "registry_mode", :boolean
+      attribute :namespaces, "namespaces", ["PcaActionRegistryNamespacesItem"]
+      attribute :publisher_keys, "publisher_keys", ["PcaActionRegistryPublisherKeysItem"]
+      attribute :reviewer_keys, "reviewer_keys", ["PcaActionRegistryReviewerKeysItem"]
+    end
+
+    class PcaActionRegistryNamespacesItem < Atlas::Model
+      attribute :ns, "ns", :string
+      attribute :active_version, "active_version", :string
+      attribute :digest, "digest", :string
+      attribute :pinned, "pinned", :boolean
+      attribute :updated_at, "updated_at", :string
+      attribute :counts, "counts", "PcaActionRegistryNamespacesItemCounts"
+    end
+
+    class PcaActionRegistryNamespacesItemCounts < Atlas::Model
+      attribute :actions, "actions", :integer
+      attribute :confirmed, "confirmed", :integer
+      attribute :unconfirmed, "unconfirmed", :integer
+      attribute :deprecated, "deprecated", :integer
+    end
+
+    class PcaActionRegistryPublisherKeysItem < Atlas::Model
+      attribute :kid, "kid", :string
+      attribute :pk, "pk", :string
+      attribute :display_name, "display_name", :string
+      attribute :created_at, "created_at", :string
+    end
+
+    class PcaActionRegistryReviewerKeysItem < Atlas::Model
+      attribute :kid, "kid", :string
+      attribute :pk, "pk", :string
+      attribute :reviewer_id, "reviewer_id", :string
+      attribute :display_name, "display_name", :string
+    end
+
+    class PcaActionReviewer < Atlas::Model
+      attribute :object, "object", :string
+      attribute :id, "id", :string
+      attribute :kid, "kid", :string
+      attribute :pk, "pk", :string
+      attribute :display_name, "display_name", :string
+      attribute :email, "email", :string
+      attribute :user_id, "user_id", :string
+      attribute :status, "status", :string
+      attribute :created_at, "created_at", :string
+      attribute :credentials, "credentials", ["PcaActionReviewerCredentialsItem"]
+    end
+
+    class PcaActionReviewerCredentialsItem < Atlas::Model
+      attribute :id, "id", :string
+      attribute :name, "name", :string
+      attribute :transports, "transports", [:string]
+      attribute :status, "status", :string
+      attribute :created_at, "created_at", :string
+      attribute :last_used_at, "last_used_at", :string
+      attribute :revoked_at, "revoked_at", :string
+    end
+
+    class PcaActionReviewerEnrolment < Atlas::Model
+      attribute :object, "object", :string
+      attribute :id, "id", :string
+      attribute :enrolment_url, "enrolment_url", :string
+      attribute :expires_at, "expires_at", :string
+      attribute :reviewer_id, "reviewer_id", :string
+    end
+
+    class PcaActionSource < Atlas::Model
+      attribute :object, "object", :string
+      attribute :id, "id", :string
+      attribute :ns, "ns", :string
+      attribute :kind, "kind", :string
+      attribute :uri, "uri", :string
+      attribute :verb, "verb", :string
+      attribute :schedule, "schedule", :string
+      attribute :last_synced_at, "last_synced_at", :string
+      attribute :next_run_at, "next_run_at", :string
+      attribute :last_status, "last_status", :string
+      attribute :last_error, "last_error", :string
+      attribute :failures, "failures", :integer
+      attribute :operations, "operations", :integer
+      attribute :created_at, "created_at", :string
+    end
+
+    class PcaActionSource2 < Atlas::Model
+      attribute :object, "object", :string
+      attribute :id, "id", :string
+      attribute :deleted, "deleted", :boolean
+    end
+
+    class PcaActionSync < Atlas::Model
+      attribute :object, "object", :string
+      attribute :source_id, "source_id", :string
+      attribute :ns, "ns", :string
+      attribute :entries, "entries", ["PcaActionSyncEntriesItem"]
+      attribute :needs_review, "needs_review", :boolean
+      attribute :drafted, "drafted", [:string]
+    end
+
+    class PcaActionSyncEntriesItem < Atlas::Model
+      attribute :verb, "verb", :string
+      attribute :change, "change", :string
+      attribute :diff, "diff", "PcaActionHistoryItemRules"
+    end
+
+    class PcaActionVersion < Atlas::Model
+      attribute :object, "object", :string
+      attribute :version, "version", :string
+      attribute :digest, "digest", :string
+      attribute :prev, "prev", :string
+      attribute :status, "status", :string
+      attribute :published_by, "published_by", :string
+      attribute :created_at, "created_at", :string
+      attribute :changes, "changes", ["GetPcaActionRegistryNamespacesDiffResponseChangesItem"]
+      attribute :ns, "ns", :string
+      attribute :pack, "pack", :hash
+      attribute :rules, "rules", :hash
+      attribute :traits, "traits", :hash
+      attribute :deprecated, "deprecated", [:string]
+    end
+
+    class PcaActionVersion2 < Atlas::Model
+      attribute :object, "object", :string
+      attribute :ns, "ns", :string
+      attribute :version, "version", :string
+      attribute :digest, "digest", :string
+      attribute :prev, "prev", :string
+      attribute :status, "status", :string
+      attribute :changes, "changes", ["GetPcaActionRegistryNamespacesDiffResponseChangesItem"]
+      attribute :published_drafts, "published_drafts", :integer
+    end
+
+    class PcaApprovalSettings < Atlas::Model
+      attribute :object, "object", :string
+      attribute :channels, "channels", "PcaApprovalSettingsChannels"
+      attribute :default_member_channels, "default_member_channels", [:string]
+      attribute :ciba, "ciba", "PcaApprovalSettingsCiba"
+      attribute :slack_webhook_set, "slack_webhook_set", :boolean
+    end
+
+    class PcaApprovalSettingsChannels < Atlas::Model
+      attribute :push, "push", :boolean
+      attribute :email, "email", :boolean
+      attribute :sms, "sms", :boolean
+      attribute :slack, "slack", :boolean
+      attribute :webhook, "webhook", :boolean
+    end
+
+    class PcaApprovalSettingsCiba < Atlas::Model
+      attribute :enabled, "enabled", :boolean
+      attribute :mode, "mode", :string
+      attribute :backchannel_authentication_endpoint, "backchannel_authentication_endpoint", :string
+      attribute :token_endpoint, "token_endpoint", :string
+      attribute :client_id, "client_id", :string
+      attribute :login_hint, "login_hint", :string
+      attribute :client_secret_set, "client_secret_set", :boolean
+    end
+
+    class PcaApprover < Atlas::Model
+      attribute :object, "object", :string
+      attribute :id, "id", :string
+      attribute :principal_pub, "principal_pub", :string
+      attribute :subject_type, "subject_type", :string
+      attribute :subject_id, "subject_id", :string
+      attribute :display_name, "display_name", :string
+      attribute :quorum, "quorum", :integer
+      attribute :status, "status", :string
+      attribute :created_at, "created_at", :string
+      attribute :members, "members", ["PcaApproverMembersItem"]
+      attribute :credentials, "credentials", ["PcaApproverCredentialsItem"]
+    end
+
+    class PcaApproverCredentialsItem < Atlas::Model
+      attribute :id, "id", :string
+      attribute :member_id, "member_id", :string
+      attribute :name, "name", :string
+      attribute :transports, "transports", [:string]
+      attribute :aaguid, "aaguid", :string
+      attribute :status, "status", :string
+      attribute :created_at, "created_at", :string
+      attribute :last_used_at, "last_used_at", :string
+      attribute :revoked_at, "revoked_at", :string
+    end
+
+    class PcaApproverEnrolment < Atlas::Model
+      attribute :object, "object", :string
+      attribute :id, "id", :string
+      attribute :enrolment_url, "enrolment_url", :string
+      attribute :expires_at, "expires_at", :string
+      attribute :approver_id, "approver_id", :string
+      attribute :member_id, "member_id", :string
+    end
+
+    class PcaApproverMembersItem < Atlas::Model
+      attribute :id, "id", :string
+      attribute :display_name, "display_name", :string
+      attribute :user_id, "user_id", :string
+      attribute :email, "email", :string
+      attribute :phone, "phone", :string
+      attribute :channels, "channels", [:string]
+      attribute :status, "status", :string
+      attribute :created_at, "created_at", :string
+    end
+
     class PcaAttestors < Atlas::Model
       attribute :object, "object", :string
       attribute :trusted_attestor_keys, "trusted_attestor_keys", [:string]
+    end
+
+    class PcaBeacon < Atlas::Model
+      attribute :object, "object", :string
+      attribute :beacon, "beacon", :hash
+      attribute :beacon_ref, "beacon_ref", :string
+      attribute :issuer_kind, "issuer_kind", :string
+    end
+
+    class PcaBondAccount < Atlas::Model
+      attribute :object, "object", :string
+      attribute :account, "account", :string
+      attribute :balance, "balance", :number
+    end
+
+    class PcaConstitution < Atlas::Model
+      attribute :object, "object", :string
+      attribute :grant_ref, "grant_ref", :string
+      attribute :constitution, "constitution", :hash
+      attribute :constitution_id, "constitution_id", :string
+      attribute :registered_at, "registered_at", :string
+      attribute :monitor, "monitor", :hash
+      attribute :progress, "progress", :hash
     end
 
     class PcaFreeze < Atlas::Model
@@ -12844,11 +13859,134 @@ module Atlas
       attribute :frozen, "frozen", :boolean
     end
 
+    class PcaGrant < Atlas::Model
+      attribute :object, "object", :string
+      attribute :grant_ref, "grant_ref", :string
+      attribute :status, "status", :string
+      attribute :principal, "principal", :string
+      attribute :agent, "agent", :string
+      attribute :chain_digest, "chain_digest", :string
+    end
+
+    class PcaGrant2 < Atlas::Model
+      attribute :object, "object", :string
+      attribute :grant_ref, "grant_ref", :string
+      attribute :status, "status", :string
+      attribute :grant, "grant", :hash
+      attribute :remaining_budget, "remaining_budget", :hash
+      attribute :revoked_capabilities, "revoked_capabilities", :integer
+      attribute :revocation_epoch, "revocation_epoch", :hash
+    end
+
+    class PcaGrantAuthority < Atlas::Model
+      attribute :object, "object", :string
+      attribute :grant_ref, "grant_ref", :string
+      attribute :rev, "rev", :integer
+      attribute :created, "created", :boolean
+      attribute :supersedes, "supersedes", :string
+      attribute :authority, "authority", :hash
+    end
+
+    class PcaGrantAuthority2 < Atlas::Model
+      attribute :object, "object", :string
+      attribute :grant_ref, "grant_ref", :string
+      attribute :rev, "rev", :integer
+      attribute :status, "status", :string
+      attribute :authority, "authority", :hash
+      attribute :authority_digest, "authority_digest", :string
+    end
+
+    class PcaGrantAuthority3 < Atlas::Model
+      attribute :object, "object", :string
+      attribute :grant_ref, "grant_ref", :string
+      attribute :supersedes, "supersedes", :string
+      attribute :authority, "authority", :hash
+    end
+
+    class PcaGrantNeed < Atlas::Model
+      attribute :object, "object", :string
+      attribute :id, "id", :string
+      attribute :grant_ref, "grant_ref", :string
+      attribute :status, "status", :string
+    end
+
+    class PcaGrantNeed2 < Atlas::Model
+      attribute :object, "object", :string
+      attribute :id, "id", :string
+      attribute :status, "status", :string
+    end
+
+    class PcaGrantRevocation < Atlas::Model
+      attribute :object, "object", :string
+      attribute :revoked, "revoked", [:string]
+      attribute :revocation_epoch, "revocation_epoch", :hash
+    end
+
+    class PcaGrantStepUp < Atlas::Model
+      attribute :object, "object", :string
+      attribute :step_up_ref, "step_up_ref", :string
+      attribute :nonce, "nonce", :string
+      attribute :expires_at, "expires_at", :string
+    end
+
+    class PcaGrantStepUp2 < Atlas::Model
+      attribute :object, "object", :string
+      attribute :step_up_ref, "step_up_ref", :string
+      attribute :approved, "approved", :boolean
+    end
+
+    class PcaGuardian < Atlas::Model
+      attribute :object, "object", :string
+      attribute :epoch, "epoch", :integer
+      attribute :public_key, "public_key", :string
+      attribute :previous, "previous", "PcaGuardianPrevious"
+      attribute :keys, "keys", [:hash]
+    end
+
+    class PcaGuardianPrevious < Atlas::Model
+      attribute :epoch, "epoch", :integer
+      attribute :public_key, "public_key", :string
+    end
+
+    class PcaIntentSchema < Atlas::Model
+      attribute :object, "object", :string
+      attribute :digest, "digest", :string
+      attribute :aud, "aud", :string
+      attribute :version, "version", :string
+      attribute :schema, "schema", :hash
+      attribute :anchor, "anchor", :hash
+    end
+
+    class PcaPqPin < Atlas::Model
+      attribute :object, "object", :string
+      attribute :identity, "identity", :string
+      attribute :deleted, "deleted", :boolean
+    end
+
+    class PcaPrincipal < Atlas::Model
+      attribute :object, "object", :string
+    end
+
+    class PcaPrincipal2 < Atlas::Model
+      attribute :object, "object", :string
+      attribute :principal_pub, "principal_pub", :string
+      attribute :subject_type, "subject_type", :string
+      attribute :subject_id, "subject_id", :string
+      attribute :status, "status", :string
+    end
+
+    class PcaPrincipal3 < Atlas::Model
+      attribute :object, "object", :string
+      attribute :principal_pub, "principal_pub", :string
+      attribute :status, "status", :string
+    end
+
     class PcaRevocation < Atlas::Model
       attribute :object, "object", :string
       attribute :grant_ref, "grant_ref", :string
       attribute :cap_id, "cap_id", :string
       attribute :revoked, "revoked", :boolean
+      attribute :revocation_epoch, "revocation_epoch", :hash
     end
 
     class PcaStepup < Atlas::Model
@@ -12865,7 +14003,53 @@ module Atlas
       attribute :step_up_required, "step_up_required", :boolean
     end
 
+    class PcaUndoRecord < Atlas::Model
+      attribute :object, "object", :string
+      attribute :record, "record", :hash
+      attribute :pending_veto, "pending_veto", "PcaUndoRecordPendingVeto"
+    end
+
+    class PcaUndoRecordPendingVeto < Atlas::Model
+      attribute :at, "at", :integer
+      attribute :via, "via", :string
+      attribute :by, "by", :string
+      attribute :evidence, "evidence", :string
+    end
+
+    class PcaUndoVeto < Atlas::Model
+      attribute :object, "object", :string
+      attribute :record_id, "record_id", :string
+      attribute :grant_ref, "grant_ref", :string
+      attribute :state, "state", :string
+      attribute :ver, "ver", :integer
+      attribute :window_end, "window_end", :integer
+      attribute :veto, "veto", "PcaUndoVetoVeto"
+    end
+
+    class PcaUndoVetoVeto < Atlas::Model
+      attribute :at, "at", :integer
+      attribute :via, "via", :string
+      attribute :by, "by", :string
+      attribute :evidence, "evidence", :string
+      attribute :token, "token", :string
+    end
+
+    class PcaWorkflowReceipt < Atlas::Model
+      attribute :object, "object", :string
+      attribute :grant_ref, "grant_ref", :string
+      attribute :receipt, "receipt", :hash
+      attribute :receipts, "receipts", [:hash]
+    end
+
     class Permission < Atlas::Model
+      attribute :object, "object", :string
+      attribute :id, "id", :string
+      attribute :key, "key", :string
+      attribute :previous_key, "previous_key", :string
+      attribute :alias_, "alias", :string
+    end
+
+    class Permission2 < Atlas::Model
       attribute :object, "object", :string
       attribute :id, "id", :string
       attribute :key, "key", :string
@@ -12875,9 +14059,22 @@ module Atlas
       attribute :implies, "implies", [:string]
     end
 
-    class Permission2 < Atlas::Model
+    class Permission3 < Atlas::Model
       attribute :object, "object", :string
       attribute :id, "id", :string
+      attribute :deleted, "deleted", :boolean
+    end
+
+    class PermissionAlias < Atlas::Model
+      attribute :object, "object", :string
+      attribute :alias_, "alias", :string
+      attribute :permission_key, "permission_key", :string
+      attribute :created_at, "created_at", :integer
+    end
+
+    class PermissionAlias2 < Atlas::Model
+      attribute :object, "object", :string
+      attribute :alias_, "alias", :string
       attribute :deleted, "deleted", :boolean
     end
 
@@ -12886,10 +14083,18 @@ module Atlas
       attribute :id, "id", :string
       attribute :phone_number, "phone_number", :string
       attribute :verified, "verified", :boolean
-      attribute :created_at, "created_at", :integer
+      attribute :primary, "primary", :boolean
     end
 
     class PhoneNumber2 < Atlas::Model
+      attribute :object, "object", :string
+      attribute :id, "id", :string
+      attribute :phone_number, "phone_number", :string
+      attribute :verified, "verified", :boolean
+      attribute :created_at, "created_at", :integer
+    end
+
+    class PhoneNumber3 < Atlas::Model
       attribute :object, "object", :string
       attribute :id, "id", :string
       attribute :deleted, "deleted", :boolean
@@ -12953,6 +14158,11 @@ module Atlas
       attribute :secret_key_scopes, "secret_key_scopes", [:string]
       attribute :onboarding_secret, "onboarding_secret", :string
       attribute :onboarding_key_id, "onboarding_key_id", :string
+      attribute :runtime_secret, "runtime_secret", :string
+      attribute :runtime_key_id, "runtime_key_id", :string
+      attribute :runtime_secret_scopes, "runtime_secret_scopes", [:string]
+      attribute :secret_key_label, "secret_key_label", :string
+      attribute :secret_expires_at, "secret_expires_at", :integer
       attribute :onboarding_secret_expires_at, "onboarding_secret_expires_at", :integer
       attribute :warnings, "warnings", ["LocalizationCheckResultsItemProblemsItem"]
       attribute :note, "note", :string
@@ -12988,6 +14198,11 @@ module Atlas
       attribute :secret_key_scopes, "secret_key_scopes", [:string]
       attribute :onboarding_secret, "onboarding_secret", :string
       attribute :onboarding_key_id, "onboarding_key_id", :string
+      attribute :runtime_secret, "runtime_secret", :string
+      attribute :runtime_key_id, "runtime_key_id", :string
+      attribute :runtime_secret_scopes, "runtime_secret_scopes", [:string]
+      attribute :secret_key_label, "secret_key_label", :string
+      attribute :secret_expires_at, "secret_expires_at", :integer
       attribute :onboarding_secret_expires_at, "onboarding_secret_expires_at", :integer
       attribute :warnings, "warnings", ["LocalizationCheckResultsItemProblemsItem"]
       attribute :note, "note", :string
@@ -13319,6 +14534,7 @@ module Atlas
 
     class PostApiKeysRotateResponse < Atlas::Model
       attribute :secret, "secret", :string
+      attribute :private_key, "private_key", :string
       attribute :previous_key, "previous_key", "PostApiKeysRotateResponsePreviousKey"
       attribute :overlap_seconds, "overlap_seconds", :integer
       attribute :note, "note", :string
@@ -13341,6 +14557,8 @@ module Atlas
       attribute :approvers, "approvers", :hash
       attribute :require_signature, "require_signature", :boolean
       attribute :require_trusted_device, "require_trusted_device", :boolean
+      attribute :exclude_requester, "exclude_requester", :boolean
+      attribute :step_up_policy, "step_up_policy", :string
       attribute :digest, "digest", :string
       attribute :reference, "reference", :string
       attribute :binding_, "binding", :string
@@ -13439,6 +14657,12 @@ module Atlas
       attribute :meta, "meta", :hash
     end
 
+    class PostConnectionsRehomeResponseItem < Atlas::Model
+      attribute :connection_id, "connection_id", :string
+      attribute :status, "status", :any
+      attribute :reason, "reason", :string
+    end
+
     class PostConnectionsRelayResponse < Atlas::Model
       attribute :object, "object", :string
       attribute :pages, "pages", :integer
@@ -13463,6 +14687,24 @@ module Atlas
     class PostConnectionsTokensBatchResponseItemError < Atlas::Model
       attribute :code, "code", :any
       attribute :reason, "reason", :any
+    end
+
+    class PostInstanceHooksBeforeFirstSessionTestResponse < Atlas::Model
+      attribute :ok, "ok", :boolean
+      attribute :status, "status", :string
+      attribute :http_status, "http_status", :integer
+      attribute :latency_ms, "latency_ms", :integer
+      attribute :answer, "answer", "PostInstanceHooksBeforeFirstSessionTestResponseAnswer"
+      attribute :error, "error", "PostInstanceHooksBeforeFirstSessionTestResponseError"
+    end
+
+    class PostInstanceHooksBeforeFirstSessionTestResponseAnswer < Atlas::Model
+      attribute :external_id, "external_id", :string
+    end
+
+    class PostInstanceHooksBeforeFirstSessionTestResponseError < Atlas::Model
+      attribute :code, "code", :string
+      attribute :message, "message", :string
     end
 
     class PostInstanceHooksBeforeUserCreateTestResponse < Atlas::Model
@@ -13569,6 +14811,30 @@ module Atlas
       attribute :message, "message", :string
     end
 
+    class PostMessagesResponseList < Atlas::Model
+      attribute :object, "object", :any
+      attribute :id, "id", :string
+      attribute :channel, "channel", :string
+      attribute :template, "template", :string
+      attribute :recipient_masked, "recipient_masked", :string
+      attribute :category, "category", :string
+      attribute :message_category, "message_category", :string
+      attribute :tags, "tags", { map: :string }
+      attribute :recipient_hash, "recipient_hash", :string
+      attribute :country, "country", :string
+      attribute :status, "status", :string
+      attribute :status_detail, "status_detail", :string
+      attribute :provider, "provider", :string
+      attribute :provider_message_id, "provider_message_id", :string
+      attribute :attempts, "attempts", ["MessageAttemptsItem"]
+      attribute :timeline, "timeline", ["MessageTimelineItem"]
+      attribute :created_at, "created_at", :integer
+      attribute :updated_at, "updated_at", :integer
+      attribute :data, "data", ["Message"]
+      attribute :has_more, "has_more", :boolean
+      attribute :next_cursor, "next_cursor", :string
+    end
+
     class PostMigrationsBetterAuthExchangeResponse < Atlas::Model
       attribute :object, "object", :string
       attribute :id, "id", :string
@@ -13598,6 +14864,11 @@ module Atlas
     class PostNotificationsResponse < Atlas::Model
       attribute :object, "object", :string
       attribute :id, "id", :string
+      attribute :status, "status", :string
+    end
+
+    class PostOauthGrantsImportResponseItem < Atlas::Model
+      attribute :index, "index", :integer
       attribute :status, "status", :string
     end
 
@@ -13694,6 +14965,38 @@ module Atlas
       attribute :error, "error", :string
     end
 
+    class PostPcaActionRegistryActionsReviewResponse < Atlas::Model
+      attribute :verb, "verb", :string
+      attribute :ns, "ns", :string
+      attribute :origin, "origin", :string
+      attribute :change, "change", :string
+      attribute :source_id, "source_id", :string
+      attribute :def_, "def", :hash
+      attribute :def_digest, "def_digest", :string
+      attribute :state, "state", :string
+      attribute :review, "review", :hash
+      attribute :card_text, "card_text", :string
+      attribute :lint, "lint", ["PostPcaActionRegistryActionsReviewResponseLintItem"]
+      attribute :rules, "rules", :any
+      attribute :rules_text, "rules_text", [:string]
+      attribute :rules_lint, "rules_lint", ["PostPcaActionRegistryActionsReviewResponseLintItem"]
+      attribute :rules_review, "rules_review", :any
+      attribute :rules_review_needed, "rules_review_needed", :boolean
+      attribute :registry_traits, "registry_traits", [:hash]
+      attribute :diff_vs_active, "diff_vs_active", "PcaActionHistoryItemRules"
+      attribute :rules_diff_vs_active, "rules_diff_vs_active", "PcaActionHistoryItemRules"
+      attribute :updated_by, "updated_by", :string
+      attribute :updated_at, "updated_at", :string
+    end
+
+    class PostPcaActionRegistryActionsReviewResponseLintItem < Atlas::Model
+      attribute :rule, "rule", :string
+      attribute :severity, "severity", :string
+      attribute :verb, "verb", :string
+      attribute :param, "param", :string
+      attribute :message, "message", :string
+    end
+
     class PostPlatformAuditStreamsTestResponse < Atlas::Model
       attribute :object, "object", :string
       attribute :id, "id", :string
@@ -13741,6 +15044,20 @@ module Atlas
       attribute :object, "object", :string
       attribute :jwt, "jwt", :string
       attribute :expires_in, "expires_in", :integer
+    end
+
+    class PostSsfConfigurationResponse < Atlas::Model
+      attribute :stream_id, "stream_id", :string
+      attribute :iss, "iss", :string
+      attribute :aud, "aud", :string
+      attribute :events_supported, "events_supported", [:string]
+      attribute :events_delivered, "events_delivered", [:string]
+      attribute :delivery, "delivery", :hash
+    end
+
+    class PostSsfStreamsPollResponse < Atlas::Model
+      attribute :sets, "sets", :hash
+      attribute :more_available, "moreAvailable", :boolean
     end
 
     class PostSuppressionsResponseList < Atlas::Model
@@ -13873,6 +15190,7 @@ module Atlas
       attribute :message, "message", :string
       attribute :fix, "fix", :string
       attribute :fix_call, "fix_call", "PreflightFindingFixCall"
+      attribute :autofix_body, "autofix_body", :hash
       attribute :safe_to_autofix, "safe_to_autofix", :boolean
       attribute :subject, "subject", { map: :string }
       attribute :group, "group", :string
@@ -14912,6 +16230,27 @@ module Atlas
       attribute :includes, "includes", [:string]
     end
 
+    class Revocation < Atlas::Model
+      attribute :object, "object", :string
+      attribute :id, "id", :string
+      attribute :seq, "seq", :integer
+      attribute :type, "type", :string
+      attribute :kind, "kind", :string
+      attribute :at, "at", :integer
+      attribute :user_id, "user_id", :string
+      attribute :ids, "ids", { map: :string }
+      attribute :reason, "reason", :string
+      attribute :actor, "actor", "RevocationActor"
+      attribute :sessions_revoked, "sessions_revoked", :integer
+      attribute :kept_session_id, "kept_session_id", :string
+      attribute :revoked_at, "revoked_at", :integer
+    end
+
+    class RevocationActor < Atlas::Model
+      attribute :type, "type", :string
+      attribute :id, "id", :string
+    end
+
     class RevokedApiKey < Atlas::Model
       attribute :object, "object", :string
       attribute :id, "id", :string
@@ -14920,6 +16259,13 @@ module Atlas
       attribute :subject_type, "subject_type", :string
       attribute :subject_id, "subject_id", :string
       attribute :organization_id, "organization_id", :string
+      attribute :end_reason, "end_reason", :string
+      attribute :revoked_by, "revoked_by", "RevokedApiKeyRevokedBy"
+    end
+
+    class RevokedApiKeyRevokedBy < Atlas::Model
+      attribute :type, "type", :string
+      attribute :id, "id", :string
     end
 
     class RiskBasedMfa < Atlas::Model
@@ -15103,6 +16449,12 @@ module Atlas
     class RiskSignalSubject < Atlas::Model
       attribute :type, "type", :string
       attribute :value, "value", :string
+    end
+
+    class RiskSignalsCleared < Atlas::Model
+      attribute :object, "object", :string
+      attribute :user_id, "user_id", :string
+      attribute :cleared, "cleared", :integer
     end
 
     class RiskyUser < Atlas::Model
@@ -15351,6 +16703,66 @@ module Atlas
       attribute :deleted, "deleted", :boolean
     end
 
+    class SecuritySummary < Atlas::Model
+      attribute :object, "object", :string
+      attribute :user_id, "user_id", :string
+      attribute :password_enabled, "password_enabled", :boolean
+      attribute :password_changed_at, "password_changed_at", :integer
+      attribute :mfa_enabled, "mfa_enabled", :boolean
+      attribute :has_passkey, "has_passkey", :boolean
+      attribute :sign_in_methods, "sign_in_methods", [:string]
+      attribute :linked_providers, "linked_providers", ["SecuritySummaryLinkedProvidersItem"]
+      attribute :mfa_factors, "mfa_factors", ["SecuritySummaryMfaFactorsItem"]
+      attribute :backup_codes_remaining, "backup_codes_remaining", :integer
+      attribute :passkeys, "passkeys", ["SecuritySummaryPasskeysItem"]
+      attribute :trusted_devices, "trusted_devices", ["SecuritySummaryTrustedDevicesItem"]
+      attribute :active_sessions, "active_sessions", "SecuritySummaryActiveSessions"
+    end
+
+    class SecuritySummaryActiveSessions < Atlas::Model
+      attribute :count, "count", :integer
+      attribute :latest, "latest", "SecuritySummaryActiveSessionsLatest"
+    end
+
+    class SecuritySummaryActiveSessionsLatest < Atlas::Model
+      attribute :id, "id", :string
+      attribute :last_active_at, "last_active_at", :integer
+      attribute :current, "current", :boolean
+      attribute :ip_address, "ip_address", :string
+      attribute :country, "country", :string
+    end
+
+    class SecuritySummaryLinkedProvidersItem < Atlas::Model
+      attribute :id, "id", :string
+      attribute :provider, "provider", :string
+      attribute :provider_user_id, "provider_user_id", :string
+      attribute :email_address, "email_address", :string
+      attribute :email_verified, "email_verified", :boolean
+    end
+
+    class SecuritySummaryMfaFactorsItem < Atlas::Model
+      attribute :id, "id", :string
+      attribute :type, "type", :string
+      attribute :verified, "verified", :boolean
+      attribute :created_at, "created_at", :integer
+    end
+
+    class SecuritySummaryPasskeysItem < Atlas::Model
+      attribute :id, "id", :string
+      attribute :name, "name", :string
+      attribute :created_at, "created_at", :integer
+      attribute :last_used_at, "last_used_at", :integer
+    end
+
+    class SecuritySummaryTrustedDevicesItem < Atlas::Model
+      attribute :kind, "kind", :any
+      attribute :id, "id", :string
+      attribute :label, "label", :string
+      attribute :created_at, "created_at", :integer
+      attribute :last_used_at, "last_used_at", :integer
+      attribute :expires_at, "expires_at", :integer
+    end
+
     class ServiceConnector < Atlas::Model
       attribute :object, "object", :string
       attribute :id, "id", :string
@@ -15363,6 +16775,8 @@ module Atlas
       attribute :last_status, "last_status", :string
       attribute :created_at, "created_at", :integer
       attribute :updated_at, "updated_at", :integer
+      attribute :webhook_url, "webhook_url", :string
+      attribute :webhook_events, "webhook_events", [:string]
     end
 
     class ServiceConnectorDeleted < Atlas::Model
@@ -15418,11 +16832,13 @@ module Atlas
       attribute :custom_data, "custom_data", :hash
       attribute :sign_in_method, "sign_in_method", :string
       attribute :provider, "provider", :string
+      attribute :native_client, "native_client", "SessionNativeClient"
+      attribute :device_label, "device_label", :string
       attribute :amr, "amr", [:string]
       attribute :user_agent, "user_agent", :string
       attribute :ip_address, "ip_address", :string
       attribute :location, "location", "SessionLocation"
-      attribute :risk, "risk", "SessionRisk2"
+      attribute :risk, "risk", "SessionRisk"
       attribute :revoked_at, "revoked_at", :integer
       attribute :revoked_reason, "revoked_reason", :string
     end
@@ -15468,6 +16884,12 @@ module Atlas
       attribute :city, "city", :string
     end
 
+    class SessionNativeClient < Atlas::Model
+      attribute :kind, "kind", :string
+      attribute :app_id, "app_id", :string
+      attribute :binding_, "binding", :string
+    end
+
     class SessionRevokeJob < Atlas::Model
       attribute :object, "object", :string
       attribute :id, "id", :string
@@ -15500,9 +16922,6 @@ module Atlas
     end
 
     class SessionRisk < Atlas::Model
-      attribute :object, "object", :string
-      attribute :session_id, "session_id", :string
-      attribute :user_id, "user_id", :string
       attribute :score, "score", :integer
       attribute :level, "level", :string
       attribute :reasons, "reasons", [:string]
@@ -15510,6 +16929,9 @@ module Atlas
     end
 
     class SessionRisk2 < Atlas::Model
+      attribute :object, "object", :string
+      attribute :session_id, "session_id", :string
+      attribute :user_id, "user_id", :string
       attribute :score, "score", :integer
       attribute :level, "level", :string
       attribute :reasons, "reasons", [:string]
@@ -16160,6 +17582,7 @@ module Atlas
       attribute :phishing_resistant, "phishing_resistant", :boolean
       attribute :allowed_methods, "allowed_methods", [:string]
       attribute :accepted_factors, "accepted_factors", [:string]
+      attribute :accepted_factor_info, "accepted_factor_info", ["StepUpPolicyAcceptedFactorInfoItem"]
       attribute :receipt_ttl_seconds, "receipt_ttl_seconds", :integer
       attribute :created_at, "created_at", :integer
       attribute :updated_at, "updated_at", :integer
@@ -16169,6 +17592,13 @@ module Atlas
       attribute :object, "object", :string
       attribute :id, "id", :string
       attribute :deleted, "deleted", :boolean
+    end
+
+    class StepUpPolicyAcceptedFactorInfoItem < Atlas::Model
+      attribute :factor, "factor", :string
+      attribute :label, "label", :string
+      attribute :needs_input, "needs_input", :boolean
+      attribute :input_kind, "input_kind", :string
     end
 
     class StorageDeclaration < Atlas::Model
@@ -16456,6 +17886,7 @@ module Atlas
       attribute :has_passkey, "has_passkey", :boolean
       attribute :required_factors, "required_factors", [:string]
       attribute :is_anonymous, "is_anonymous", :boolean
+      attribute :sandbox, "sandbox", :boolean
       attribute :banned, "banned", :boolean
       attribute :ban_reason, "ban_reason", :string
       attribute :ban_note, "ban_note", :string
@@ -16471,6 +17902,9 @@ module Atlas
       attribute :referral_code, "referral_code", :string
       attribute :warnings, "warnings", [:string]
       attribute :referral_link, "referral_link", :string
+      attribute :phone_numbers, "phone_numbers", ["PhoneNumber"]
+      attribute :primary_phone_number, "primary_phone_number", :string
+      attribute :phone_number_verified, "phone_number_verified", :boolean
       attribute :external_accounts, "external_accounts", ["UserExternalAccount"]
     end
 
@@ -16981,6 +18415,7 @@ module Atlas
       attribute :header_names, "header_names", [:string]
       attribute :oauth, "oauth", :hash
       attribute :max_rps, "max_rps", :integer
+      attribute :include_private_membership, "include_private_membership", :boolean
       attribute :destination, "destination", "WebhookEndpointDestination"
       attribute :health, "health", :string
       attribute :failing_since, "failing_since", :integer
@@ -17022,6 +18457,7 @@ module Atlas
       attribute :header_names, "header_names", [:string]
       attribute :oauth, "oauth", :hash
       attribute :max_rps, "max_rps", :integer
+      attribute :include_private_membership, "include_private_membership", :boolean
       attribute :destination, "destination", "WebhookEndpointDestination"
       attribute :health, "health", :string
       attribute :failing_since, "failing_since", :integer
@@ -17075,6 +18511,7 @@ module Atlas
       attribute :header_names, "header_names", [:string]
       attribute :oauth, "oauth", :hash
       attribute :max_rps, "max_rps", :integer
+      attribute :include_private_membership, "include_private_membership", :boolean
       attribute :destination, "destination", "WebhookEndpointDestination"
       attribute :health, "health", :string
       attribute :failing_since, "failing_since", :integer
@@ -17221,11 +18658,21 @@ module Atlas
       attribute :environment, "environment", :string
       attribute :scopes, "scopes", [:string]
       attribute :effective_scopes, "effective_scopes", [:string]
+      attribute :preset, "preset", :string
+      attribute :can_mint, "can_mint", "WhoamiKeyCanMint"
+      attribute :resource, "resource", :hash
+      attribute :route_prefixes, "route_prefixes", [:string]
       attribute :owner, "owner", :string
       attribute :created_at, "created_at", :integer
       attribute :expires_at, "expires_at", :integer
       attribute :last_used_at, "last_used_at", :integer
       attribute :last_used_ip, "last_used_ip", :string
+    end
+
+    class WhoamiKeyCanMint < Atlas::Model
+      attribute :secret_keys, "secret_keys", :boolean
+      attribute :scopes, "scopes", [:string]
+      attribute :presets, "presets", [:string]
     end
 
     class Workflow < Atlas::Model
@@ -17513,6 +18960,7 @@ module Atlas
       "POST /v1/analytics/alert_rules/{id}/test" => "AnalyticsAlertTest",
       "GET /v1/analytics/api_usage" => "ApiUsageDataItem[]:ApiUsage",
       "GET /v1/analytics/breakdown" => "AnalyticsBreakdownDataItem[]:AnalyticsBreakdown",
+      "GET /v1/analytics/captcha" => "GetAnalyticsCaptchaResponseItem[]:AnalyticsCaptcha",
       "GET /v1/analytics/failures" => "AnalyticsFailuresDataItem[]:AnalyticsFailures",
       "GET /v1/analytics/funnel" => "AnalyticsFunnelDataItem[]:AnalyticsFunnel",
       "GET /v1/analytics/journey_funnel" => "AnalyticsJourneyFunnelDataItem[]:AnalyticsJourneyFunnel",
@@ -17520,6 +18968,7 @@ module Atlas
       "GET /v1/analytics/reports/access_by_app" => "AnalyticsReportAccessByAppDataItem[]:AnalyticsReportAccessByApp",
       "GET /v1/analytics/reports/inactive_users" => "AnalyticsReportInactiveUsersDataItem[]:AnalyticsReportInactiveUsers",
       "GET /v1/analytics/reports/mfa_coverage" => "AnalyticsReportMfaCoverageDataItem[]:AnalyticsReportMfaCoverage",
+      "GET /v1/analytics/sms" => "GetAnalyticsSmsResponseItem[]:AnalyticsSms",
       "GET /v1/api_keys" => "ApiKey[]",
       "POST /v1/api_keys" => "ApiKeyCreate",
       "GET /v1/api_keys/posture" => "ApiKeyPostureFinding[]:ApiKeyPosture",
@@ -17724,10 +19173,12 @@ module Atlas
       "GET /v1/connection_provider_event_log" => "ConnectionProviderEvent[]",
       "GET /v1/connection_provider_topics" => "ConnectionProviderTopics",
       "PUT /v1/connection_provider_topics" => "ConnectionProviderTopics",
+      "GET /v1/connection_providers/policies" => "ConnectionProviderPolicy[]",
       "GET /v1/connection_providers/{provider}/policy" => "ConnectionProviderPolicy",
       "PUT /v1/connection_providers/{provider}/policy" => "ConnectionProviderPolicy",
       "GET /v1/connection_reconnect_settings" => "ConnectionReconnectSettings",
       "PUT /v1/connection_reconnect_settings" => "ConnectionReconnectSettings",
+      "GET /v1/connection_templates" => "ConnectionTemplate[]",
       "GET /v1/connections" => "Connection[]",
       "POST /v1/connections" => "Connection",
       "POST /v1/connections/export" => "ConnectionExport",
@@ -17736,6 +19187,7 @@ module Atlas
       "GET /v1/connections/oauth_clients" => "ConnectionOauthClient[]",
       "PUT /v1/connections/oauth_clients" => "ConnectionOauthClient",
       "GET /v1/connections/oauth_clients/{id}" => "ConnectionOauthClient",
+      "POST /v1/connections/rehome" => "PostConnectionsRehomeResponseItem[]:ConnectionRehome",
       "GET /v1/connections/relay_limits" => "ConnectionRelayLimits",
       "PUT /v1/connections/relay_limits" => "ConnectionRelayLimits",
       "GET /v1/connections/token_limits" => "ConnectionTokenLimits",
@@ -17870,6 +19322,8 @@ module Atlas
       "GET /v1/domains" => "CustomDomain[]:GetDomainsResponseList",
       "POST /v1/domains" => "CustomDomain2",
       "DELETE /v1/domains/{id}" => "CustomDomain3",
+      "GET /v1/domains/{id}" => "CustomDomain",
+      "POST /v1/domains/{id}/verification/rotate" => "CustomDomain",
       "POST /v1/domains/{id}/verify" => "CustomDomain4",
       "GET /v1/dsr_console/requests" => "[]",
       "GET /v1/dsr_console/summary" => "DsrConsoleSummary",
@@ -17947,11 +19401,14 @@ module Atlas
       "DELETE /v1/grant_management/grants/{id}" => "ManagedGrant2",
       "GET /v1/grant_management/grants/{id}" => "ManagedGrant",
       "PATCH /v1/grant_management/grants/{id}" => "ManagedGrant",
+      "GET /v1/grants" => "Grant[]",
       "POST /v1/grants/{grantType}/{id}/consume" => "UsageDecision",
       "POST /v1/grants/{grantType}/{id}/leases/{leaseId}/release" => "UsageLease",
       "POST /v1/grants/{grantType}/{id}/refund" => "UsageRefund",
       "GET /v1/grants/{grantType}/{id}/usage" => "GrantUsage",
-      "DELETE /v1/grants/{id}" => "Grant",
+      "DELETE /v1/grants/{id}" => "Grant2",
+      "GET /v1/grants/{id}" => "Grant",
+      "PATCH /v1/grants/{id}" => "Grant",
       "GET /v1/group_rules" => "GroupRule[]",
       "POST /v1/group_rules" => "GroupRule",
       "POST /v1/group_rules/apply" => "GroupRuleResult[]",
@@ -18048,6 +19505,7 @@ module Atlas
       "GET /v1/instance/connections" => "InstanceConnection[]:InstanceConnections",
       "DELETE /v1/instance/cookie_consent" => "CookieConsent",
       "GET /v1/instance/cookie_consent" => "CookieConsent",
+      "PATCH /v1/instance/cookie_consent" => "CookieConsent2",
       "PUT /v1/instance/cookie_consent" => "CookieConsent2",
       "POST /v1/instance/data_key_provider/rotation_drill" => "DataKeyDrill",
       "GET /v1/instance/data_key_provider/rotation_drills" => "DataKeyDrill[]",
@@ -18065,6 +19523,10 @@ module Atlas
       "GET /v1/instance/exports/{id}" => "InstanceExport",
       "POST /v1/instance/exports/{id}/download_url" => "InstanceExportDownload",
       "POST /v1/instance/exports/{id}/revoke_links" => "InstanceExport",
+      "DELETE /v1/instance/hooks/before_first_session" => "BeforeFirstSessionHook",
+      "GET /v1/instance/hooks/before_first_session" => "BeforeFirstSessionHook",
+      "PATCH /v1/instance/hooks/before_first_session" => "BeforeFirstSessionHook",
+      "POST /v1/instance/hooks/before_first_session/test" => "PostInstanceHooksBeforeFirstSessionTestResponse",
       "DELETE /v1/instance/hooks/before_user_create" => "BeforeUserCreateHook",
       "GET /v1/instance/hooks/before_user_create" => "BeforeUserCreateHook",
       "PATCH /v1/instance/hooks/before_user_create" => "BeforeUserCreateHook",
@@ -18077,6 +19539,9 @@ module Atlas
       "POST /v1/instance/imports" => "InstanceExport",
       "GET /v1/instance/imports/{id}" => "InstanceExport",
       "GET /v1/instance/integrations" => "GetInstanceIntegrationsResponseItem[]",
+      "GET /v1/instance/integrations/forwarding/{destination}" => "IntegrationForwarding",
+      "PUT /v1/instance/integrations/forwarding/{destination}" => "IntegrationForwarding2",
+      "GET /v1/instance/integrations/health" => "GetInstanceIntegrationsHealthResponseItem[]:GetInstanceIntegrationsHealthResponseList",
       "DELETE /v1/instance/integrations/{product}" => "GetInstanceIntegrationsResponseItem",
       "GET /v1/instance/integrations/{product}" => "GetInstanceIntegrationsResponseItem",
       "PUT /v1/instance/integrations/{product}" => "GetInstanceIntegrationsResponseItem",
@@ -18087,6 +19552,7 @@ module Atlas
       "POST /v1/instance/integrations/{product}/events_secret/rotate" => "IntegrationEventsSecret2",
       "GET /v1/instance/integrations/{product}/mints" => "IntegrationMint[]",
       "POST /v1/instance/integrations/{product}/test" => "PostInstanceIntegrationsTestResponse",
+      "GET /v1/instance/issuers" => "GetInstanceIssuersResponse",
       "DELETE /v1/instance/kerberos_secret" => "KerberosSecret2",
       "PUT /v1/instance/kerberos_secret" => "KerberosSecret",
       "DELETE /v1/instance/ldap_connections/{connectionId}/bind_password" => "LdapBindPassword2",
@@ -18160,6 +19626,11 @@ module Atlas
       "POST /v1/instance/signing_keys/rotate" => "SigningKeyRotation",
       "DELETE /v1/instance/smart_card_secret" => "SmartCardSecret2",
       "PUT /v1/instance/smart_card_secret" => "SmartCardSecret",
+      "GET /v1/instance/staging_copies" => "InstanceClone[]",
+      "POST /v1/instance/staging_copies" => "InstanceClone2",
+      "DELETE /v1/instance/staging_copies/{id}" => "InstanceClone",
+      "GET /v1/instance/staging_copies/{id}" => "InstanceClone",
+      "POST /v1/instance/staging_copies/{id}/refresh" => "InstanceClone",
       "GET /v1/instance/status_dependencies" => "StatusDependency[]:GetInstanceStatusDependenciesResponseList",
       "POST /v1/instance/status_dependencies" => "StatusDependency",
       "DELETE /v1/instance/status_dependencies/{id}" => "StatusDependency2",
@@ -18256,6 +19727,7 @@ module Atlas
       "POST /v1/machine_trust_policies/{id}/test" => "MachineTrustPolicyTest",
       "GET /v1/machines" => "Machine[]",
       "POST /v1/machines" => "MachineWithSecret",
+      "GET /v1/machines/revoked" => "GetMachinesRevokedResponseItem[]",
       "DELETE /v1/machines/{id}" => "Machine2",
       "GET /v1/machines/{id}" => "Machine",
       "PATCH /v1/machines/{id}" => "Machine",
@@ -18303,10 +19775,12 @@ module Atlas
       "POST /v1/mcp_registry" => "McpRegistryEntry",
       "DELETE /v1/mcp_registry/{id}" => "McpRegistryEntry2",
       "POST /v1/mcp_registry/{id}/decide" => "McpRegistryEntry",
+      "POST /v1/message_links" => "MessageLink",
       "GET /v1/message_receivers" => "MessageReceiver[]",
       "DELETE /v1/message_receivers/{provider}" => "MessageReceiver2",
       "PUT /v1/message_receivers/{provider}" => "MessageReceiver",
       "GET /v1/messages" => "Message[]",
+      "POST /v1/messages" => "Message[]:PostMessagesResponseList",
       "GET /v1/messages/summary" => "MessageSummary",
       "GET /v1/messages/{id}" => "Message",
       "GET /v1/messaging/country_routes" => "SmsCountryRoute[]",
@@ -18365,7 +19839,15 @@ module Atlas
       "POST /v1/migrations/{source}/imports/{id}/dry_run" => "MigrationImport",
       "POST /v1/migrations/{source}/imports/{id}/finalize" => "MigrationImport",
       "PUT /v1/migrations/{source}/imports/{id}/parts/{part}" => "MigrationImportPart",
+      "POST /v1/migrations/{source}/sessions" => "MigrationSessionImport",
       "POST /v1/migrations/{source}/verify" => "MigrationTokenCheck",
+      "GET /v1/native_apps" => "NativeApp[]",
+      "POST /v1/native_apps" => "NativeApp",
+      "GET /v1/native_apps/publishable_key" => "NativeAppKeyRestriction",
+      "PUT /v1/native_apps/publishable_key" => "NativeAppKeyRestriction",
+      "DELETE /v1/native_apps/{id}" => "NativeApp2",
+      "GET /v1/native_apps/{id}" => "NativeApp",
+      "PATCH /v1/native_apps/{id}" => "NativeApp",
       "GET /v1/network_acls" => "NetworkAcl[]",
       "POST /v1/network_acls" => "NetworkAcl",
       "DELETE /v1/network_acls/{id}" => "NetworkAcl2",
@@ -18403,6 +19885,8 @@ module Atlas
       "PATCH /v1/oauth_clients/{id}/app_settings" => "AppSettings",
       "GET /v1/oauth_clients/{id}/backchannel_deliveries" => "BackchannelLogoutDelivery[]",
       "POST /v1/oauth_clients/{id}/backchannel_logout/test" => "BackchannelLogoutTest",
+      "GET /v1/oauth_clients/{id}/consents" => "OauthClientConsent[]:GetOauthClientsConsentsResponseList",
+      "POST /v1/oauth_clients/{id}/consents/revoke" => "OauthClientConsentsRevocation",
       "PUT /v1/oauth_clients/{id}/delegated_ui" => "OauthClientDelegatedUi",
       "DELETE /v1/oauth_clients/{id}/exchange_policy" => "OauthExchangePolicy2",
       "GET /v1/oauth_clients/{id}/exchange_policy" => "OauthExchangePolicy",
@@ -18423,7 +19907,11 @@ module Atlas
       "GET /v1/oauth_consent_requests" => "OauthConsentRequest",
       "PUT /v1/oauth_consent_requests/accept" => "OauthConsentRedirect",
       "PUT /v1/oauth_consent_requests/reject" => "OauthConsentRedirect",
-      "POST /v1/oauth_grants/import" => "OauthGrantImport",
+      "PUT /v1/oauth_consent_requests/switch_account" => "OauthConsentRedirect",
+      "GET /v1/oauth_device_requests" => "OauthDeviceRequest",
+      "PUT /v1/oauth_device_requests/accept" => "OauthDeviceRedirect",
+      "PUT /v1/oauth_device_requests/reject" => "OauthDeviceRedirect",
+      "POST /v1/oauth_grants/import" => "PostOauthGrantsImportResponseItem[]:OauthGrantImport",
       "GET /v1/oauth_initial_access_tokens" => "OauthInitialAccessToken[]",
       "POST /v1/oauth_initial_access_tokens" => "OauthInitialAccessToken",
       "DELETE /v1/oauth_initial_access_tokens/{id}" => "OauthInitialAccessToken",
@@ -18491,6 +19979,7 @@ module Atlas
       "POST /v1/organization_connections" => "OrganizationConnection2",
       "DELETE /v1/organization_connections/{id}" => "OrganizationConnection",
       "POST /v1/organization_connections/{id}/accept" => "OrganizationConnection",
+      "GET /v1/organization_invitations" => "[]",
       "GET /v1/organization_settings_schema" => "GetOrganizationSettingsSchemaResponse",
       "POST /v1/organization_settings_schema" => "OrganizationSettingsSchema",
       "PUT /v1/organization_settings_schema" => "OrganizationSettingsSchema",
@@ -18634,16 +20123,84 @@ module Atlas
       "POST /v1/passkey_campaigns" => "PasskeyCampaign",
       "DELETE /v1/passkey_campaigns/{id}" => "PasskeyCampaign",
       "GET /v1/passkey_campaigns/{id}" => "PasskeyCampaign",
+      "GET /v1/pca/action-registry" => "PcaActionRegistry",
+      "GET /v1/pca/action-registry/actions" => "GetPcaActionRegistryActionsResponseItem[]",
+      "GET /v1/pca/action-registry/actions/{verb}" => "PcaAction",
+      "POST /v1/pca/action-registry/actions/{verb}/review" => "PostPcaActionRegistryActionsReviewResponse",
+      "GET /v1/pca/action-registry/drafts" => "PostPcaActionRegistryActionsReviewResponse[]",
+      "DELETE /v1/pca/action-registry/drafts/{verb}" => "PcaActionDraft",
+      "GET /v1/pca/action-registry/drafts/{verb}" => "PostPcaActionRegistryActionsReviewResponse",
+      "PATCH /v1/pca/action-registry/drafts/{verb}" => "PostPcaActionRegistryActionsReviewResponse",
+      "POST /v1/pca/action-registry/drafts/{verb}/confirm" => "PostPcaActionRegistryActionsReviewResponse",
+      "POST /v1/pca/action-registry/imports" => "PcaActionImport",
+      "GET /v1/pca/action-registry/namespaces/{ns}/diff" => "GetPcaActionRegistryNamespacesDiffResponse",
+      "DELETE /v1/pca/action-registry/namespaces/{ns}/pin" => "PcaActionHead",
+      "PUT /v1/pca/action-registry/namespaces/{ns}/pin" => "PcaActionHead",
+      "GET /v1/pca/action-registry/namespaces/{ns}/versions" => "GetPcaActionRegistryNamespacesVersionsResponseItem[]",
+      "GET /v1/pca/action-registry/namespaces/{ns}/versions/{version}" => "PcaActionVersion",
+      "POST /v1/pca/action-registry/packs" => "PcaActionVersion2",
+      "POST /v1/pca/action-registry/publish" => "PcaActionVersion2",
+      "POST /v1/pca/action-registry/publisher-keys" => "PcaActionPublisherKey",
+      "GET /v1/pca/action-registry/reviewers" => "PcaActionReviewer[]",
+      "POST /v1/pca/action-registry/reviewers/enrolments" => "PcaActionReviewerEnrolment",
+      "DELETE /v1/pca/action-registry/reviewers/{id}" => "PcaActionReviewer",
+      "GET /v1/pca/action-registry/sources" => "PcaActionSource[]",
+      "POST /v1/pca/action-registry/sources" => "PcaActionSource",
+      "DELETE /v1/pca/action-registry/sources/{id}" => "PcaActionSource2",
+      "PATCH /v1/pca/action-registry/sources/{id}" => "PcaActionSource",
+      "POST /v1/pca/action-registry/sources/{id}/sync" => "PcaActionSync",
+      "GET /v1/pca/action-registry/templates" => "GetPcaActionRegistryTemplatesResponseItem[]",
+      "POST /v1/pca/action-registry/templates/{id}/apply" => "PostPcaActionRegistryActionsReviewResponse[]",
+      "GET /v1/pca/approvals/settings" => "PcaApprovalSettings",
+      "PUT /v1/pca/approvals/settings" => "PcaApprovalSettings",
+      "GET /v1/pca/approvers" => "PcaApprover[]",
+      "POST /v1/pca/approvers/enrolments" => "PcaApproverEnrolment",
+      "GET /v1/pca/approvers/{id}" => "PcaApprover",
+      "PATCH /v1/pca/approvers/{id}" => "PcaApprover",
+      "DELETE /v1/pca/approvers/{id}/credentials/{credentialId}" => "PcaApprover",
+      "PATCH /v1/pca/approvers/{id}/members/{memberId}" => "PcaApprover",
       "GET /v1/pca/attestors" => "PcaAttestors",
       "PUT /v1/pca/attestors" => "PcaAttestors",
+      "POST /v1/pca/beacons" => "PcaBeacon",
+      "GET /v1/pca/bond-accounts" => "PcaBondAccount",
+      "POST /v1/pca/bond-accounts" => "PcaBondAccount",
+      "POST /v1/pca/constitutions" => "PcaConstitution",
       "DELETE /v1/pca/freeze" => "PcaFreeze",
       "POST /v1/pca/freeze" => "PcaFreeze",
+      "GET /v1/pca/grants" => "PcaGrant[]",
+      "DELETE /v1/pca/grants/{grantRef}" => "PcaGrantRevocation",
+      "GET /v1/pca/grants/{grantRef}" => "PcaGrant2",
+      "POST /v1/pca/grants/{grantRef}/amend" => "PcaGrantAuthority",
+      "PUT /v1/pca/grants/{grantRef}/authority" => "PcaGrantAuthority2",
+      "GET /v1/pca/grants/{grantRef}/needs" => "[]",
+      "POST /v1/pca/grants/{grantRef}/needs" => "PcaGrantNeed",
+      "POST /v1/pca/grants/{grantRef}/step-up" => "PcaGrantStepUp",
+      "POST /v1/pca/grants/{grantRef}/step-up/{challengeId}/approve" => "PcaGrantStepUp2",
+      "POST /v1/pca/guardian/rotate" => "PcaGuardian",
+      "GET /v1/pca/intent/maps/{digest}/observations" => "[]",
+      "POST /v1/pca/intent/schemas" => "PcaIntentSchema",
+      "POST /v1/pca/needs/{needId}/approve" => "PcaGrantAuthority3",
+      "POST /v1/pca/needs/{needId}/deny" => "PcaGrantNeed2",
+      "DELETE /v1/pca/pq-pins/{identity}" => "PcaPqPin",
+      "GET /v1/pca/principals" => "PcaPrincipal[]",
+      "POST /v1/pca/principals" => "PcaPrincipal2",
+      "DELETE /v1/pca/principals/{principalPub}" => "PcaPrincipal3",
       "POST /v1/pca/revocations" => "PcaRevocation",
       "POST /v1/pca/stepups/{id}/deny" => "PcaStepup",
-      "GET /v1/permissions" => "Permission[]",
-      "POST /v1/permissions" => "Permission",
-      "DELETE /v1/permissions/{id}" => "Permission2",
-      "PATCH /v1/permissions/{id}" => "Permission",
+      "POST /v1/pca/undo/records" => "PcaUndoRecord",
+      "GET /v1/pca/undo/records/{id}" => "PcaUndoRecord",
+      "PUT /v1/pca/undo/records/{id}" => "PcaUndoRecord",
+      "GET /v1/pca/undo/vetoes" => "PcaUndoVeto[]",
+      "POST /v1/pca/workflow-receipts" => "PcaWorkflowReceipt",
+      "GET /v1/permission_aliases" => "PermissionAlias[]",
+      "POST /v1/permission_aliases" => "PermissionAlias",
+      "DELETE /v1/permission_aliases/{alias}" => "PermissionAlias2",
+      "PUT /v1/permission_aliases/{alias}" => "PermissionAlias",
+      "GET /v1/permissions" => "Permission2[]",
+      "POST /v1/permissions" => "Permission2",
+      "DELETE /v1/permissions/{id}" => "Permission3",
+      "PATCH /v1/permissions/{id}" => "Permission2",
+      "POST /v1/permissions/{id}/rename" => "Permission",
       "POST /v1/platform/accountless_apps" => "AccountlessApp",
       "GET /v1/platform/apps" => "PlatformApp[]",
       "POST /v1/platform/apps" => "PlatformAppProvisioned",
@@ -18661,8 +20218,10 @@ module Atlas
       "POST /v1/platform/apps/{id}/instances/{instanceId}/clones" => "InstanceClone2",
       "DELETE /v1/platform/apps/{id}/instances/{instanceId}/clones/{cloneId}" => "InstanceClone",
       "GET /v1/platform/apps/{id}/instances/{instanceId}/clones/{cloneId}" => "InstanceClone",
+      "POST /v1/platform/apps/{id}/instances/{instanceId}/clones/{cloneId}/refresh" => "InstanceClone",
       "POST /v1/platform/apps/{id}/instances/{instanceId}/rotate_secret" => "AppSecret",
       "POST /v1/platform/apps/{id}/narrow_secret_keys" => "AppSecretKeysNarrowed",
+      "POST /v1/platform/apps/{id}/provisioning_key/renew" => "AppProvisioningKeyRenewed",
       "POST /v1/platform/apps/{id}/rotate_secret" => "AppSecret2",
       "GET /v1/platform/apps/{id}/secret_keys" => "SecretKey[]",
       "POST /v1/platform/apps/{id}/secret_keys" => "SecretKey2",
@@ -18803,6 +20362,7 @@ module Atlas
       "PUT /v1/resources" => "Resource",
       "POST /v1/resources/sync" => "Resource[]",
       "GET /v1/resources/{id}" => "Resource",
+      "GET /v1/revocations" => "Revocation[]:GetRevocationsResponseList",
       "GET /v1/risk_based_mfa" => "RiskBasedMfa",
       "PATCH /v1/risk_based_mfa" => "RiskBasedMfa",
       "POST /v1/risk_based_mfa/replay" => "RiskReplay",
@@ -18879,6 +20439,7 @@ module Atlas
       "GET /v1/sessions/revoke_jobs/{id}" => "SessionRevokeJob2",
       "GET /v1/sessions/revoked" => "GetSessionsRevokedResponseListDataItem[]:GetSessionsRevokedResponseList",
       "GET /v1/sessions/{id}" => "Session",
+      "PUT /v1/sessions/{id}/active_organization" => "Session",
       "DELETE /v1/sessions/{id}/binding" => "SessionBinding2",
       "GET /v1/sessions/{id}/binding" => "SessionBinding",
       "PATCH /v1/sessions/{id}/custom_data" => "Session",
@@ -18886,7 +20447,7 @@ module Atlas
       "GET /v1/sessions/{id}/events" => "GetSessionsEventsResponseItem[]:GetSessionsEventsResponseList",
       "POST /v1/sessions/{id}/integration_tokens/{integration}" => "IntegrationToken",
       "POST /v1/sessions/{id}/revoke" => "PostSessionsRevokeResponse",
-      "GET /v1/sessions/{id}/risk" => "SessionRisk",
+      "GET /v1/sessions/{id}/risk" => "SessionRisk2",
       "GET /v1/sessions/{id}/status" => "GetSessionsStatusResponse",
       "POST /v1/sessions/{id}/tokens/{template}" => "PostSessionsTokensResponse",
       "POST /v1/sessions/{id}/touch" => "SessionTouch",
@@ -18898,6 +20459,8 @@ module Atlas
       "GET /v1/sms_templates/{name}" => "SmsTemplate",
       "PATCH /v1/sms_templates/{name}" => "SmsTemplate",
       "POST /v1/sms_templates/{name}/preview" => "SmsTemplatePreview",
+      "POST /v1/ssf/configuration" => "PostSsfConfigurationResponse",
+      "GET /v1/ssf/metadata" => "GetSsfMetadataResponse",
       "GET /v1/ssf/receivers" => "SsfReceiver[]",
       "GET /v1/ssf/status" => "GetSsfStatusResponse",
       "GET /v1/ssf/streams" => "SsfStream[]",
@@ -18906,6 +20469,7 @@ module Atlas
       "GET /v1/ssf/streams/{id}/status" => "SsfStreamStatus",
       "POST /v1/ssf/streams/{id}/status" => "SsfStreamStatus",
       "GET /v1/ssf/streams/{id}/subjects" => "SsfStreamSubject[]:GetSsfStreamsSubjectsResponseList",
+      "POST /v1/ssf/streams/{streamId}/poll" => "PostSsfStreamsPollResponse",
       "GET /v1/sso_connections" => "SsoConnection[]",
       "POST /v1/sso_connections" => "SsoConnection",
       "DELETE /v1/sso_connections/{id}" => "SsoConnection2",
@@ -18962,6 +20526,8 @@ module Atlas
       "GET /v1/users/bulk_actions/{id}" => "BulkUserAction",
       "POST /v1/users/bulk_actions/{id}/cancel" => "BulkUserAction",
       "POST /v1/users/by_emails" => "PostUsersByEmailsResponseItem[]",
+      "PUT /v1/users/by_external_id/{external_id}" => "User",
+      "GET /v1/users/deleted" => "DeletedUser[]",
       "POST /v1/users/deleted_addresses" => "DeletedAddressImport",
       "POST /v1/users/deleted_addresses/check" => "DeletedAddressCheck",
       "POST /v1/users/search" => "User[]",
@@ -18983,6 +20549,7 @@ module Atlas
       "GET /v1/users/{id}/approval_devices" => "GetUsersApprovalDevicesResponseItem[]",
       "POST /v1/users/{id}/approval_devices/trust" => "GetUsersApprovalDevicesResponseItem",
       "DELETE /v1/users/{id}/approval_devices/{deviceId}" => "DeleteUsersApprovalDevicesResponse",
+      "GET /v1/users/{id}/approval_requests" => "GetUsersApprovalRequestsResponseItem[]",
       "POST /v1/users/{id}/approval_requests" => "PostApprovalRequestsResponse",
       "GET /v1/users/{id}/approval_requests/{approvalId}" => "GetApprovalRequestsResponseItem",
       "POST /v1/users/{id}/approval_requests/{approvalId}/cancel" => "GetApprovalRequestsResponseItem",
@@ -18991,6 +20558,8 @@ module Atlas
       "POST /v1/users/{id}/consents" => "Consent",
       "POST /v1/users/{id}/contain" => "UserContainment2",
       "DELETE /v1/users/{id}/cookie_consents" => "CookieConsentErasure",
+      "POST /v1/users/{id}/delegation_tokens" => "DelegationToken",
+      "PATCH /v1/users/{id}/deletion" => "User",
       "POST /v1/users/{id}/deletion" => "User",
       "POST /v1/users/{id}/deletion/cancel" => "User",
       "POST /v1/users/{id}/deletion/finalize" => "User2",
@@ -19047,9 +20616,9 @@ module Atlas
       "DELETE /v1/users/{id}/passkeys/{passkeyId}" => "Passkey",
       "DELETE /v1/users/{id}/password" => "User",
       "POST /v1/users/{id}/password" => "User",
-      "POST /v1/users/{id}/phone_numbers" => "PhoneNumber",
-      "DELETE /v1/users/{id}/phone_numbers/{pid}" => "PhoneNumber2",
-      "POST /v1/users/{id}/phone_numbers/{pid}/verify" => "PhoneNumber",
+      "POST /v1/users/{id}/phone_numbers" => "PhoneNumber2",
+      "DELETE /v1/users/{id}/phone_numbers/{pid}" => "PhoneNumber3",
+      "POST /v1/users/{id}/phone_numbers/{pid}/verify" => "PhoneNumber2",
       "GET /v1/users/{id}/policies" => "PolicyStanding[]:GetUsersPoliciesResponseList",
       "DELETE /v1/users/{id}/profile_image" => "User",
       "POST /v1/users/{id}/progression/events" => "ProgressionEvent",
@@ -19062,7 +20631,11 @@ module Atlas
       "DELETE /v1/users/{id}/required_actions/{rid}" => "RequiredAction2",
       "POST /v1/users/{id}/reset_mfa" => "PostUsersResetMfaResponse",
       "GET /v1/users/{id}/resolved" => "GetUsersResolvedResponse",
+      "DELETE /v1/users/{id}/risk_signals" => "RiskSignalsCleared",
+      "GET /v1/users/{id}/risk_signals" => "RiskSignal[]",
+      "POST /v1/users/{id}/risk_signals" => "RiskSignal",
       "DELETE /v1/users/{id}/security_questions" => "SecurityQuestions",
+      "GET /v1/users/{id}/security_summary" => "SecuritySummary",
       "GET /v1/users/{id}/sessions" => "Session[]",
       "POST /v1/users/{id}/sessions/revoke" => "PostUsersSessionsRevokeResponse",
       "GET /v1/users/{id}/sign_in_history" => "SignInEvent[]",
@@ -19105,6 +20678,7 @@ module Atlas
       "PUT /v1/web_bot_auth" => "WebBotAuth",
       "GET /v1/web_bot_auth/directories" => "[]",
       "DELETE /v1/web_bot_auth/directories/{id}" => "WebBotDirectory",
+      "GET /v1/webhook_dlq" => "GetWebhookDlqResponseItem[]:GetWebhookDlqResponseList",
       "GET /v1/webhook_endpoints" => "WebhookEndpoint[]:GetWebhookEndpointsResponseList",
       "POST /v1/webhook_endpoints" => "WebhookEndpointCreate",
       "PUT /v1/webhook_endpoints/by_url" => "WebhookEndpoint3",
