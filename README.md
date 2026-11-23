@@ -603,7 +603,7 @@ atlas = Atlas::Client.new(key, retry_policy: Atlas::RetryPolicy.new(max_retries:
 atlas.doctor(jwks_url: "https://auth.example.com/v1/jwks", issuer: "https://auth.example.com")  # => report, `puts report`
 ```
 
-Retries are off unless you pass `retry_policy:`; they apply to GET, PUT, DELETE and to writes that carry an `idempotency_key`. When the `opentelemetry` API gem is loaded each call is a span (and records `atlas.client.request.duration`); `telemetry: false` turns it off.
+Every client retries once, after a short jittered delay, when a request fails with a connection reset before any response (an idle pooled socket the server closed), for GET, HEAD, OPTIONS, PUT, DELETE and any call with an `idempotency_key`; timeouts and other writes are never replayed. Retries beyond that are off unless you pass `retry_policy:`; they apply to GET, PUT, DELETE and to writes that carry an `idempotency_key`. When the `opentelemetry` API gem is loaded each call is a span (and records `atlas.client.request.duration`); `telemetry: false` turns it off.
 
 ## Resources
 

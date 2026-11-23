@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.25.1 — 2026-11-23
+
+### Fixed
+
+- A request that fails with a connection reset (`ECONNRESET`, `EPIPE`, `ECONNREFUSED`, `EOFError`) before any response is retried once, after a short jittered delay, when it is a GET, HEAD, OPTIONS, PUT or DELETE or carries an `idempotency_key`. Timeouts and other writes are never retried.
+
 ## 0.25.0 — 2026-11-22
 
 ### Added
