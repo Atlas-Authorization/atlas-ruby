@@ -49,9 +49,9 @@ module Atlas
       # Set the claim mapping used by `authorize_token`: the principal type and id claim, claims that become parent entities (org, role, groups), claims copied as attributes, and trusted issuers with their JWKS URLs.
       # `PUT /v1/abac/token_mapping` (scope: abac:write)
       # @return [Hash]
-      def set_token_mapping(principal_type: UNSET, id_claim: UNSET, parents: UNSET, attribute_claims: UNSET, trusted_issuers: UNSET)
+      def set_token_mapping(principal_type: UNSET, id_claim: UNSET, parents: UNSET, attribute_claims: UNSET, trusted_issuers: UNSET, idempotency_key: nil)
         body = G.compact("principal_type" => principal_type, "id_claim" => id_claim, "parents" => parents, "attribute_claims" => attribute_claims, "trusted_issuers" => trusted_issuers)
-        request(method: :put, path: "/v1/abac/token_mapping", body: body)
+        request(method: :put, path: "/v1/abac/token_mapping", body: body, idempotency_key: idempotency_key)
       end
     end
 
@@ -126,9 +126,9 @@ module Atlas
       # Move a staged rollout: 1-99 changes its share, 100 promotes the staged version to current, 0 aborts it and drops it. 409 when the Action has no staged version.
       # `PATCH /v1/actions/{id}/rollout` (scope: actions:write)
       # @return [Atlas::Models::Action]
-      def update_rollout(id, percent:)
+      def update_rollout(id, percent:, idempotency_key: nil)
         body = G.compact("percent" => percent)
-        G.wrap(M::Action, request(method: :patch, path: "/v1/actions/#{enc(id)}/rollout", body: body))
+        G.wrap(M::Action, request(method: :patch, path: "/v1/actions/#{enc(id)}/rollout", body: body, idempotency_key: idempotency_key))
       end
 
       # Every kept version of an Action (up to 50, newest first), with which one is live and which one is staged. Each is an immutable snapshot of the code (or HTTP target); the first change to an Action that predates versions snapshots what it was.
@@ -183,16 +183,16 @@ module Atlas
       # Change a unit's name, description or filter.
       # `PATCH /v1/administrative_units/{id}` (scope: organizations:write)
       # @return [Atlas::Models::AdministrativeUnit]
-      def update_administrative_unit(id, name: UNSET, description: UNSET, filter: UNSET)
+      def update_administrative_unit(id, name: UNSET, description: UNSET, filter: UNSET, idempotency_key: nil)
         body = G.compact("name" => name, "description" => description, "filter" => filter)
-        G.wrap(M::AdministrativeUnit, request(method: :patch, path: "/v1/administrative_units/#{enc(id)}", body: body))
+        G.wrap(M::AdministrativeUnit, request(method: :patch, path: "/v1/administrative_units/#{enc(id)}", body: body, idempotency_key: idempotency_key))
       end
 
       # Delete a unit. A membership scope that named it stops reaching those people.
       # `DELETE /v1/administrative_units/{id}` (scope: organizations:write)
       # @return [Atlas::Models::AdministrativeUnit2]
-      def delete_administrative_unit(id)
-        G.wrap(M::AdministrativeUnit2, request(method: :delete, path: "/v1/administrative_units/#{enc(id)}"))
+      def delete_administrative_unit(id, idempotency_key: nil)
+        G.wrap(M::AdministrativeUnit2, request(method: :delete, path: "/v1/administrative_units/#{enc(id)}", idempotency_key: idempotency_key))
       end
 
       # The listed members of a static unit (409 for a dynamic unit).
@@ -354,9 +354,9 @@ module Atlas
       # Set an agent's sponsor, backup sponsor and expiry (omitted fields keep their value; null clears). Emits agent.sponsor_changed. When the sponsor's account is gone, banned or locked the backup is promoted automatically; at the expiry the agent's grants are revoked and the agent is revoked, after an agent.expiring warning 14 days ahead.
       # `PUT /v1/agents/{id}/lifecycle` (scope: machines:write)
       # @return [Atlas::Models::AgentLifecycle]
-      def set_lifecycle(id, sponsor_user_id: UNSET, backup_sponsor_user_id: UNSET, expires_at: UNSET)
+      def set_lifecycle(id, sponsor_user_id: UNSET, backup_sponsor_user_id: UNSET, expires_at: UNSET, idempotency_key: nil)
         body = G.compact("sponsor_user_id" => sponsor_user_id, "backup_sponsor_user_id" => backup_sponsor_user_id, "expires_at" => expires_at)
-        G.wrap(M::AgentLifecycle, request(method: :put, path: "/v1/agents/#{enc(id)}/lifecycle", body: body))
+        G.wrap(M::AgentLifecycle, request(method: :put, path: "/v1/agents/#{enc(id)}/lifecycle", body: body, idempotency_key: idempotency_key))
       end
 
       # Extend an agent's registration by extend_days (1 to 365) from its current expiry (or now, when that has passed). A revoked agent cannot be renewed.
@@ -373,14 +373,33 @@ module Atlas
       # Remove an allowlist identifier. Another instance id is 404, never 403.
       # `DELETE /v1/allowlist_identifiers/{id}` (scope: restrictions:write)
       # @return [Atlas::Models::AllowlistIdentifier]
-      def delete_allowlist_identifier(id)
-        G.wrap(M::AllowlistIdentifier, request(method: :delete, path: "/v1/allowlist_identifiers/#{enc(id)}"))
+      def delete_allowlist_identifier(id, idempotency_key: nil)
+        G.wrap(M::AllowlistIdentifier, request(method: :delete, path: "/v1/allowlist_identifiers/#{enc(id)}", idempotency_key: idempotency_key))
       end
     end
 
     # Namespace for /v1/allowlist_identifiers (`client.allowlist_identifiers`).
     class AllowlistIdentifiersApi < Atlas::Resources::Base
       include AllowlistIdentifiersOperations
+    end
+
+    # /v1/analytics
+    module AnalyticsOperations
+      # Captcha challenges per provider and flow: issued, passed, failed, refused, and the solve rate (passed over passed plus failed). No organization slice. A provider that records no issue event shows 0 issued.
+      # `GET /v1/analytics/captcha` (scope: analytics:read)
+      # @return [Page<GetAnalyticsCaptchaResponseItem>]
+      def list_captcha(from: UNSET, to: UNSET, days: UNSET, granularity: UNSET, organization_id: UNSET, format: UNSET, limit: UNSET, starting_after: UNSET)
+        query = G.compact("from" => from, "to" => to, "days" => days, "granularity" => granularity, "organization_id" => organization_id, "format" => format, "limit" => limit, "starting_after" => starting_after)
+        G.page(M::GetAnalyticsCaptchaResponseItem, query, envelope: M::AnalyticsCaptcha) { |q| request(method: :get, path: "/v1/analytics/captcha", query: q) }
+      end
+
+      # SMS messages by destination country: sent, delivered, failed. Atlas sends through your own provider, which bills you; pass `rate_per_message` (and optionally `currency`) to add `estimated_cost` (messages times that rate, not a billed amount). No organization slice.
+      # `GET /v1/analytics/sms` (scope: analytics:read)
+      # @return [Page<GetAnalyticsSmsResponseItem>]
+      def list_sms(rate_per_message: UNSET, currency: UNSET, from: UNSET, to: UNSET, days: UNSET, granularity: UNSET, organization_id: UNSET, format: UNSET, limit: UNSET, starting_after: UNSET)
+        query = G.compact("rate_per_message" => rate_per_message, "currency" => currency, "from" => from, "to" => to, "days" => days, "granularity" => granularity, "organization_id" => organization_id, "format" => format, "limit" => limit, "starting_after" => starting_after)
+        G.page(M::GetAnalyticsSmsResponseItem, query, envelope: M::AnalyticsSms) { |q| request(method: :get, path: "/v1/analytics/sms", query: q) }
+      end
     end
 
     # /v1/api_keys
@@ -404,8 +423,8 @@ module Atlas
       # Rotate an end-user API key with an overlap: mint its successor and keep the old key working until the overlap ends.
       # `POST /v1/api_keys/{id}/rotate` (scope: api_keys:write)
       # @return [Atlas::Models::PostApiKeysRotateResponse]
-      def rotate(id, overlap_seconds: UNSET, name: UNSET, expires_at: UNSET, expires_in_seconds: UNSET, idempotency_key: nil)
-        body = G.compact("overlap_seconds" => overlap_seconds, "name" => name, "expires_at" => expires_at, "expires_in_seconds" => expires_in_seconds)
+      def rotate(id, overlap_seconds: UNSET, name: UNSET, expires_at: UNSET, expires_in_seconds: UNSET, secret: UNSET, prefix: UNSET, public_key: UNSET, idempotency_key: nil)
+        body = G.compact("overlap_seconds" => overlap_seconds, "name" => name, "expires_at" => expires_at, "expires_in_seconds" => expires_in_seconds, "secret" => secret, "prefix" => prefix, "public_key" => public_key)
         G.wrap(M::PostApiKeysRotateResponse, request(method: :post, path: "/v1/api_keys/#{enc(id)}/rotate", body: body, idempotency_key: idempotency_key))
       end
     end
@@ -431,8 +450,8 @@ module Atlas
       # Delete a private preset. Apps already installed from it keep working.
       # `DELETE /v1/app_catalog/custom_presets/{id}` (scope: app_catalog:write)
       # @return [nil]
-      def delete_custom_preset(id)
-        request(method: :delete, path: "/v1/app_catalog/custom_presets/#{enc(id)}")
+      def delete_custom_preset(id, idempotency_key: nil)
+        request(method: :delete, path: "/v1/app_catalog/custom_presets/#{enc(id)}", idempotency_key: idempotency_key)
       end
 
       # The queue of apps people asked for, most wanted first. Filter with status (open, building, available, declined).
@@ -454,16 +473,16 @@ module Atlas
       # Move a request along: status open, building, available or declined, and a note.
       # `PATCH /v1/app_catalog/requests/{id}` (scope: app_catalog:write)
       # @return [nil]
-      def update_request(id, status: UNSET, note: UNSET)
+      def update_request(id, status: UNSET, note: UNSET, idempotency_key: nil)
         body = G.compact("status" => status, "note" => note)
-        request(method: :patch, path: "/v1/app_catalog/requests/#{enc(id)}", body: body)
+        request(method: :patch, path: "/v1/app_catalog/requests/#{enc(id)}", body: body, idempotency_key: idempotency_key)
       end
 
       # Remove an app catalog request.
       # `DELETE /v1/app_catalog/requests/{id}` (scope: app_catalog:write)
       # @return [nil]
-      def delete_request(id)
-        request(method: :delete, path: "/v1/app_catalog/requests/#{enc(id)}")
+      def delete_request(id, idempotency_key: nil)
+        request(method: :delete, path: "/v1/app_catalog/requests/#{enc(id)}", idempotency_key: idempotency_key)
       end
 
       # Add one vote to an open or in-progress app request (409 when it is available or declined, 404 when unknown). One vote per person or key: a repeat vote changes nothing.
@@ -487,8 +506,8 @@ module Atlas
       # Create an approval request with the subject in the body (`user_id`). Same options as the per-user route: a caller-chosen lifetime, an N-of-M approver set (named users or an organization role) and a signed receipt. The request is rendered into a canonical text whose SHA-256 is its `digest`; approvers sign that digest with a registered device key or a passkey, and once enough approve, Atlas signs a receipt (a compact JWS, typ `atlas-approval-receipt+jws`) that verifies offline against the instance JWKS. Accepts Idempotency-Key. → 201.
       # `POST /v1/approval_requests` (scope: approvals:write)
       # @return [Atlas::Models::PostApprovalRequestsResponse]
-      def create_approval_request(user_id:, description:, context: UNSET, ttl_seconds: UNSET, approvers: UNSET, require_signature: UNSET, require_trusted_device: UNSET, binding: UNSET, reference: UNSET, idempotency_key: nil)
-        body = G.compact("user_id" => user_id, "description" => description, "context" => context, "ttl_seconds" => ttl_seconds, "approvers" => approvers, "require_signature" => require_signature, "require_trusted_device" => require_trusted_device, "binding" => binding, "reference" => reference)
+      def create_approval_request(user_id:, description:, context: UNSET, ttl_seconds: UNSET, approvers: UNSET, require_signature: UNSET, exclude_requester: UNSET, step_up_policy: UNSET, require_trusted_device: UNSET, binding: UNSET, reference: UNSET, idempotency_key: nil)
+        body = G.compact("user_id" => user_id, "description" => description, "context" => context, "ttl_seconds" => ttl_seconds, "approvers" => approvers, "require_signature" => require_signature, "exclude_requester" => exclude_requester, "step_up_policy" => step_up_policy, "require_trusted_device" => require_trusted_device, "binding" => binding, "reference" => reference)
         G.wrap(M::PostApprovalRequestsResponse, request(method: :post, path: "/v1/approval_requests", body: body, idempotency_key: idempotency_key))
       end
 
@@ -551,9 +570,9 @@ module Atlas
       # Turn the tamper-evident audit chain on. From then on every audit row is hashed and chained to the one before (by the worker, about a minute after it is written) and signed checkpoints pin the head. A chain that is on cannot be turned off: its links are the evidence. Needs a recent MFA sign-in. Idempotent; call again to change checkpoint_interval_seconds.
       # `PUT /v1/audit/chain` (scope: audit:write)
       # @return [Atlas::Models::AuditChain]
-      def set_chain(enabled:, checkpoint_interval_seconds: UNSET)
+      def set_chain(enabled:, checkpoint_interval_seconds: UNSET, idempotency_key: nil)
         body = G.compact("enabled" => enabled, "checkpoint_interval_seconds" => checkpoint_interval_seconds)
-        G.wrap(M::AuditChain, request(method: :put, path: "/v1/audit/chain", body: body))
+        G.wrap(M::AuditChain, request(method: :put, path: "/v1/audit/chain", body: body, idempotency_key: idempotency_key))
       end
 
       # Signed checkpoints, oldest first. Each is a JWS the instance's signing key made; verify it against jwks_uri.
@@ -605,9 +624,9 @@ module Atlas
       # Set audit log retention in days (`null` returns to the default). Entries older than the retention are deleted by an hourly sweep, so shortening it needs `confirm_deletion: true`.
       # `PUT /v1/audit_retention` (scope: audit:write)
       # @return [Hash]
-      def set_audit_retention(retention_days: UNSET, confirm_deletion: UNSET)
+      def set_audit_retention(retention_days: UNSET, confirm_deletion: UNSET, idempotency_key: nil)
         body = G.compact("retention_days" => retention_days, "confirm_deletion" => confirm_deletion)
-        request(method: :put, path: "/v1/audit_retention", body: body)
+        request(method: :put, path: "/v1/audit_retention", body: body, idempotency_key: idempotency_key)
       end
     end
 
@@ -651,16 +670,16 @@ module Atlas
       # Update an authenticator policy.
       # `PATCH /v1/authenticator_policies/{id}` (scope: access_policies:write)
       # @return [Atlas::Models::AuthenticatorPolicy]
-      def update_authenticator_policy(id, name: UNSET, group: UNSET, enabled: UNSET, required_factors: UNSET, grace_until: UNSET, passkey: UNSET)
+      def update_authenticator_policy(id, name: UNSET, group: UNSET, enabled: UNSET, required_factors: UNSET, grace_until: UNSET, passkey: UNSET, idempotency_key: nil)
         body = G.compact("name" => name, "group" => group, "enabled" => enabled, "required_factors" => required_factors, "grace_until" => grace_until, "passkey" => passkey)
-        G.wrap(M::AuthenticatorPolicy, request(method: :patch, path: "/v1/authenticator_policies/#{enc(id)}", body: body))
+        G.wrap(M::AuthenticatorPolicy, request(method: :patch, path: "/v1/authenticator_policies/#{enc(id)}", body: body, idempotency_key: idempotency_key))
       end
 
       # Delete an authenticator policy.
       # `DELETE /v1/authenticator_policies/{id}` (scope: access_policies:write)
       # @return [Atlas::Models::AuthenticatorPolicy2]
-      def delete_authenticator_policy(id)
-        G.wrap(M::AuthenticatorPolicy2, request(method: :delete, path: "/v1/authenticator_policies/#{enc(id)}"))
+      def delete_authenticator_policy(id, idempotency_key: nil)
+        G.wrap(M::AuthenticatorPolicy2, request(method: :delete, path: "/v1/authenticator_policies/#{enc(id)}", idempotency_key: idempotency_key))
       end
     end
 
@@ -721,8 +740,8 @@ module Atlas
       # Delete a saved what-if run.
       # `DELETE /v1/authz/what_if/{id}` (scope: authz_decisions:write)
       # @return [Atlas::Models::AuthzWhatIfRun2]
-      def delete_what_if(id)
-        G.wrap(M::AuthzWhatIfRun2, request(method: :delete, path: "/v1/authz/what_if/#{enc(id)}"))
+      def delete_what_if(id, idempotency_key: nil)
+        G.wrap(M::AuthzWhatIfRun2, request(method: :delete, path: "/v1/authz/what_if/#{enc(id)}", idempotency_key: idempotency_key))
       end
     end
 
@@ -755,8 +774,8 @@ module Atlas
       # Forget a local policy decision point (it reappears if it checks in again).
       # `DELETE /v1/authz_pdps/{id}` (scope: authz_decisions:write)
       # @return [Atlas::Models::AuthzPdp2]
-      def delete_authz_pdp(id)
-        G.wrap(M::AuthzPdp2, request(method: :delete, path: "/v1/authz_pdps/#{enc(id)}"))
+      def delete_authz_pdp(id, idempotency_key: nil)
+        G.wrap(M::AuthzPdp2, request(method: :delete, path: "/v1/authz_pdps/#{enc(id)}", idempotency_key: idempotency_key))
       end
     end
 
@@ -862,16 +881,16 @@ module Atlas
       # Deactivate or reactivate a code, rename it, or change its redemption cap, expiry (`expires_at`, null removes it), eligible plans (`plan_ids`, null means every plan) or first-time-only rule. The discount itself cannot change; create a new code for that. Atlas enforces these when it validates a code at checkout; the promotion code on your payment provider keeps the limits it was created with, so the provider's own hosted page is still bound by those.
       # `PATCH /v1/billing/coupons/{id}` (scope: billing:write)
       # @return [Atlas::Models::BillingCoupon]
-      def update_coupon(id, active: UNSET, name: UNSET, max_redemptions: UNSET, expires_at: UNSET, plan_ids: UNSET, first_time_only: UNSET)
+      def update_coupon(id, active: UNSET, name: UNSET, max_redemptions: UNSET, expires_at: UNSET, plan_ids: UNSET, first_time_only: UNSET, idempotency_key: nil)
         body = G.compact("active" => active, "name" => name, "max_redemptions" => max_redemptions, "expires_at" => expires_at, "plan_ids" => plan_ids, "first_time_only" => first_time_only)
-        G.wrap(M::BillingCoupon, request(method: :patch, path: "/v1/billing/coupons/#{enc(id)}", body: body))
+        G.wrap(M::BillingCoupon, request(method: :patch, path: "/v1/billing/coupons/#{enc(id)}", body: body, idempotency_key: idempotency_key))
       end
 
       # Delete a code and stop it being used. Subscriptions that already have the discount keep it.
       # `DELETE /v1/billing/coupons/{id}` (scope: billing:write)
       # @return [Atlas::Models::BillingCoupon2]
-      def delete_coupon(id)
-        G.wrap(M::BillingCoupon2, request(method: :delete, path: "/v1/billing/coupons/#{enc(id)}"))
+      def delete_coupon(id, idempotency_key: nil)
+        G.wrap(M::BillingCoupon2, request(method: :delete, path: "/v1/billing/coupons/#{enc(id)}", idempotency_key: idempotency_key))
       end
 
       # A subject's account-credit ledger and its balance per currency.
@@ -943,8 +962,8 @@ module Atlas
       # Remove a blocklist identifier. Another instance id is 404, never 403.
       # `DELETE /v1/blocklist_identifiers/{id}` (scope: restrictions:write)
       # @return [Atlas::Models::BlocklistIdentifier]
-      def delete_blocklist_identifier(id)
-        G.wrap(M::BlocklistIdentifier, request(method: :delete, path: "/v1/blocklist_identifiers/#{enc(id)}"))
+      def delete_blocklist_identifier(id, idempotency_key: nil)
+        G.wrap(M::BlocklistIdentifier, request(method: :delete, path: "/v1/blocklist_identifiers/#{enc(id)}", idempotency_key: idempotency_key))
       end
     end
 
@@ -981,9 +1000,9 @@ module Atlas
       # Acknowledge that a consumer has processed the feed up to `seq`. The position only moves forward: a lower or equal `seq` is accepted and changes nothing, so a retry is safe. A `seq` beyond `head_seq` is a 400. Consumer name: 1-64 characters from letters, digits, dot, dash and underscore. Names belong to the API key that uses them, so two keys can use the same name without sharing a position.
       # `PUT /v1/changes/consumers/{name}/ack` (scope: events:read)
       # @return [Atlas::Models::GetChangesConsumersResponse]
-      def set_ack(name, seq:)
+      def set_ack(name, seq:, idempotency_key: nil)
         body = G.compact("seq" => seq)
-        G.wrap(M::GetChangesConsumersResponse, request(method: :put, path: "/v1/changes/consumers/#{enc(name)}/ack", body: body))
+        G.wrap(M::GetChangesConsumersResponse, request(method: :put, path: "/v1/changes/consumers/#{enc(name)}/ack", body: body, idempotency_key: idempotency_key))
       end
 
       # A paginated, full list of the live resources of one type, in id order, pinned to the feed position it was taken at. Walk every page, then follow `GET /v1/changes?after={snapshot_seq}`: no change between the snapshot and the feed is missed, and an entry already reflected in a page is applied again harmlessly (apply by version). `next_cursor` carries the pin, so every page of one walk reports the same `snapshot_seq`. 410 `RESYNC_REQUIRED` when the pinned position has since been trimmed.
@@ -1028,16 +1047,16 @@ module Atlas
       # Turn an integration on or off, change its routing, settings or credentials. `config.agent_approver_user_ids` lists who may decide agent access requests from chat.
       # `PATCH /v1/chat_integrations/{id}` (scope: service_connectors:write)
       # @return [Atlas::Models::ChatIntegration]
-      def update_chat_integration(id, enabled: UNSET, config: UNSET, credentials: UNSET, routing: UNSET)
+      def update_chat_integration(id, enabled: UNSET, config: UNSET, credentials: UNSET, routing: UNSET, idempotency_key: nil)
         body = G.compact("enabled" => enabled, "config" => config, "credentials" => credentials, "routing" => routing)
-        G.wrap(M::ChatIntegration, request(method: :patch, path: "/v1/chat_integrations/#{enc(id)}", body: body))
+        G.wrap(M::ChatIntegration, request(method: :patch, path: "/v1/chat_integrations/#{enc(id)}", body: body, idempotency_key: idempotency_key))
       end
 
       # Remove an integration and its stored credentials.
       # `DELETE /v1/chat_integrations/{id}` (scope: service_connectors:write)
       # @return [Atlas::Models::DeleteChatIntegrationsResponse]
-      def delete_chat_integration(id)
-        G.wrap(M::DeleteChatIntegrationsResponse, request(method: :delete, path: "/v1/chat_integrations/#{enc(id)}"))
+      def delete_chat_integration(id, idempotency_key: nil)
+        G.wrap(M::DeleteChatIntegrationsResponse, request(method: :delete, path: "/v1/chat_integrations/#{enc(id)}", idempotency_key: idempotency_key))
       end
 
       # The latest button clicks and what became of them (applied, refused, unlinked, stale).
@@ -1074,8 +1093,8 @@ module Atlas
       # Remove the link between a chat user and an Atlas user.
       # `DELETE /v1/chat_integrations/{id}/user_links/{linkId}` (scope: service_connectors:write)
       # @return [Atlas::Models::DeleteChatIntegrationsResponse]
-      def delete_user_link(id, link_id)
-        G.wrap(M::DeleteChatIntegrationsResponse, request(method: :delete, path: "/v1/chat_integrations/#{enc(id)}/user_links/#{enc(link_id)}"))
+      def delete_user_link(id, link_id, idempotency_key: nil)
+        G.wrap(M::DeleteChatIntegrationsResponse, request(method: :delete, path: "/v1/chat_integrations/#{enc(id)}/user_links/#{enc(link_id)}", idempotency_key: idempotency_key))
       end
     end
 
@@ -1112,16 +1131,16 @@ module Atlas
       # Change a target's name, config or assignment. The provider cannot change.
       # `PATCH /v1/cloud_access/targets/{id}` (scope: app_catalog:write)
       # @return [Atlas::Models::CloudAccessTarget]
-      def update_target(id, name: UNSET, config: UNSET, assignment: UNSET)
+      def update_target(id, name: UNSET, config: UNSET, assignment: UNSET, idempotency_key: nil)
         body = G.compact("name" => name, "config" => config, "assignment" => assignment)
-        G.wrap(M::CloudAccessTarget, request(method: :patch, path: "/v1/cloud_access/targets/#{enc(id)}", body: body))
+        G.wrap(M::CloudAccessTarget, request(method: :patch, path: "/v1/cloud_access/targets/#{enc(id)}", body: body, idempotency_key: idempotency_key))
       end
 
       # Delete a target and its launcher tile.
       # `DELETE /v1/cloud_access/targets/{id}` (scope: app_catalog:write)
       # @return [nil]
-      def delete_target(id)
-        request(method: :delete, path: "/v1/cloud_access/targets/#{enc(id)}")
+      def delete_target(id, idempotency_key: nil)
+        request(method: :delete, path: "/v1/cloud_access/targets/#{enc(id)}", idempotency_key: idempotency_key)
       end
 
       # What to configure on the cloud side for this target, with ready-to-run snippets: the AWS CLI command and role trust policy, the gcloud command for the workforce pool provider, or the Azure federated credential.
@@ -1233,16 +1252,16 @@ module Atlas
       # Define or replace a custom action: data only (an input schema, a request template, a response mapping), never code. A definition with a first-party action's name replaces it for this instance.
       # `PUT /v1/connection_actions/{provider}/{name}` (scope: organizations:write)
       # @return [Atlas::Models::ConnectionAction]
-      def set_connection_action(provider, name, description:, request:, input: UNSET, output: UNSET, response: UNSET, scopes: UNSET, paginate: UNSET, mutating: UNSET)
+      def set_connection_action(provider, name, description:, request:, input: UNSET, output: UNSET, response: UNSET, scopes: UNSET, paginate: UNSET, mutating: UNSET, idempotency_key: nil)
         body = G.compact("description" => description, "input" => input, "output" => output, "request" => request, "response" => response, "scopes" => scopes, "paginate" => paginate, "mutating" => mutating)
-        G.wrap(M::ConnectionAction, request(method: :put, path: "/v1/connection_actions/#{enc(provider)}/#{enc(name)}", body: body))
+        G.wrap(M::ConnectionAction, request(method: :put, path: "/v1/connection_actions/#{enc(provider)}/#{enc(name)}", body: body, idempotency_key: idempotency_key))
       end
 
       # Delete a custom action definition (a first-party action of the same name comes back).
       # `DELETE /v1/connection_actions/{provider}/{name}` (scope: organizations:write)
       # @return [nil]
-      def delete_connection_action(provider, name)
-        request(method: :delete, path: "/v1/connection_actions/#{enc(provider)}/#{enc(name)}")
+      def delete_connection_action(provider, name, idempotency_key: nil)
+        request(method: :delete, path: "/v1/connection_actions/#{enc(provider)}/#{enc(name)}", idempotency_key: idempotency_key)
       end
     end
 
@@ -1313,12 +1332,12 @@ module Atlas
         G.wrap(M::ConnectionProviderTopics, request(method: :get, path: "/v1/connection_provider_topics"))
       end
 
-      # Replace the instance's business topics: { topics: { shopify: [...], ebay: [...] } }, up to 50 per provider, spelled as the provider spells them (Shopify orders/create; eBay Trading events such as ItemSold, or Commerce Notification topic ids in UPPER_SNAKE_CASE). Connections made afterwards subscribe automatically; call POST /v1/connections/{id}/provider_subscriptions/sync for existing ones. A topic not listed here is acknowledged and ignored on delivery.
+      # Replace the instance's business topics: { topics: { shopify: [...], ebay: [...], bigcommerce: [...], square: [...], etsy: [...], tiktok_shop: [...] } }, up to 50 per provider (or ["*"] to pass every topic the provider sends through as connection.provider_event with the raw payload), spelled as the provider spells them (Shopify orders/create; eBay Trading events such as ItemSold, or Commerce Notification topic ids in UPPER_SNAKE_CASE). Connections made afterwards subscribe automatically; call POST /v1/connections/{id}/provider_subscriptions/sync for existing ones. A topic not listed here is acknowledged and ignored on delivery.
       # `PUT /v1/connection_provider_topics` (scope: organizations:write)
       # @return [Atlas::Models::ConnectionProviderTopics]
-      def set_connection_provider_topic(topics:)
+      def set_connection_provider_topic(topics:, idempotency_key: nil)
         body = G.compact("topics" => topics)
-        G.wrap(M::ConnectionProviderTopics, request(method: :put, path: "/v1/connection_provider_topics", body: body))
+        G.wrap(M::ConnectionProviderTopics, request(method: :put, path: "/v1/connection_provider_topics", body: body, idempotency_key: idempotency_key))
       end
     end
 
@@ -1329,6 +1348,14 @@ module Atlas
 
     # /v1/connection_providers
     module ConnectionProvidersOperations
+      # List every provider that has a stored instance policy, in the shape of the single-provider read (unique_external_id, whether a webhook secret or dev id is stored, events_url). Secrets are never returned.
+      # `GET /v1/connection_providers/policies` (scope: organizations:read)
+      # @return [Page<ConnectionProviderPolicy>]
+      def list_policies(limit: UNSET, starting_after: UNSET)
+        query = G.compact("limit" => limit, "starting_after" => starting_after)
+        G.page(M::ConnectionProviderPolicy, query) { |q| request(method: :get, path: "/v1/connection_providers/policies", query: q) }
+      end
+
       # Read the instance policy for one provider's connections: unique_external_id, whether a webhook secret is stored, and the one ingress URL (events_url) for that provider's uninstall and revocation notices (shopify, bigcommerce, wix, square, ebay).
       # `GET /v1/connection_providers/{provider}/policy` (scope: organizations:read)
       # @return [Atlas::Models::ConnectionProviderPolicy]
@@ -1339,16 +1366,16 @@ module Atlas
       # Set the instance policy for one provider's connections. unique_external_id: true makes a connect or import answer 409 external_id_taken (with the other connection's id) when another owner already holds that provider account (a revoked connection does not count). webhook_secret is the secret the provider's uninstall ingress verifies with where it is not the app's client secret: eBay verification token, Square signature key, Wix public key (PEM), Etsy webhook signing secret; null clears it. Write-only.
       # `PUT /v1/connection_providers/{provider}/policy` (scope: organizations:write)
       # @return [Atlas::Models::ConnectionProviderPolicy]
-      def set_policy(provider, unique_external_id: UNSET, webhook_secret: UNSET, dev_id: UNSET)
+      def set_policy(provider, unique_external_id: UNSET, webhook_secret: UNSET, dev_id: UNSET, idempotency_key: nil)
         body = G.compact("unique_external_id" => unique_external_id, "webhook_secret" => webhook_secret, "dev_id" => dev_id)
-        G.wrap(M::ConnectionProviderPolicy, request(method: :put, path: "/v1/connection_providers/#{enc(provider)}/policy", body: body))
+        G.wrap(M::ConnectionProviderPolicy, request(method: :put, path: "/v1/connection_providers/#{enc(provider)}/policy", body: body, idempotency_key: idempotency_key))
       end
 
       # Remove the instance policy for a provider (back to the defaults).
       # `DELETE /v1/connection_providers/{provider}/policy` (scope: organizations:write)
       # @return [nil]
-      def delete_policy(provider)
-        request(method: :delete, path: "/v1/connection_providers/#{enc(provider)}/policy")
+      def delete_policy(provider, idempotency_key: nil)
+        request(method: :delete, path: "/v1/connection_providers/#{enc(provider)}/policy", idempotency_key: idempotency_key)
       end
     end
 
@@ -1369,15 +1396,31 @@ module Atlas
       # Replace the hosted-reconnect settings (a field left out returns to its default). With enabled true, the owner of an oauth connection that needs authorization again (a user, or an organization's technical contacts) gets one email per episode through the instance's own mail provider, never an Atlas key, with a link to a hosted page that restarts the provider consent. Nothing is sent while enabled is false, which is the default.
       # `PUT /v1/connection_reconnect_settings` (scope: organizations:write)
       # @return [Atlas::Models::ConnectionReconnectSettings]
-      def set_connection_reconnect_setting(enabled: UNSET, link_ttl_hours: UNSET, return_url: UNSET, providers: UNSET)
+      def set_connection_reconnect_setting(enabled: UNSET, link_ttl_hours: UNSET, return_url: UNSET, providers: UNSET, idempotency_key: nil)
         body = G.compact("enabled" => enabled, "link_ttl_hours" => link_ttl_hours, "return_url" => return_url, "providers" => providers)
-        G.wrap(M::ConnectionReconnectSettings, request(method: :put, path: "/v1/connection_reconnect_settings", body: body))
+        G.wrap(M::ConnectionReconnectSettings, request(method: :put, path: "/v1/connection_reconnect_settings", body: body, idempotency_key: idempotency_key))
       end
     end
 
     # Namespace for /v1/connection_reconnect_settings (`client.connection_reconnect_settings`).
     class ConnectionReconnectSettingsApi < Atlas::Resources::Base
       include ConnectionReconnectSettingsOperations
+    end
+
+    # /v1/connection_templates
+    module ConnectionTemplatesOperations
+      # The marketplace connection templates (Discogs, Trade Me, BrickLink, Cardmarket, WooCommerce, Bonanza, Poizon, browser-session cookie jars, RSA-signed OAuth 1.0a): for each, the connection kind, whether the owner authorizes or you enter the secrets, which secret fields, the hosts to allow and the config to send. Read-only.
+      # `GET /v1/connection_templates` (scope: organizations:read)
+      # @return [Page<ConnectionTemplate>]
+      def list_connection_templates(limit: UNSET, starting_after: UNSET)
+        query = G.compact("limit" => limit, "starting_after" => starting_after)
+        G.page(M::ConnectionTemplate, query) { |q| request(method: :get, path: "/v1/connection_templates", query: q) }
+      end
+    end
+
+    # Namespace for /v1/connection_templates (`client.connection_templates`).
+    class ConnectionTemplatesApi < Atlas::Resources::Base
+      include ConnectionTemplatesOperations
     end
 
     # /v1/connections
@@ -1398,6 +1441,14 @@ module Atlas
         request(method: :post, path: "/v1/connections/oauth_clients/register", body: body, idempotency_key: idempotency_key)
       end
 
+      # Move OAuth connections from one owner client to another (a retired owner client you can now delete, two clients merged). Both clients must be the same provider and environment. When both are the same provider app (same client_id) every token stays valid and the rows simply move. Otherwise (verify, the default and the only allowed mode) one real refresh is made per connection with the TARGET client's credentials and only connections the provider accepts move; the others stay on the old client untouched and are reported failed with a reason (a failed probe changes no status). Token-family siblings move together. Dry run reports what would move without calling the provider. Never returns tokens. Idempotent on Idempotency-Key; audited as connection.rehomed (ids and counts).
+      # `POST /v1/connections/rehome` (scope: organizations:write)
+      # @return [Page<PostConnectionsRehomeResponseItem>]
+      def rehome(from_client:, to_client:, connection_ids: UNSET, dry_run: UNSET, verify: UNSET, idempotency_key: nil)
+        body = G.compact("from_client" => from_client, "to_client" => to_client, "connection_ids" => connection_ids, "dry_run" => dry_run, "verify" => verify)
+        G.page(M::PostConnectionsRehomeResponseItem, {}, envelope: M::ConnectionRehome) { |q| request(method: :post, path: "/v1/connections/rehome", query: q, body: body, idempotency_key: idempotency_key) }
+      end
+
       # The relay size limits of this instance: the largest request body and response body, in bytes. Defaults are 256 KiB and 1 MiB.
       # `GET /v1/connections/relay_limits` (scope: organizations:read)
       # @return [Atlas::Models::ConnectionRelayLimits]
@@ -1408,9 +1459,9 @@ module Atlas
       # Raise the relay size limits of this instance, up to 25 MiB (26214400 bytes) each: request_bytes for the body or multipart sent through POST /v1/connections/{id}/relay, response_bytes for what comes back. The relay never reads more than the limit into memory, and a response over it is cut with truncated true. Values below the defaults (256 KiB, 1 MiB) are refused.
       # `PUT /v1/connections/relay_limits` (scope: organizations:write)
       # @return [Atlas::Models::ConnectionRelayLimits]
-      def set_relay_limits(request_bytes: UNSET, response_bytes: UNSET)
+      def set_relay_limits(request_bytes: UNSET, response_bytes: UNSET, idempotency_key: nil)
         body = G.compact("request_bytes" => request_bytes, "response_bytes" => response_bytes)
-        G.wrap(M::ConnectionRelayLimits, request(method: :put, path: "/v1/connections/relay_limits", body: body))
+        G.wrap(M::ConnectionRelayLimits, request(method: :put, path: "/v1/connections/relay_limits", body: body, idempotency_key: idempotency_key))
       end
 
       # The connection-token rate limits of this instance (requests per minute on GET /v1/connections/{id}/token, POST /v1/connections/{id}/token/refresh and POST /v1/connections/tokens/batch) and how much of the current one-minute window is used: per_key (the calling secret key, all connections; default 6,000), per_connection (one connection, per key; default 300; no usage shown) per_app (one provider app client: the instance client shared by every owner, or an owner's own client; no limit unless you set one) and providers (one provider across all of the instance's keys; no limit unless you set one). With per_app set, token reads carry x-app-ratelimit-limit, x-app-ratelimit-remaining and x-app-ratelimit-reset (seconds) for the app client the connection runs under. Conditional reads (If-None-Match) get ten times the per-key and per-connection budgets and do not count against provider limits.
@@ -1423,9 +1474,9 @@ module Atlas
       # Set this instance's connection-token rate limits, in requests per minute. per_key goes up to 60,000 and per_connection up to 3,000 (ten times the defaults); null restores the default. per_app (up to 60,000; null removes it) is one shared budget per provider app client, on top of the per-key and per-connection ones, answered with 429 and Retry-After when spent. providers maps a provider id to an instance-wide limit for that provider's connections (up to 60,000; null removes one; up to 100 providers) and merges into the stored map; providers null clears them all. Takes effect at once. Over a provider limit, the token routes answer 429 with Retry-After and the batch route marks those ids rate_limited / provider_limit.
       # `PUT /v1/connections/token_limits` (scope: organizations:write)
       # @return [Atlas::Models::ConnectionTokenLimits]
-      def set_token_limits(per_key: UNSET, per_connection: UNSET, per_app: UNSET, providers: UNSET)
+      def set_token_limits(per_key: UNSET, per_connection: UNSET, per_app: UNSET, providers: UNSET, idempotency_key: nil)
         body = G.compact("per_key" => per_key, "per_connection" => per_connection, "per_app" => per_app, "providers" => providers)
-        G.wrap(M::ConnectionTokenLimits, request(method: :put, path: "/v1/connections/token_limits", body: body))
+        G.wrap(M::ConnectionTokenLimits, request(method: :put, path: "/v1/connections/token_limits", body: body, idempotency_key: idempotency_key))
       end
 
       # Who may use this connection's credential. No rule means open to every key that has the route's scope; one rule or more restricts the connection to the principals the rules name.
@@ -1438,16 +1489,16 @@ module Atlas
       # Replace the connection's access rules (at most 100; an empty list opens the connection again). Rules gate credential use: `read_token` (token reads and refreshes), `relay`, `run_actions` and `sign`; a key that no rule names gets 403 with reason `connection_access_denied`. Managing the connection and its rules stays under organizations:read and organizations:write.
       # `PUT /v1/connections/{id}/access_rules` (scope: organizations:write)
       # @return [Atlas::Models::ConnectionAccessRules]
-      def set_access_rules(id, rules:)
+      def set_access_rules(id, rules:, idempotency_key: nil)
         body = G.compact("rules" => rules)
-        G.wrap(M::ConnectionAccessRules, request(method: :put, path: "/v1/connections/#{enc(id)}/access_rules", body: body))
+        G.wrap(M::ConnectionAccessRules, request(method: :put, path: "/v1/connections/#{enc(id)}/access_rules", body: body, idempotency_key: idempotency_key))
       end
 
       # Remove every access rule: the connection is open again.
       # `DELETE /v1/connections/{id}/access_rules` (scope: organizations:write)
       # @return [nil]
-      def delete_access_rule(id)
-        request(method: :delete, path: "/v1/connections/#{enc(id)}/access_rules")
+      def delete_access_rule(id, idempotency_key: nil)
+        request(method: :delete, path: "/v1/connections/#{enc(id)}/access_rules", idempotency_key: idempotency_key)
       end
 
       # The actions available on a connection (its provider's catalog).
@@ -1583,16 +1634,16 @@ module Atlas
       # Pause or resume a trigger.
       # `PATCH /v1/connections/{id}/triggers/{triggerId}` (scope: organizations:write)
       # @return [Atlas::Models::ConnectionTrigger]
-      def update_trigger(id, trigger_id, status:)
+      def update_trigger(id, trigger_id, status:, idempotency_key: nil)
         body = G.compact("status" => status)
-        G.wrap(M::ConnectionTrigger, request(method: :patch, path: "/v1/connections/#{enc(id)}/triggers/#{enc(trigger_id)}", body: body))
+        G.wrap(M::ConnectionTrigger, request(method: :patch, path: "/v1/connections/#{enc(id)}/triggers/#{enc(trigger_id)}", body: body, idempotency_key: idempotency_key))
       end
 
       # Remove a trigger: the provider webhook is deleted first when Atlas registered it (`provider_unregistered` says what happened; the connection must allow DELETE for that), then the ingress endpoint.
       # `DELETE /v1/connections/{id}/triggers/{triggerId}` (scope: organizations:write)
       # @return [Atlas::Models::ConnectionTrigger2]
-      def delete_trigger(id, trigger_id)
-        G.wrap(M::ConnectionTrigger2, request(method: :delete, path: "/v1/connections/#{enc(id)}/triggers/#{enc(trigger_id)}"))
+      def delete_trigger(id, trigger_id, idempotency_key: nil)
+        G.wrap(M::ConnectionTrigger2, request(method: :delete, path: "/v1/connections/#{enc(id)}/triggers/#{enc(trigger_id)}", idempotency_key: idempotency_key))
       end
     end
 
@@ -1632,8 +1683,8 @@ module Atlas
       # Erase one visitor's records (an erasure request from someone who is not a user). Audited.
       # `DELETE /v1/cookie_consents/subjects/{subject}` (scope: data_subject_requests:write)
       # @return [Atlas::Models::CookieConsentErasure]
-      def delete_subject(subject)
-        G.wrap(M::CookieConsentErasure, request(method: :delete, path: "/v1/cookie_consents/subjects/#{enc(subject)}"))
+      def delete_subject(subject, idempotency_key: nil)
+        G.wrap(M::CookieConsentErasure, request(method: :delete, path: "/v1/cookie_consents/subjects/#{enc(subject)}", idempotency_key: idempotency_key))
       end
 
       # Choices recorded in the last days (default 30): distinct visitors, how many sent a Global Privacy Control signal, and how many allow each category.
@@ -1709,9 +1760,9 @@ module Atlas
       # Triage a request: who works it, how urgent it is, free labels. Only what is sent changes; send at least one. Audited.
       # `PATCH /v1/data_subject_requests/{id}/triage` (scope: data_subject_requests:write)
       # @return [Hash]
-      def update_triage(id, assignee: UNSET, priority: UNSET, labels: UNSET)
+      def update_triage(id, assignee: UNSET, priority: UNSET, labels: UNSET, idempotency_key: nil)
         body = G.compact("assignee" => assignee, "priority" => priority, "labels" => labels)
-        request(method: :patch, path: "/v1/data_subject_requests/#{enc(id)}/triage", body: body)
+        request(method: :patch, path: "/v1/data_subject_requests/#{enc(id)}/triage", body: body, idempotency_key: idempotency_key)
       end
     end
 
@@ -1728,8 +1779,8 @@ module Atlas
       # Remove a passkey registered through a workstation. It stops answering the passkey factor at once.
       # `DELETE /v1/desktop_mfa/devices/{id}/passkeys/{passkeyId}` (scope: desktop_mfa:write)
       # @return [Atlas::Models::DesktopPasskey2]
-      def delete_passkey(id, passkey_id)
-        G.wrap(M::DesktopPasskey2, request(method: :delete, path: "/v1/desktop_mfa/devices/#{enc(id)}/passkeys/#{enc(passkey_id)}"))
+      def delete_passkey(id, passkey_id, idempotency_key: nil)
+        G.wrap(M::DesktopPasskey2, request(method: :delete, path: "/v1/desktop_mfa/devices/#{enc(id)}/passkeys/#{enc(passkey_id)}", idempotency_key: idempotency_key))
       end
     end
 
@@ -1746,8 +1797,8 @@ module Atlas
       # Empty the development email inbox (development instances only). Refused on a production instance (422 TEST_MODE_ONLY).
       # `DELETE /v1/dev/emails` (scope: instance:write)
       # @return [Atlas::Models::DevEmailsCleared]
-      def delete_email()
-        G.wrap(M::DevEmailsCleared, request(method: :delete, path: "/v1/dev/emails"))
+      def delete_email(idempotency_key: nil)
+        G.wrap(M::DevEmailsCleared, request(method: :delete, path: "/v1/dev/emails", idempotency_key: idempotency_key))
       end
     end
 
@@ -1791,16 +1842,16 @@ module Atlas
       # Update a device assurance policy. Devices are re-evaluated.
       # `PATCH /v1/device_assurance_policies/{id}` (scope: device_assurance:write)
       # @return [Atlas::Models::DeviceAssurancePolicy]
-      def update_device_assurance_policy(id, name: UNSET, platform: UNSET, enabled: UNSET, min_os_version: UNSET, os_latest_minus: UNSET, require_disk_encryption: UNSET, require_screen_lock: UNSET, require_secure_hardware: UNSET, block_jailbroken: UNSET, require_firewall: UNSET, require_edr: UNSET, grace_hours: UNSET)
+      def update_device_assurance_policy(id, name: UNSET, platform: UNSET, enabled: UNSET, min_os_version: UNSET, os_latest_minus: UNSET, require_disk_encryption: UNSET, require_screen_lock: UNSET, require_secure_hardware: UNSET, block_jailbroken: UNSET, require_firewall: UNSET, require_edr: UNSET, grace_hours: UNSET, idempotency_key: nil)
         body = G.compact("name" => name, "platform" => platform, "enabled" => enabled, "min_os_version" => min_os_version, "os_latest_minus" => os_latest_minus, "require_disk_encryption" => require_disk_encryption, "require_screen_lock" => require_screen_lock, "require_secure_hardware" => require_secure_hardware, "block_jailbroken" => block_jailbroken, "require_firewall" => require_firewall, "require_edr" => require_edr, "grace_hours" => grace_hours)
-        G.wrap(M::DeviceAssurancePolicy, request(method: :patch, path: "/v1/device_assurance_policies/#{enc(id)}", body: body))
+        G.wrap(M::DeviceAssurancePolicy, request(method: :patch, path: "/v1/device_assurance_policies/#{enc(id)}", body: body, idempotency_key: idempotency_key))
       end
 
       # Delete a device assurance policy. Devices are re-evaluated.
       # `DELETE /v1/device_assurance_policies/{id}` (scope: device_assurance:write)
       # @return [Atlas::Models::DeviceAssurancePolicy2]
-      def delete_device_assurance_policy(id)
-        G.wrap(M::DeviceAssurancePolicy2, request(method: :delete, path: "/v1/device_assurance_policies/#{enc(id)}"))
+      def delete_device_assurance_policy(id, idempotency_key: nil)
+        G.wrap(M::DeviceAssurancePolicy2, request(method: :delete, path: "/v1/device_assurance_policies/#{enc(id)}", idempotency_key: idempotency_key))
       end
     end
 
@@ -1837,16 +1888,16 @@ module Atlas
       # Change a device integration (name, config, credentials, interval, paused or active).
       # `PATCH /v1/device_integrations/{id}` (scope: device_assurance:write)
       # @return [Atlas::Models::DeviceIntegration]
-      def update_device_integration(id, provider: UNSET, name: UNSET, config: UNSET, credentials: UNSET, interval_minutes: UNSET, status: UNSET)
+      def update_device_integration(id, provider: UNSET, name: UNSET, config: UNSET, credentials: UNSET, interval_minutes: UNSET, status: UNSET, idempotency_key: nil)
         body = G.compact("provider" => provider, "name" => name, "config" => config, "credentials" => credentials, "interval_minutes" => interval_minutes, "status" => status)
-        G.wrap(M::DeviceIntegration, request(method: :patch, path: "/v1/device_integrations/#{enc(id)}", body: body))
+        G.wrap(M::DeviceIntegration, request(method: :patch, path: "/v1/device_integrations/#{enc(id)}", body: body, idempotency_key: idempotency_key))
       end
 
       # Delete a device integration. Devices already pulled stay in the registry.
       # `DELETE /v1/device_integrations/{id}` (scope: device_assurance:write)
       # @return [Atlas::Models::DeviceIntegration2]
-      def delete_device_integration(id)
-        G.wrap(M::DeviceIntegration2, request(method: :delete, path: "/v1/device_integrations/#{enc(id)}"))
+      def delete_device_integration(id, idempotency_key: nil)
+        G.wrap(M::DeviceIntegration2, request(method: :delete, path: "/v1/device_integrations/#{enc(id)}", idempotency_key: idempotency_key))
       end
 
       # Pull the integration now.
@@ -1882,8 +1933,8 @@ module Atlas
       # Delete a device registration and its sessions.
       # `DELETE /v1/device_sso/registrations/{id}` (scope: desktop_mfa:write)
       # @return [Atlas::Models::DeviceSsoRegistration2]
-      def delete_registration(id)
-        G.wrap(M::DeviceSsoRegistration2, request(method: :delete, path: "/v1/device_sso/registrations/#{enc(id)}"))
+      def delete_registration(id, idempotency_key: nil)
+        G.wrap(M::DeviceSsoRegistration2, request(method: :delete, path: "/v1/device_sso/registrations/#{enc(id)}", idempotency_key: idempotency_key))
       end
 
       # Revoke a device registration. Every refresh token it holds stops working at once and its next call is refused.
@@ -1925,6 +1976,23 @@ module Atlas
       # @return [Atlas::Models::DiagnosticTrace]
       def get_trace(id)
         G.wrap(M::DiagnosticTrace, request(method: :get, path: "/v1/diagnostics/traces/#{enc(id)}"))
+      end
+    end
+
+    # /v1/domains
+    module DomainsOperations
+      # Read one custom domain: the same object as a list item, including a path mount's verification file and what the last failed check observed.
+      # `GET /v1/domains/{id}` (scope: domains:read)
+      # @return [Atlas::Models::CustomDomain]
+      def get_domain(id)
+        G.wrap(M::CustomDomain, request(method: :get, path: "/v1/domains/#{enc(id)}"))
+      end
+
+      # Issue a new random verification token for a path-mounted domain and return the domain with the new `verification.token` and `url`. The previous token keeps verifying for 24 hours (`verification.previous_url`, `previous_valid_until`). Use it when a CDN cache has stored a wrong answer for the old URL: the new URL has never been requested, so nothing is cached for it. A CNAME domain has no token (400).
+      # `POST /v1/domains/{id}/verification/rotate` (scope: domains:write)
+      # @return [Atlas::Models::CustomDomain]
+      def rotate_verification(id, body, idempotency_key: nil)
+        G.wrap(M::CustomDomain, request(method: :post, path: "/v1/domains/#{enc(id)}/verification/rotate", body: body, idempotency_key: idempotency_key))
       end
     end
 
@@ -2014,16 +2082,16 @@ module Atlas
       # Change a connector's name, mode, ack_source, enabled or notes. The key cannot change.
       # `PATCH /v1/erasure_connectors/{id}` (scope: data_subject_requests:write)
       # @return [Atlas::Models::ErasureConnector]
-      def update_erasure_connector(id, key: UNSET, catalog_id: UNSET, name: UNSET, mode: UNSET, vendor: UNSET, config: UNSET, credential: UNSET, ack_source: UNSET, enabled: UNSET, notes: UNSET)
+      def update_erasure_connector(id, key: UNSET, catalog_id: UNSET, name: UNSET, mode: UNSET, vendor: UNSET, config: UNSET, credential: UNSET, ack_source: UNSET, enabled: UNSET, notes: UNSET, idempotency_key: nil)
         body = G.compact("key" => key, "catalog_id" => catalog_id, "name" => name, "mode" => mode, "vendor" => vendor, "config" => config, "credential" => credential, "ack_source" => ack_source, "enabled" => enabled, "notes" => notes)
-        G.wrap(M::ErasureConnector, request(method: :patch, path: "/v1/erasure_connectors/#{enc(id)}", body: body))
+        G.wrap(M::ErasureConnector, request(method: :patch, path: "/v1/erasure_connectors/#{enc(id)}", body: body, idempotency_key: idempotency_key))
       end
 
       # Stop tracking a downstream system. Past request records of it are removed with it. 204.
       # `DELETE /v1/erasure_connectors/{id}` (scope: data_subject_requests:write)
       # @return [nil]
-      def delete_erasure_connector(id)
-        request(method: :delete, path: "/v1/erasure_connectors/#{enc(id)}")
+      def delete_erasure_connector(id, idempotency_key: nil)
+        request(method: :delete, path: "/v1/erasure_connectors/#{enc(id)}", idempotency_key: idempotency_key)
       end
 
       # A read-only call to the vendor that proves the connector's saved key works. Nothing is deleted. Audited.
@@ -2082,9 +2150,9 @@ module Atlas
       # Change the instance FGA settings. Fields you omit keep their value. `cache_ttl_ms` null uses the platform default and 0 turns the result cache off; a request that carries its own `consistency` always wins over `default_consistency`; `changelog_retention_days` null keeps the whole tuple change log, otherwise older changes are removed in the background.
       # `PUT /v1/fga/settings` (scope: fga:write)
       # @return [Atlas::Models::FgaSettings]
-      def set_settings(cache_ttl_ms: UNSET, default_consistency: UNSET, changelog_retention_days: UNSET)
+      def set_settings(cache_ttl_ms: UNSET, default_consistency: UNSET, changelog_retention_days: UNSET, idempotency_key: nil)
         body = G.compact("cache_ttl_ms" => cache_ttl_ms, "default_consistency" => default_consistency, "changelog_retention_days" => changelog_retention_days)
-        G.wrap(M::FgaSettings, request(method: :put, path: "/v1/fga/settings", body: body))
+        G.wrap(M::FgaSettings, request(method: :put, path: "/v1/fga/settings", body: body, idempotency_key: idempotency_key))
       end
 
       # Run the stored assertions of a model version against the real store tuples.
@@ -2143,8 +2211,8 @@ module Atlas
       # Remove a materialization; list-objects is then always computed live.
       # `DELETE /v1/fga/stores/{id}/materializations/{mid}` (scope: fga:write)
       # @return [Hash]
-      def delete_materialization(id, mid)
-        request(method: :delete, path: "/v1/fga/stores/#{enc(id)}/materializations/#{enc(mid)}")
+      def delete_materialization(id, mid, idempotency_key: nil)
+        request(method: :delete, path: "/v1/fga/stores/#{enc(id)}/materializations/#{enc(mid)}", idempotency_key: idempotency_key)
       end
 
       # Rebuild one materialization now.
@@ -2188,9 +2256,9 @@ module Atlas
       # Configure the managed sync that turns organization memberships, org roles and groups into FGA tuples, so a model can say `viewer: member from organization` without mirroring anything by hand. Opt-in per instance; nothing is written until `enabled` is true with a `store_id`. Enabling starts from the current end of the change feed and queues a backfill. The sync only ever removes tuples it wrote; a tuple that existed first is left alone. Tuples the store's model has no relation for are skipped and counted. A store or a tuple name cannot change while the sync owns tuples (409): disable it and `POST /v1/fga/sync/purge` first. Emits nothing itself; its writes emit fga.tuple_written and fga.tuple_deleted.
       # `PUT /v1/fga/sync` (scope: fga:write)
       # @return [Atlas::Models::FgaSync]
-      def set_sync(enabled: UNSET, store_id: UNSET, sync_memberships: UNSET, sync_org_roles: UNSET, sync_groups: UNSET, user_type: UNSET, org_type: UNSET, group_type: UNSET, member_relation: UNSET, role_relation_prefix: UNSET, group_key: UNSET)
+      def set_sync(enabled: UNSET, store_id: UNSET, sync_memberships: UNSET, sync_org_roles: UNSET, sync_groups: UNSET, user_type: UNSET, org_type: UNSET, group_type: UNSET, member_relation: UNSET, role_relation_prefix: UNSET, group_key: UNSET, idempotency_key: nil)
         body = G.compact("enabled" => enabled, "store_id" => store_id, "sync_memberships" => sync_memberships, "sync_org_roles" => sync_org_roles, "sync_groups" => sync_groups, "user_type" => user_type, "org_type" => org_type, "group_type" => group_type, "member_relation" => member_relation, "role_relation_prefix" => role_relation_prefix, "group_key" => group_key)
-        G.wrap(M::FgaSync, request(method: :put, path: "/v1/fga/sync", body: body))
+        G.wrap(M::FgaSync, request(method: :put, path: "/v1/fga/sync", body: body, idempotency_key: idempotency_key))
       end
 
       # Queue a backfill: walk every membership, group member and group and write the tuples that are missing, then remove owned tuples whose source is gone. `repair: true` rewrites every desired tuple, healing tuples someone deleted by hand. Resumable and processed by the worker; read the run to follow it. One backfill runs at a time: asking again returns the one in flight (200). Honours Idempotency-Key. Emits fga_sync.completed or fga_sync.failed when it ends.
@@ -2269,8 +2337,8 @@ module Atlas
       # Delete a draft or stopped experiment and its assignments. Stop a running one first.
       # `DELETE /v1/flows/{id}/experiments/{experimentId}` (scope: actions:write)
       # @return [nil]
-      def delete_experiment(id, experiment_id)
-        request(method: :delete, path: "/v1/flows/#{enc(id)}/experiments/#{enc(experiment_id)}")
+      def delete_experiment(id, experiment_id, idempotency_key: nil)
+        request(method: :delete, path: "/v1/flows/#{enc(id)}/experiments/#{enc(experiment_id)}", idempotency_key: idempotency_key)
       end
 
       # Results per variant. Users are counted from when they were assigned: assigned (reached the journey), started (a run began, meaning the journey held them), completed, abandoned, in progress, completion and abandon rates, the 95% interval of the completion rate, average time to complete, and against the first variant the relative lift and a two-sided p-value (two-proportion z-test) with significant at 0.05. A difference is only worth acting on when significant is true and the sample is large enough.
@@ -2344,9 +2412,9 @@ module Atlas
       # Change email risk settings. `mode`: off, mx or provider (your own verification account; the key is write-only). With `gate_sign_up` a `block` verdict refuses the sign-up.
       # `PUT /v1/fraud/email_risk/settings` (scope: email_suppressions:write)
       # @return [Atlas::Models::EmailRiskSettings]
-      def set_settings(mode: UNSET, provider: UNSET, credentials: UNSET, block_disposable: UNSET, block_suppressed: UNSET, block_undeliverable: UNSET, block_role: UNSET, gate_sign_up: UNSET)
+      def set_settings(mode: UNSET, provider: UNSET, credentials: UNSET, block_disposable: UNSET, block_suppressed: UNSET, block_undeliverable: UNSET, block_role: UNSET, gate_sign_up: UNSET, idempotency_key: nil)
         body = G.compact("mode" => mode, "provider" => provider, "credentials" => credentials, "block_disposable" => block_disposable, "block_suppressed" => block_suppressed, "block_undeliverable" => block_undeliverable, "block_role" => block_role, "gate_sign_up" => gate_sign_up)
-        G.wrap(M::EmailRiskSettings, request(method: :put, path: "/v1/fraud/email_risk/settings", body: body))
+        G.wrap(M::EmailRiskSettings, request(method: :put, path: "/v1/fraud/email_risk/settings", body: body, idempotency_key: idempotency_key))
       end
     end
 
@@ -2357,6 +2425,14 @@ module Atlas
 
     # /v1/grants
     module GrantsOperations
+      # List every grant in one cursor-paged list: users' consent grants and OpenID Grant Management grants, told apart by `type`. Filter by `user_id`, `client_id` (the public client id), `type` (consent, managed, all) and `status` (active by default; revoking a consent removes it, so revoked grants are managed ones).
+      # `GET /v1/grants` (scope: grants:read)
+      # @return [Page<Grant>]
+      def list_grants(user_id: UNSET, client_id: UNSET, type: UNSET, status: UNSET, limit: UNSET, starting_after: UNSET)
+        query = G.compact("user_id" => user_id, "client_id" => client_id, "type" => type, "status" => status, "limit" => limit, "starting_after" => starting_after)
+        G.page(M::Grant, query) { |q| request(method: :get, path: "/v1/grants", query: q) }
+      end
+
       # Take an amount from one of a grant's counters, atomically. A denial is a 200 decision with `allowed: false`.
       # `POST /v1/grants/{grantType}/{id}/consume` (scope: machines:write)
       # @return [Atlas::Models::UsageDecision]
@@ -2445,16 +2521,16 @@ module Atlas
       # Change an access bundle, its entitlements, form fields or policy.
       # `PATCH /v1/iga/bundles/{id}` (scope: iga:write)
       # @return [Atlas::Models::IgaBundle]
-      def update_bundle(id, key: UNSET, name: UNSET, description: UNSET, catalog: UNSET, entitlements: UNSET, form: UNSET, policy: UNSET, enabled: UNSET)
+      def update_bundle(id, key: UNSET, name: UNSET, description: UNSET, catalog: UNSET, entitlements: UNSET, form: UNSET, policy: UNSET, enabled: UNSET, idempotency_key: nil)
         body = G.compact("key" => key, "name" => name, "description" => description, "catalog" => catalog, "entitlements" => entitlements, "form" => form, "policy" => policy, "enabled" => enabled)
-        G.wrap(M::IgaBundle, request(method: :patch, path: "/v1/iga/bundles/#{enc(id)}", body: body))
+        G.wrap(M::IgaBundle, request(method: :patch, path: "/v1/iga/bundles/#{enc(id)}", body: body, idempotency_key: idempotency_key))
       end
 
       # Delete a bundle (access already granted stays).
       # `DELETE /v1/iga/bundles/{id}` (scope: iga:write)
       # @return [Atlas::Models::IgaBundle2]
-      def delete_bundle(id)
-        G.wrap(M::IgaBundle2, request(method: :delete, path: "/v1/iga/bundles/#{enc(id)}"))
+      def delete_bundle(id, idempotency_key: nil)
+        G.wrap(M::IgaBundle2, request(method: :delete, path: "/v1/iga/bundles/#{enc(id)}", idempotency_key: idempotency_key))
       end
 
       # Request every entitlement of a bundle for a person. Each one follows its own approval steps and separation-of-duties rules; the response says which were requested, skipped (already held or pending) or failed.
@@ -2522,8 +2598,8 @@ module Atlas
       # Remove an eligibility. Access already activated stays until it ends.
       # `DELETE /v1/iga/eligibilities/{id}` (scope: iga:write)
       # @return [Atlas::Models::IgaEligibility2]
-      def delete_eligibility(id)
-        G.wrap(M::IgaEligibility2, request(method: :delete, path: "/v1/iga/eligibilities/#{enc(id)}"))
+      def delete_eligibility(id, idempotency_key: nil)
+        G.wrap(M::IgaEligibility2, request(method: :delete, path: "/v1/iga/eligibilities/#{enc(id)}", idempotency_key: idempotency_key))
       end
 
       # Add catalog entitlements (not requestable, no approval steps) for the groups or app roles that exist but are not in the catalog yet.
@@ -2602,8 +2678,8 @@ module Atlas
       # Replace the event types third-party apps can subscribe to (send an array, or { types: [...] }). Each has a type (lowercase dotted, not an Atlas event name), an optional description and schema, and a required_scope that must exist in the scope catalogue. Publish with POST /v1/app_events { user_id }; subscribe a client with PUT /v1/oauth_clients/{id}/webhook.
       # `PUT /v1/instance/app_event_types` (scope: instance:write)
       # @return [Page<AppEventType>]
-      def set_app_event_types(body)
-        G.page(M::AppEventType, {}) { |q| request(method: :put, path: "/v1/instance/app_event_types", query: q, body: body) }
+      def set_app_event_types(body, idempotency_key: nil)
+        G.page(M::AppEventType, {}) { |q| request(method: :put, path: "/v1/instance/app_event_types", query: q, body: body, idempotency_key: idempotency_key) }
       end
 
       # The configuration snapshots of the instance, newest first. Filter by source: manual, auto, pre_restore (saved before a restore), cli, clone.
@@ -2640,8 +2716,8 @@ module Atlas
       # Delete one snapshot. Audited.
       # `DELETE /v1/instance/config_snapshots/{id}` (scope: instance:write)
       # @return [Atlas::Models::ConfigSnapshot2]
-      def delete_config_snapshot(id)
-        G.wrap(M::ConfigSnapshot2, request(method: :delete, path: "/v1/instance/config_snapshots/#{enc(id)}"))
+      def delete_config_snapshot(id, idempotency_key: nil)
+        G.wrap(M::ConfigSnapshot2, request(method: :delete, path: "/v1/instance/config_snapshots/#{enc(id)}", idempotency_key: idempotency_key))
       end
 
       # Put a snapshot back: the configuration returns to what it was, the secrets the instance holds today stay, and the state being replaced is first saved as a pre_restore snapshot so the restore can be undone the same way. dry_run: true returns the changes and writes nothing; send its current_sha256 as expected_sha256 to apply exactly what you saw (409 if the configuration moved). Allowed origins are left alone unless include_allowed_origins is true. The restored configuration must pass the same checks as any configuration write (422 otherwise). Needs instance:write. Honours Idempotency-Key. Audited. Emits config_snapshot.restored.
@@ -2669,17 +2745,17 @@ module Atlas
       # Set the cache window: how long Atlas may use a loaded data key without your KMS confirming it, which is how long a revoked key keeps working (60 to 3,600 seconds, default 300). Shorter revokes faster but depends on the KMS being reachable more tightly: Atlas re-confirms every 20 seconds, so a KMS outage longer than the window takes the instance down.
       # `PUT /v1/instance/data_key_provider` (scope: vault:manage)
       # @return [Hash]
-      def set_data_key_provider(cache_window_seconds: UNSET)
+      def set_data_key_provider(cache_window_seconds: UNSET, idempotency_key: nil)
         body = G.compact("cache_window_seconds" => cache_window_seconds)
-        request(method: :put, path: "/v1/instance/data_key_provider", body: body)
+        request(method: :put, path: "/v1/instance/data_key_provider", body: body, idempotency_key: idempotency_key)
       end
 
       # Remove customer-managed encryption by deleting the wrapped data keys. This crypto-shreds everything encrypted under them and cannot be undone; send { "confirm": "shred" }.
       # `DELETE /v1/instance/data_key_provider` (scope: vault:manage)
       # @return [Hash]
-      def delete_data_key_provider(confirm:)
+      def delete_data_key_provider(confirm:, idempotency_key: nil)
         body = G.compact("confirm" => confirm)
-        request(method: :delete, path: "/v1/instance/data_key_provider", body: body)
+        request(method: :delete, path: "/v1/instance/data_key_provider", body: body, idempotency_key: idempotency_key)
       end
 
       # Check the customer key now: wrap and unwrap a random key through it and open the current data keys. `reason` names a failure: key_disabled, key_not_found, access_denied, unreachable or invalid_config.
@@ -2779,6 +2855,35 @@ module Atlas
         G.wrap(M::InstanceExport, request(method: :post, path: "/v1/instance/exports/#{enc(id)}/revoke_links", idempotency_key: idempotency_key))
       end
 
+      # Read the before_first_session hook: the endpoint Atlas calls once per user, after their email is verified and before their first session token, so your app can link the account and stamp its own external_id on that very token. The signing secret is reported as signing_secret_set only.
+      # `GET /v1/instance/hooks/before_first_session` (scope: instance:read)
+      # @return [Atlas::Models::BeforeFirstSessionHook]
+      def get_before_first_session()
+        G.wrap(M::BeforeFirstSessionHook, request(method: :get, path: "/v1/instance/hooks/before_first_session"))
+      end
+
+      # Update the before_first_session hook. Only the fields you send change; null clears. Atlas POSTs {"type":"before_first_session","data":{user_id,email,email_verified,provider,provider_user_id,name,external_id}} signed like a webhook (atlas-id, atlas-timestamp, atlas-signature). Answer 200 {"external_id":"…"} to set it: it is stored only when the user has none and no other user holds it (never overwritten). A timeout or failure never blocks the sign-in (it is audited and counted in failed_calls). Not called for impersonation or anonymous guests.
+      # `PATCH /v1/instance/hooks/before_first_session` (scope: instance:write)
+      # @return [Atlas::Models::BeforeFirstSessionHook]
+      def update_before_first_session(enabled: UNSET, url: UNSET, signing_secret: UNSET, timeout_ms: UNSET, idempotency_key: nil)
+        body = G.compact("enabled" => enabled, "url" => url, "signing_secret" => signing_secret, "timeout_ms" => timeout_ms)
+        G.wrap(M::BeforeFirstSessionHook, request(method: :patch, path: "/v1/instance/hooks/before_first_session", body: body, idempotency_key: idempotency_key))
+      end
+
+      # Turn the hook off and clear its url and signing secret, the same as PATCH with {enabled:false, url:null, signing_secret:null}. Audited. Idempotent.
+      # `DELETE /v1/instance/hooks/before_first_session` (scope: instance:write)
+      # @return [Atlas::Models::BeforeFirstSessionHook]
+      def delete_before_first_session(idempotency_key: nil)
+        G.wrap(M::BeforeFirstSessionHook, request(method: :delete, path: "/v1/instance/hooks/before_first_session", idempotency_key: idempotency_key))
+      end
+
+      # Send a signed sample call (a user that does not exist) to the hook and report its answer. Nothing is stored on any user.
+      # `POST /v1/instance/hooks/before_first_session/test` (scope: instance:write)
+      # @return [Atlas::Models::PostInstanceHooksBeforeFirstSessionTestResponse]
+      def test_before_first_session(idempotency_key: nil)
+        G.wrap(M::PostInstanceHooksBeforeFirstSessionTestResponse, request(method: :post, path: "/v1/instance/hooks/before_first_session/test", idempotency_key: idempotency_key))
+      end
+
       # The instance's staff impersonation policy: require_reason, reason_codes, max_duration_seconds, require_approval, read_only_default and notify_user.
       # `GET /v1/instance/impersonation_policy` (scope: instance:read)
       # @return [Atlas::Models::ImpersonationPolicy]
@@ -2789,9 +2894,9 @@ module Atlas
       # Change the staff impersonation policy. Send only the fields to change; unknown fields are refused. Audited.
       # `PUT /v1/instance/impersonation_policy` (scope: instance:write)
       # @return [nil]
-      def set_impersonation_policy(require_reason: UNSET, reason_codes: UNSET, max_duration_seconds: UNSET, require_approval: UNSET, read_only_default: UNSET, notify_user: UNSET)
+      def set_impersonation_policy(require_reason: UNSET, reason_codes: UNSET, max_duration_seconds: UNSET, require_approval: UNSET, read_only_default: UNSET, notify_user: UNSET, idempotency_key: nil)
         body = G.compact("require_reason" => require_reason, "reason_codes" => reason_codes, "max_duration_seconds" => max_duration_seconds, "require_approval" => require_approval, "read_only_default" => read_only_default, "notify_user" => notify_user)
-        request(method: :put, path: "/v1/instance/impersonation_policy", body: body)
+        request(method: :put, path: "/v1/instance/impersonation_policy", body: body, idempotency_key: idempotency_key)
       end
 
       # The tenant imports of the instance, newest first.
@@ -2817,6 +2922,36 @@ module Atlas
         G.wrap(M::InstanceExport, request(method: :get, path: "/v1/instance/imports/#{enc(id)}"))
       end
 
+      # Read the stored sign-up forwarding for a destination: its managed endpoint, active flag and non-secret settings. The destination key is never returned. 404 when sign-ups are not forwarded there.
+      # `GET /v1/instance/integrations/forwarding/{destination}` (scope: webhooks:read)
+      # @return [Atlas::Models::IntegrationForwarding]
+      def get_forwarding(destination)
+        G.wrap(M::IntegrationForwarding, request(method: :get, path: "/v1/instance/integrations/forwarding/#{enc(destination)}"))
+      end
+
+      # Forward every sign-up (`user.created`) to Lucida, Hermetica or Seolyticize with your own server key, or to any HTTPS webhook.
+      # `PUT /v1/instance/integrations/forwarding/{destination}` (scope: webhooks:write)
+      # @return [Atlas::Models::IntegrationForwarding2]
+      def set_forwarding(destination, server_key: UNSET, site_key: UNSET, site_url: UNSET, host: UNSET, conversion_event: UNSET, include_pii: UNSET, url: UNSET, active: UNSET, idempotency_key: nil)
+        body = G.compact("server_key" => server_key, "site_key" => site_key, "site_url" => site_url, "host" => host, "conversion_event" => conversion_event, "include_pii" => include_pii, "url" => url, "active" => active)
+        G.wrap(M::IntegrationForwarding2, request(method: :put, path: "/v1/instance/integrations/forwarding/#{enc(destination)}", body: body, idempotency_key: idempotency_key))
+      end
+
+      # Stop forwarding sign-ups to a destination (removes its managed endpoint).
+      # `DELETE /v1/instance/integrations/forwarding/{destination}` (scope: webhooks:write)
+      # @return [nil]
+      def delete_forwarding(destination, idempotency_key: nil)
+        request(method: :delete, path: "/v1/instance/integrations/forwarding/#{enc(destination)}", idempotency_key: idempotency_key)
+      end
+
+      # Every connected integration and receiver with its last delivery status and time, in one list.
+      # `GET /v1/instance/integrations/health` (scope: instance:read)
+      # @return [Page<GetInstanceIntegrationsHealthResponseItem>]
+      def list_health(limit: UNSET, starting_after: UNSET)
+        query = G.compact("limit" => limit, "starting_after" => starting_after)
+        G.page(M::GetInstanceIntegrationsHealthResponseItem, query, envelope: M::GetInstanceIntegrationsHealthResponseList) { |q| request(method: :get, path: "/v1/instance/integrations/health", query: q) }
+      end
+
       # The integration's mint log: every getToken({ for }) attempt, from the browser and from the server call, newest first, with its outcome (ok, or refused with the reason code), the route kind and the user id. No tokens are stored. Kept 7 days. Use it when health.last_minted_at stays null: an empty log means nothing is calling Atlas, a refused row says why.
       # `GET /v1/instance/integrations/{product}/mints` (scope: instance:read)
       # @return [Page<IntegrationMint>]
@@ -2831,6 +2966,13 @@ module Atlas
       def test_integration(product, wait: UNSET, idempotency_key: nil)
         query = G.compact("wait" => wait)
         G.wrap(M::PostInstanceIntegrationsTestResponse, request(method: :post, path: "/v1/instance/integrations/#{enc(product)}/test", query: query, idempotency_key: idempotency_key))
+      end
+
+      # The token issuers a verifier should accept: the active one, the planned one while a domain claim is pending, and earlier ones still in their overlap window.
+      # `GET /v1/instance/issuers` (scope: instance:read)
+      # @return [Atlas::Models::GetInstanceIssuersResponse]
+      def get_issuers()
+        G.wrap(M::GetInstanceIssuersResponse, request(method: :get, path: "/v1/instance/issuers"))
       end
 
       # The OpenID provider keys beyond the instance signing key: PS256, ES384 and EdDSA signing keys and the RSA-OAEP-256 / ECDH-ES keys request objects are encrypted to, with their status.
@@ -2859,9 +3001,9 @@ module Atlas
       # Set the departure policy. `transfer_to`: oldest_admin, user (needs `user_id`, who must still be a member) or none.
       # `PUT /v1/instance/org_departure_policy` (scope: instance:write)
       # @return [nil]
-      def set_org_departure_policy(transfer_to:, user_id: UNSET)
+      def set_org_departure_policy(transfer_to:, user_id: UNSET, idempotency_key: nil)
         body = G.compact("transfer_to" => transfer_to, "user_id" => user_id)
-        request(method: :put, path: "/v1/instance/org_departure_policy", body: body)
+        request(method: :put, path: "/v1/instance/org_departure_policy", body: body, idempotency_key: idempotency_key)
       end
 
       # The map of organization role key to the feature keys a seat in that role grants. Those features join the token's `fea` claim for a member whose active organization role matches, on top of (or without) a plan.
@@ -2874,9 +3016,9 @@ module Atlas
       # Replace the role to features map. A role left out grants nothing. Takes effect on the next token.
       # `PUT /v1/instance/org_role_entitlements` (scope: instance:write)
       # @return [nil]
-      def set_org_role_entitlements(roles:)
+      def set_org_role_entitlements(roles:, idempotency_key: nil)
         body = G.compact("roles" => roles)
-        request(method: :put, path: "/v1/instance/org_role_entitlements", body: body)
+        request(method: :put, path: "/v1/instance/org_role_entitlements", body: body, idempotency_key: idempotency_key)
       end
 
       # The data-rights cases Atlas opened (or tried to) at the orchestrator, newest first, paged like every list (`limit` 1-100, `starting_after` = a request id, `has_more`). `status` filters (`abandoned` = given up, `failed` = still being retried, `open`, `pending`, `cancel_pending`, `cancelled`). A case dismissed by an operator is left out unless `dismissed=true`. `reason_code: email_unverified` marks a case deliberately not filed because the account's primary email address is not verified. Each `id` is the Atlas request id.
@@ -2918,12 +3060,13 @@ module Atlas
         G.page(M::GetInstanceScopesResponseItem, query) { |q| request(method: :get, path: "/v1/instance/scopes", query: q) }
       end
 
-      # Replace the scope catalogue. Each scope has a `name`, a `label` and a `description` per locale ({ "en": "…", "es": "…" }), `sensitive`, and `requires_verified_client`. The consent screen shows the label and description in the user's language (falling back to its base language, then `en`). A scope with `requires_verified_client` is refused at /oauth2/authorize with `invalid_scope` unless the app's status is `approved` or that scope is in the client's `approved_scopes` (per-scope review). The owner and testers of a client still in development may request it too. A client still needs the scope in its allowed scopes to request it.
+      # Replace the scope catalogue. Each scope has a `name`, a `label` and a `description` per locale ({ "en": "…", "es": "…" }), `sensitive`, and `requires_verified_client`. The consent screen shows the label and description in the user's language (falling back to its base language, then `en`). A scope with `requires_verified_client` is refused at /oauth2/authorize with `invalid_scope` unless the app's status is `approved` or that scope is in the client's `approved_scopes` (per-scope review). The owner and testers of a client still in development may request it too. A client still needs the scope in its allowed scopes to request it. `requires_client_level` (`any`, `verified` or `certified`) sets the level a client needs (`requires_verified_client: true` means `verified`; the stricter wins); a `certified` client is an approved one the instance has certified (PATCH /v1/oauth_clients/{id} `certified`). `owner_exempt: true` lets the developer who owns a client request the scope with it on their own account whatever the client's level. A name ending `:*` (`listings:*`) is a wildcard entry: it covers every `listings:<anything>` for gating, consent text and released claims, and a client or grant that holds `listings:*` holds each of them. By default the whole list is checked and nothing is written if any entry is bad (422, one problem per field). `?mode=partial` applies the valid entries and answers 200 with `rejected: [{ index, name, errors }]` (a rejected entry leaves the scope of that name as it was). `?too_long=truncate` cuts over-long labels and descriptions instead of refusing them and lists each cut in `warnings`.
       # `PUT /v1/instance/scopes` (scope: instance:write)
       # @return [nil]
-      def set_scopes(scopes:)
+      def set_scopes(scopes:, mode: UNSET, too_long: UNSET, idempotency_key: nil)
+        query = G.compact("mode" => mode, "too_long" => too_long)
         body = G.compact("scopes" => scopes)
-        request(method: :put, path: "/v1/instance/scopes", body: body)
+        request(method: :put, path: "/v1/instance/scopes", query: query, body: body, idempotency_key: idempotency_key)
       end
 
       # Alias of GET /v1/secret_keys. List this instance's secret keys with scopes, owner, expiry, last use, last-used IP and provisioning tags. Revoked keys stay listed. Filter by tag with ?metadata[key]=value.
@@ -2934,7 +3077,7 @@ module Atlas
         G.page(M::GetInstanceSecretKeysResponseItem, query) { |q| request(method: :get, path: "/v1/instance/secret_keys", query: q) }
       end
 
-      # Alias of POST /v1/secret_keys. Create a scoped secret key: `name`, `scopes[]` (refused when unknown, or when the calling key does not hold them; presets `read_only`, `privacy:execute`, `privacy:grants:revoke`; or `preset: "app-runtime"` for an app server runtime key), `expires_at` (at most a year; default one year; "never" is refused), `allowed_ips` (CIDRs), `allowed_origins` (browser origins; a request with another Origin gets 403 ORIGIN_NOT_ALLOWED), `owner` (default: the creating person or key), `external_ref` (idempotent create: a repeat returns the existing key, 200, idempotent_replay, no secret), `metadata` (tags; filter the list with ?metadata[key]=value) and `key_format` (`atlas`, the default `atlas_<env>_sk_…`, or `legacy` `sk_<env>_…`). The secret is returned once. Minting with an operator token needs multi-factor sign-in within 5 minutes (403 STEP_UP_REQUIRED). Send `X-Secret-Recipient: x25519:<public key>` to receive the secret sealed (libsodium sealed box) as `sealed_secret` instead of in plaintext. Example: a data-rights tool's key, { "name": "DSAR executor", "scopes": ["privacy:execute", "privacy:grants:revoke"], "expires_at": "2027-04-01" }.
+      # Alias of POST /v1/secret_keys. Create a scoped secret key: `name`, `scopes[]` (refused when unknown, or when the calling key does not hold them; presets `read_only`, `privacy:execute`, `privacy:grants:revoke`; or `preset: "app-runtime"` for an app server runtime key, or `preset: "integrations"` for the key a connected platform (consent manager, referral or support platform) connects with, or `preset: "provisioning"` for a deploy-script key that configures the instance: instance settings, domains, messaging providers, integrations, webhooks, OAuth clients and providers, redirect URLs, branding and keys, with no user, session or organization-member access), `expires_at` (at most a year; default one year; "never" is refused), `allowed_ips` (CIDRs), `allowed_origins` (browser origins; a request with another Origin gets 403 ORIGIN_NOT_ALLOWED), `owner` (default: the creating person or key), `external_ref` (idempotent create: a repeat returns the existing key, 200, idempotent_replay, no secret), `metadata` (tags; filter the list with ?metadata[key]=value) and `key_format` (`atlas`, the default `atlas_<env>_sk_…`, or `legacy` `sk_<env>_…`). The secret is returned once. Minting with an operator token needs multi-factor sign-in within 5 minutes (403 STEP_UP_REQUIRED). Send `X-Secret-Recipient: x25519:<public key>` to receive the secret sealed (libsodium sealed box) as `sealed_secret` instead of in plaintext. Example: a data-rights tool's key, { "name": "DSAR executor", "scopes": ["privacy:execute", "privacy:grants:revoke"], "expires_at": "2027-04-01" }.
       # `POST /v1/instance/secret_keys` (scope: secret_keys:write)
       # @return [Atlas::Models::GetInstanceSecretKeysResponseItem]
       def create_secret_key(name: UNSET, scopes: UNSET, preset: UNSET, expires_at: UNSET, allowed_ips: UNSET, ip_allowlist: UNSET, allowed_origins: UNSET, origin_allowlist: UNSET, organization_ids: UNSET, owner: UNSET, key_format: UNSET, external_ref: UNSET, metadata: UNSET, idempotency_key: nil)
@@ -2952,16 +3095,54 @@ module Atlas
       # Rotate the instance signing key automatically. Every interval_days the worker publishes a new key (prepublish_hours before it signs), switches to it, and keeps the previous key published until every token it signed has expired: at least the longest token lifetime the instance uses plus the key set cache, never under 24 hours, and never dropped while one of its tokens can still be presented. Keys in a cloud KMS rotate at the scheduled time (they cannot be held back) and are limited to RS256 and ES256. An earlier rotation still inside its grace window postpones the next one. Needs a recent MFA sign-in.
       # `PUT /v1/instance/signing_key_schedule` (scope: instance:write)
       # @return [Atlas::Models::SigningKeySchedule]
-      def set_signing_key_schedule(interval_days:, enabled: UNSET, alg: UNSET, grace_period_seconds: UNSET, prepublish_hours: UNSET)
+      def set_signing_key_schedule(interval_days:, enabled: UNSET, alg: UNSET, grace_period_seconds: UNSET, prepublish_hours: UNSET, idempotency_key: nil)
         body = G.compact("enabled" => enabled, "interval_days" => interval_days, "alg" => alg, "grace_period_seconds" => grace_period_seconds, "prepublish_hours" => prepublish_hours)
-        G.wrap(M::SigningKeySchedule, request(method: :put, path: "/v1/instance/signing_key_schedule", body: body))
+        G.wrap(M::SigningKeySchedule, request(method: :put, path: "/v1/instance/signing_key_schedule", body: body, idempotency_key: idempotency_key))
       end
 
       # Turn scheduled rotation off. Keys already published stay as they are.
       # `DELETE /v1/instance/signing_key_schedule` (scope: instance:write)
       # @return [Atlas::Models::SigningKeySchedule2]
-      def delete_signing_key_schedule()
-        G.wrap(M::SigningKeySchedule2, request(method: :delete, path: "/v1/instance/signing_key_schedule"))
+      def delete_signing_key_schedule(idempotency_key: nil)
+        G.wrap(M::SigningKeySchedule2, request(method: :delete, path: "/v1/instance/signing_key_schedule", idempotency_key: idempotency_key))
+      end
+
+      # The staging copies and previews of this instance, newest first (deleted ones are left out).
+      # `GET /v1/instance/staging_copies` (scope: instance:read)
+      # @return [Page<InstanceClone>]
+      def list_staging_copies(limit: UNSET, starting_after: UNSET, kind: UNSET)
+        query = G.compact("limit" => limit, "starting_after" => starting_after, "kind" => kind)
+        G.page(M::InstanceClone, query) { |q| request(method: :get, path: "/v1/instance/staging_copies", query: q) }
+      end
+
+      # Make a staging copy of this instance with its own secret key: a new development-mode instance of the same app, with or without data (same body and rules as the platform clone route, without secret_key_preset: the key it answers with holds the app-runtime preset). For an instance that is not provisioned under a platform app. The copy never carries secrets (configuration secrets are removed; API keys and provider connections are not copied), private metadata of users and organizations, webhook endpoints, signing keys, passwords or second factors. The new instance is in development mode: no email or SMS is sent until it has its own provider keys. Needs instance:write (and users:read when include has users). Honours Idempotency-Key; a repeat for a live ref returns it (200, no secret). Audited.
+      # `POST /v1/instance/staging_copies` (scope: instance:write)
+      # @return [Atlas::Models::InstanceClone2]
+      def create_staging_copy(mode:, name: UNSET, ref: UNSET, include: UNSET, mask_emails: UNSET, ttl_hours: UNSET, allowed_origins: UNSET, refresh: UNSET, secret_key_preset: UNSET, idempotency_key: nil)
+        body = G.compact("mode" => mode, "name" => name, "ref" => ref, "include" => include, "mask_emails" => mask_emails, "ttl_hours" => ttl_hours, "allowed_origins" => allowed_origins, "refresh" => refresh, "secret_key_preset" => secret_key_preset)
+        G.wrap(M::InstanceClone2, request(method: :post, path: "/v1/instance/staging_copies", body: body, idempotency_key: idempotency_key))
+      end
+
+      # One staging copy: status, what was copied, what could not be placed.
+      # `GET /v1/instance/staging_copies/{id}` (scope: instance:read)
+      # @return [Atlas::Models::InstanceClone]
+      def get_staging_copy(id)
+        G.wrap(M::InstanceClone, request(method: :get, path: "/v1/instance/staging_copies/#{enc(id)}"))
+      end
+
+      # Delete a staging copy together with its instance and everything in it. Only an instance a copy created can be removed this way. Audited.
+      # `DELETE /v1/instance/staging_copies/{id}` (scope: instance:write)
+      # @return [Atlas::Models::InstanceClone]
+      def delete_staging_copy(id, idempotency_key: nil)
+        G.wrap(M::InstanceClone, request(method: :delete, path: "/v1/instance/staging_copies/#{enc(id)}", idempotency_key: idempotency_key))
+      end
+
+      # Bring a completed staging copy up to date in place: the same instance, keys and host, with this instance's configuration merged in again (and the data sections asked for, at most the ones it was made with, up to 2000 rows each). synthetic_users { count (1-500), seed } adds seeded test users (example.com addresses, the same seed gives the same users, so repeating it adds none twice). ttl_hours extends a preview. Emails stay masked consistently, so a refresh does not duplicate users. Audited.
+      # `POST /v1/instance/staging_copies/{id}/refresh` (scope: instance:write)
+      # @return [Atlas::Models::InstanceClone]
+      def refresh_staging_copy(id, include: UNSET, synthetic_users: UNSET, ttl_hours: UNSET, idempotency_key: nil)
+        body = G.compact("include" => include, "synthetic_users" => synthetic_users, "ttl_hours" => ttl_hours)
+        G.wrap(M::InstanceClone, request(method: :post, path: "/v1/instance/staging_copies/#{enc(id)}/refresh", body: body, idempotency_key: idempotency_key))
       end
 
       # The instance user traits schema: a JSON Schema per metadata bag (public, unsafe and private user metadata; public and private organization metadata) and how strictly it applies. enforcement is off (the default and what an instance without a schema reports), warn or enforce. version is 0 until a schema is stored, then counts up on every change.
@@ -2974,9 +3155,9 @@ module Atlas
       # Store the user traits schema and/or change its enforcement. Omit schemas or enforcement to keep the stored one. Each schema is checked before it is stored (a 422 names the offending path): a subset of JSON Schema 2020-12 with type, properties, required, enum, default, items, maxLength, pattern, description and additionalProperties (true or false); any other keyword is refused, a root must have type "object", patterns that repeat a repeated group are refused, and a default must satisfy its own schema (it is documentation, never written into metadata). Enforcement: off checks nothing; warn lets every write through and records each violation in the audit log (field paths and messages, never values); enforce answers 422 with one error per field path on a write that breaks the schema. It applies to backend (secret key) writes, the dashboard and a signed-in user writing their own unsafe_metadata. Imports, migrations, SCIM provisioning and other Atlas-internal writes are never checked, so a bulk job is never stopped halfway. Existing metadata is not re-validated. Send version (the one you last read) to refuse a concurrent change with 409; sending the same content again changes nothing.
       # `PUT /v1/instance/user_traits_schema` (scope: instance:write)
       # @return [Atlas::Models::UserTraitsSchema]
-      def set_user_traits_schema(schemas: UNSET, enforcement: UNSET, version: UNSET)
+      def set_user_traits_schema(schemas: UNSET, enforcement: UNSET, version: UNSET, idempotency_key: nil)
         body = G.compact("schemas" => schemas, "enforcement" => enforcement, "version" => version)
-        G.wrap(M::UserTraitsSchema, request(method: :put, path: "/v1/instance/user_traits_schema", body: body))
+        G.wrap(M::UserTraitsSchema, request(method: :put, path: "/v1/instance/user_traits_schema", body: body, idempotency_key: idempotency_key))
       end
 
       # The instance write budgets: writes (mutating Backend API requests), counter_writes (grant consume, refund and lease release), events and webhook_fanout, each per 60-second window, the mode (observe or enforce), and when a budget was last exceeded.
@@ -2989,16 +3170,16 @@ module Atlas
       # Set the write-budget mode and any limit. A limit is an integer from 1 to 10,000,000 per minute; null returns one to its default. Unknown fields are refused.
       # `PUT /v1/instance/write_budget` (scope: instance:write)
       # @return [Atlas::Models::WriteBudget]
-      def set_write_budget(mode: UNSET, writes_per_minute: UNSET, counter_writes_per_minute: UNSET, events_per_minute: UNSET, webhook_fanout_per_minute: UNSET)
+      def set_write_budget(mode: UNSET, writes_per_minute: UNSET, counter_writes_per_minute: UNSET, events_per_minute: UNSET, webhook_fanout_per_minute: UNSET, idempotency_key: nil)
         body = G.compact("mode" => mode, "writes_per_minute" => writes_per_minute, "counter_writes_per_minute" => counter_writes_per_minute, "events_per_minute" => events_per_minute, "webhook_fanout_per_minute" => webhook_fanout_per_minute)
-        G.wrap(M::WriteBudget, request(method: :put, path: "/v1/instance/write_budget", body: body))
+        G.wrap(M::WriteBudget, request(method: :put, path: "/v1/instance/write_budget", body: body, idempotency_key: idempotency_key))
       end
 
       # Back to the platform defaults in observe mode.
       # `DELETE /v1/instance/write_budget` (scope: instance:write)
       # @return [Atlas::Models::WriteBudget]
-      def delete_write_budget()
-        G.wrap(M::WriteBudget, request(method: :delete, path: "/v1/instance/write_budget"))
+      def delete_write_budget(idempotency_key: nil)
+        G.wrap(M::WriteBudget, request(method: :delete, path: "/v1/instance/write_budget", idempotency_key: idempotency_key))
       end
     end
 
@@ -3080,16 +3261,16 @@ module Atlas
       # Change a trust policy. kind and machine_id cannot change. Needs a recent MFA sign-in.
       # `PATCH /v1/machine_trust_policies/{id}` (scope: machines:write)
       # @return [Atlas::Models::MachineTrustPolicy]
-      def update_machine_trust_policy(id, name: UNSET, kind: UNSET, issuer: UNSET, jwks_uri: UNSET, jwks: UNSET, audience: UNSET, subject_pattern: UNSET, claim_conditions: UNSET, max_ttl_seconds: UNSET, enabled: UNSET)
+      def update_machine_trust_policy(id, name: UNSET, kind: UNSET, issuer: UNSET, jwks_uri: UNSET, jwks: UNSET, audience: UNSET, subject_pattern: UNSET, claim_conditions: UNSET, max_ttl_seconds: UNSET, enabled: UNSET, idempotency_key: nil)
         body = G.compact("name" => name, "kind" => kind, "issuer" => issuer, "jwks_uri" => jwks_uri, "jwks" => jwks, "audience" => audience, "subject_pattern" => subject_pattern, "claim_conditions" => claim_conditions, "max_ttl_seconds" => max_ttl_seconds, "enabled" => enabled)
-        G.wrap(M::MachineTrustPolicy, request(method: :patch, path: "/v1/machine_trust_policies/#{enc(id)}", body: body))
+        G.wrap(M::MachineTrustPolicy, request(method: :patch, path: "/v1/machine_trust_policies/#{enc(id)}", body: body, idempotency_key: idempotency_key))
       end
 
       # Delete a trust policy. Tokens already minted through it live out their lifetime (at most max_ttl_seconds).
       # `DELETE /v1/machine_trust_policies/{id}` (scope: machines:write)
       # @return [Atlas::Models::MachineTrustPolicy2]
-      def delete_machine_trust_policy(id)
-        G.wrap(M::MachineTrustPolicy2, request(method: :delete, path: "/v1/machine_trust_policies/#{enc(id)}"))
+      def delete_machine_trust_policy(id, idempotency_key: nil)
+        G.wrap(M::MachineTrustPolicy2, request(method: :delete, path: "/v1/machine_trust_policies/#{enc(id)}", idempotency_key: idempotency_key))
       end
 
       # Dry run: would this external token (or signed AWS request) be accepted by this policy? Returns the subject and claims it saw, or the reasons it was refused. Mints nothing and spends nothing, and works on a disabled policy.
@@ -3104,6 +3285,17 @@ module Atlas
     # Namespace for /v1/machine_trust_policies (`client.machine_trust_policies`).
     class MachineTrustPoliciesApi < Atlas::Resources::Base
       include MachineTrustPoliciesOperations
+    end
+
+    # /v1/machines
+    module MachinesOperations
+      # The machine deny feed: machines revoked and machine grants ended since a cursor (since=<iso|cursor>), oldest first, so a service that verifies machine tokens offline can deny a revoked machine within one poll. A `machine` entry denies every token with that `sub` issued before `revoked_at`; a `machine_grant` entry denies tokens with that `sub` and `aud` (the `audience`) issued before it. Readable with an sk_ bearer or a publishable key; a publishable key sees ids, audiences and times only. The revocation stream carries the same events as pushes.
+      # `GET /v1/machines/revoked` (scope: machines:read)
+      # @return [Page<GetMachinesRevokedResponseItem>]
+      def list_revoked(starting_after: UNSET, since: UNSET, limit: UNSET)
+        query = G.compact("starting_after" => starting_after, "since" => since, "limit" => limit)
+        G.page(M::GetMachinesRevokedResponseItem, query) { |q| request(method: :get, path: "/v1/machines/revoked", query: q) }
+      end
     end
 
     # /v1/mcp
@@ -3145,16 +3337,16 @@ module Atlas
       # Change a tool pack; omitted fields keep their value.
       # `PATCH /v1/mcp_gateways/{id}/packs/{packId}` (scope: machines:write)
       # @return [Atlas::Models::McpToolPack]
-      def update_pack(id, pack_id, name: UNSET, description: UNSET, tools: UNSET, agent_ids: UNSET, org_ids: UNSET, groups: UNSET)
+      def update_pack(id, pack_id, name: UNSET, description: UNSET, tools: UNSET, agent_ids: UNSET, org_ids: UNSET, groups: UNSET, idempotency_key: nil)
         body = G.compact("name" => name, "description" => description, "tools" => tools, "agent_ids" => agent_ids, "org_ids" => org_ids, "groups" => groups)
-        G.wrap(M::McpToolPack, request(method: :patch, path: "/v1/mcp_gateways/#{enc(id)}/packs/#{enc(pack_id)}", body: body))
+        G.wrap(M::McpToolPack, request(method: :patch, path: "/v1/mcp_gateways/#{enc(id)}/packs/#{enc(pack_id)}", body: body, idempotency_key: idempotency_key))
       end
 
       # Delete a tool pack from an MCP gateway.
       # `DELETE /v1/mcp_gateways/{id}/packs/{packId}` (scope: machines:write)
       # @return [Atlas::Models::McpToolPack2]
-      def delete_pack(id, pack_id)
-        G.wrap(M::McpToolPack2, request(method: :delete, path: "/v1/mcp_gateways/#{enc(id)}/packs/#{enc(pack_id)}"))
+      def delete_pack(id, pack_id, idempotency_key: nil)
+        G.wrap(M::McpToolPack2, request(method: :delete, path: "/v1/mcp_gateways/#{enc(id)}/packs/#{enc(pack_id)}", idempotency_key: idempotency_key))
       end
 
       # The pinned tool definitions of a gateway with `guard.pin_tools` on: each tool's description and schema is hashed when first seen; a changed definition is blocked (status changed) until approved.
@@ -3168,8 +3360,8 @@ module Atlas
       # Forget a pin; the next tools/list pins whatever the upstream serves then.
       # `DELETE /v1/mcp_gateways/{id}/pins/{tool}` (scope: machines:write)
       # @return [Hash]
-      def delete_pin(id, tool)
-        request(method: :delete, path: "/v1/mcp_gateways/#{enc(id)}/pins/#{enc(tool)}")
+      def delete_pin(id, tool, idempotency_key: nil)
+        request(method: :delete, path: "/v1/mcp_gateways/#{enc(id)}/pins/#{enc(tool)}", idempotency_key: idempotency_key)
       end
 
       # Accept the definition the upstream serves now for a tool whose definition changed. Unblocks the tool.
@@ -3205,16 +3397,16 @@ module Atlas
       # Change an upstream. Omitted fields keep their value; sending `openapi` recompiles the tools.
       # `PATCH /v1/mcp_gateways/{id}/upstreams/{upstreamId}` (scope: machines:write)
       # @return [Atlas::Models::McpGatewayUpstream]
-      def update_upstream(id, upstream_id, namespace: UNSET, kind: UNSET, action_names: UNSET, url: UNSET, openapi: UNSET, auth_kind: UNSET, authorization: UNSET, connection_id: UNSET, connection_owner: UNSET, connect_redirect_url: UNSET, stream: UNSET, enabled: UNSET)
+      def update_upstream(id, upstream_id, namespace: UNSET, kind: UNSET, action_names: UNSET, url: UNSET, openapi: UNSET, auth_kind: UNSET, authorization: UNSET, connection_id: UNSET, connection_owner: UNSET, connect_redirect_url: UNSET, stream: UNSET, enabled: UNSET, idempotency_key: nil)
         body = G.compact("namespace" => namespace, "kind" => kind, "action_names" => action_names, "url" => url, "openapi" => openapi, "auth_kind" => auth_kind, "authorization" => authorization, "connection_id" => connection_id, "connection_owner" => connection_owner, "connect_redirect_url" => connect_redirect_url, "stream" => stream, "enabled" => enabled)
-        G.wrap(M::McpGatewayUpstream, request(method: :patch, path: "/v1/mcp_gateways/#{enc(id)}/upstreams/#{enc(upstream_id)}", body: body))
+        G.wrap(M::McpGatewayUpstream, request(method: :patch, path: "/v1/mcp_gateways/#{enc(id)}/upstreams/#{enc(upstream_id)}", body: body, idempotency_key: idempotency_key))
       end
 
       # Remove an upstream and its tools from the gateway.
       # `DELETE /v1/mcp_gateways/{id}/upstreams/{upstreamId}` (scope: machines:write)
       # @return [Atlas::Models::McpGatewayUpstream2]
-      def delete_upstream(id, upstream_id)
-        G.wrap(M::McpGatewayUpstream2, request(method: :delete, path: "/v1/mcp_gateways/#{enc(id)}/upstreams/#{enc(upstream_id)}"))
+      def delete_upstream(id, upstream_id, idempotency_key: nil)
+        G.wrap(M::McpGatewayUpstream2, request(method: :delete, path: "/v1/mcp_gateways/#{enc(id)}/upstreams/#{enc(upstream_id)}", idempotency_key: idempotency_key))
       end
 
       # Reach the upstream with its own auth and list the tools it would add to the gateway. Never fails the request: `ok` is false with an `error` instead.
@@ -3246,8 +3438,8 @@ module Atlas
       # Remove a registry entry.
       # `DELETE /v1/mcp_registry/{id}` (scope: machines:write)
       # @return [Atlas::Models::McpRegistryEntry2]
-      def delete_mcp_registry(id)
-        G.wrap(M::McpRegistryEntry2, request(method: :delete, path: "/v1/mcp_registry/#{enc(id)}"))
+      def delete_mcp_registry(id, idempotency_key: nil)
+        G.wrap(M::McpRegistryEntry2, request(method: :delete, path: "/v1/mcp_registry/#{enc(id)}", idempotency_key: idempotency_key))
       end
 
       # Approve or reject a registry entry.
@@ -3264,6 +3456,22 @@ module Atlas
       include McpRegistryOperations
     end
 
+    # /v1/message_links
+    module MessageLinksOperations
+      # Mint a link to the hosted unsubscribe (type `unsubscribe`, needs `category`) or the hosted email-preference page (type `preferences`) for one address, for your own pages and mail. Atlas fills the same links in for you when you send with `unsubscribe: true` or put {{unsubscribe_url}} / {{preferences_url}} in a message. The link works for that address and category only and does not expire. Audited. → 201.
+      # `POST /v1/message_links` (scope: messaging:write)
+      # @return [Atlas::Models::MessageLink]
+      def create_message_link(email:, type:, category: UNSET, idempotency_key: nil)
+        body = G.compact("email" => email, "type" => type, "category" => category)
+        G.wrap(M::MessageLink, request(method: :post, path: "/v1/message_links", body: body, idempotency_key: idempotency_key))
+      end
+    end
+
+    # Namespace for /v1/message_links (`client.message_links`).
+    class MessageLinksApi < Atlas::Resources::Base
+      include MessageLinksOperations
+    end
+
     # /v1/message_receivers
     module MessageReceiversOperations
       # Where your providers report delivery: for each supported provider (SES, Brevo, Mailgun, SMTP2GO, Postmark, SendGrid, Resend, Twilio, Vonage, MessageBird, Plivo) the URL to register on your own provider account, how Atlas verifies the callbacks, whether the verification secret is set and when a callback last arrived. Callbacks move ledger statuses, suppress hard bounces and complaints and send email.delivered, email.bounced, email.complained and sms.delivered events. A key with only messaging:read sees the URLs without their tokens.
@@ -3277,16 +3485,16 @@ module Atlas
       # Store the secret Atlas verifies this provider's callbacks with (your Mailgun webhook signing key, SendGrid public key, Resend webhook secret, Vonage signature secret, MessageBird signing key, or the SNS topic ARNs to accept). Write-only: it is never returned. Twilio needs none (it uses the auth token of your SMS provider).
       # `PUT /v1/message_receivers/{provider}` (scope: messaging:write)
       # @return [Atlas::Models::MessageReceiver]
-      def set_message_receiver(provider, secret:)
+      def set_message_receiver(provider, secret:, idempotency_key: nil)
         body = G.compact("secret" => secret)
-        G.wrap(M::MessageReceiver, request(method: :put, path: "/v1/message_receivers/#{enc(provider)}", body: body))
+        G.wrap(M::MessageReceiver, request(method: :put, path: "/v1/message_receivers/#{enc(provider)}", body: body, idempotency_key: idempotency_key))
       end
 
       # Forget the stored verification secret of a provider.
       # `DELETE /v1/message_receivers/{provider}` (scope: messaging:write)
       # @return [Atlas::Models::MessageReceiver2]
-      def delete_message_receiver(provider)
-        G.wrap(M::MessageReceiver2, request(method: :delete, path: "/v1/message_receivers/#{enc(provider)}"))
+      def delete_message_receiver(provider, idempotency_key: nil)
+        G.wrap(M::MessageReceiver2, request(method: :delete, path: "/v1/message_receivers/#{enc(provider)}", idempotency_key: idempotency_key))
       end
     end
 
@@ -3300,9 +3508,17 @@ module Atlas
       # The message ledger: every email, SMS, WhatsApp, voice and push message sent through your own providers, newest first, with its status timeline (queued, sent, delivered, bounced, complained, failed, suppressed, blocked), the provider that took it and the id the provider gave it. Recipients are shown masked and as a keyed hash; the address is not stored. A provider's status callbacks (see GET /v1/message_receivers) move the status on. Kept for ledger_retention_days (default 90).
       # `GET /v1/messages` (scope: messaging:read)
       # @return [Page<Message>]
-      def list_messages(channel: UNSET, status: UNSET, template: UNSET, provider: UNSET, recipient: UNSET, since: UNSET, until_: UNSET, limit: UNSET, starting_after: UNSET)
-        query = G.compact("channel" => channel, "status" => status, "template" => template, "provider" => provider, "recipient" => recipient, "since" => since, "until" => until_, "limit" => limit, "starting_after" => starting_after)
+      def list_messages(channel: UNSET, status: UNSET, template: UNSET, category: UNSET, provider: UNSET, recipient: UNSET, since: UNSET, until_: UNSET, limit: UNSET, starting_after: UNSET)
+        query = G.compact("channel" => channel, "status" => status, "template" => template, "category" => category, "provider" => provider, "recipient" => recipient, "since" => since, "until" => until_, "limit" => limit, "starting_after" => starting_after)
         G.page(M::Message, query) { |q| request(method: :get, path: "/v1/messages", query: q) }
+      end
+
+      # Send a transactional email from your app through your own email provider and its failover. Give `to` (one address, or up to 10, each sent separately) and either `template` (the name or id of a template from POST /v1/notification_templates, with `data` variables) or `subject` with `html` and/or `text`, sent exactly as you wrote them. The message is recorded in the ledger (GET /v1/messages) with category `transactional`, your `category` and `tags`, and your provider's delivery callbacks fill in its timeline; bounces and complaints suppress the address like sign-in mail. An address on the suppression list is not sent to: the message is recorded with status `suppressed` and returned. Returns 422 when the instance has no email provider of its own (Atlas never sends your mail from its own sender). Accepts an Idempotency-Key. One address returns the message; several return a list.
+      # `POST /v1/messages` (scope: messaging:write)
+      # @return [Page<Message>]
+      def create_message(to:, template: UNSET, data: UNSET, subject: UNSET, html: UNSET, text: UNSET, tags: UNSET, reply_to: UNSET, from: UNSET, headers: UNSET, unsubscribe_url: UNSET, unsubscribe: UNSET, category: UNSET, locale: UNSET, idempotency_key: nil)
+        body = G.compact("to" => to, "template" => template, "data" => data, "subject" => subject, "html" => html, "text" => text, "tags" => tags, "reply_to" => reply_to, "from" => from, "headers" => headers, "unsubscribe_url" => unsubscribe_url, "unsubscribe" => unsubscribe, "category" => category, "locale" => locale)
+        G.page(M::Message, {}, envelope: M::PostMessagesResponseList) { |q| request(method: :post, path: "/v1/messages", query: q, body: body, idempotency_key: idempotency_key) }
       end
 
       # How many messages are in each status over the last `hours` (default 24, up to 720).
@@ -3339,16 +3555,16 @@ module Atlas
       # Route SMS to a country through a provider. `provider_id` is the id of your SMS provider or one of its fallback providers; the other providers still back it up when failover is on. Replaces an earlier route for the country.
       # `PUT /v1/messaging/country_routes` (scope: messaging:write)
       # @return [Atlas::Models::SmsCountryRoute]
-      def set_country_routes(country:, provider_id:)
+      def set_country_routes(country:, provider_id:, idempotency_key: nil)
         body = G.compact("country" => country, "provider_id" => provider_id)
-        G.wrap(M::SmsCountryRoute, request(method: :put, path: "/v1/messaging/country_routes", body: body))
+        G.wrap(M::SmsCountryRoute, request(method: :put, path: "/v1/messaging/country_routes", body: body, idempotency_key: idempotency_key))
       end
 
       # Remove the route for a country.
       # `DELETE /v1/messaging/country_routes/{country}` (scope: messaging:write)
       # @return [Atlas::Models::SmsCountryRoute2]
-      def delete_country_route(country)
-        G.wrap(M::SmsCountryRoute2, request(method: :delete, path: "/v1/messaging/country_routes/#{enc(country)}"))
+      def delete_country_route(country, idempotency_key: nil)
+        G.wrap(M::SmsCountryRoute2, request(method: :delete, path: "/v1/messaging/country_routes/#{enc(country)}", idempotency_key: idempotency_key))
       end
 
       # Messaging behaviour: automatic suppression, failover and ledger retention.
@@ -3361,9 +3577,9 @@ module Atlas
       # Change messaging behaviour. Send only the fields to change. Audited.
       # `PUT /v1/messaging/settings` (scope: messaging:write)
       # @return [Atlas::Models::MessagingSettings]
-      def set_settings(auto_suppress: UNSET, failover_enabled: UNSET, ledger_retention_days: UNSET)
+      def set_settings(auto_suppress: UNSET, failover_enabled: UNSET, ledger_retention_days: UNSET, idempotency_key: nil)
         body = G.compact("auto_suppress" => auto_suppress, "failover_enabled" => failover_enabled, "ledger_retention_days" => ledger_retention_days)
-        G.wrap(M::MessagingSettings, request(method: :put, path: "/v1/messaging/settings", body: body))
+        G.wrap(M::MessagingSettings, request(method: :put, path: "/v1/messaging/settings", body: body, idempotency_key: idempotency_key))
       end
 
       # The email suppression list, or one address with `email`.
@@ -3385,8 +3601,8 @@ module Atlas
       # Remove an address from the suppression list.
       # `DELETE /v1/messaging/suppressions/{email}` (scope: email_suppressions:write)
       # @return [Atlas::Models::EmailSuppression2]
-      def delete_suppression(email)
-        G.wrap(M::EmailSuppression2, request(method: :delete, path: "/v1/messaging/suppressions/#{enc(email)}"))
+      def delete_suppression(email, idempotency_key: nil)
+        G.wrap(M::EmailSuppression2, request(method: :delete, path: "/v1/messaging/suppressions/#{enc(email)}", idempotency_key: idempotency_key))
       end
     end
 
@@ -3395,8 +3611,8 @@ module Atlas
       # Configure the push sender used for push MFA and in-app sign-in approval. The body is discriminated by `transport`: `apns_fcm` (one row carrying APNS and/or FCM credentials; devices are routed by their platform) or `expo` (an Expo access token, write-only; delivers to ExponentPushToken devices registered with platform `expo`). Unknown or missing keys are refused with a 422 naming `config.<key>`. Secrets are write-only.
       # `PUT /v1/messaging_providers/push` (scope: messaging:write)
       # @return [nil]
-      def set_push(body)
-        request(method: :put, path: "/v1/messaging_providers/push", body: body)
+      def set_push(body, idempotency_key: nil)
+        request(method: :put, path: "/v1/messaging_providers/push", body: body, idempotency_key: idempotency_key)
       end
 
       # The fallback providers of a channel (`email`, `sms` or `push`), in the order they are tried after your own provider. `failover_order` lists `primary` then each active fallback.
@@ -3418,24 +3634,24 @@ module Atlas
       # Set the order of the channel's fallback providers. `ids` lists every fallback exactly once.
       # `PUT /v1/messaging_providers/{channel}/fallbacks/order` (scope: messaging:write)
       # @return [Page<MessagingFallbackProvider>]
-      def set_order(channel, ids:)
+      def set_order(channel, ids:, idempotency_key: nil)
         body = G.compact("ids" => ids)
-        G.page(M::MessagingFallbackProvider, {}, envelope: M::GetMessagingProvidersFallbacksResponseList) { |q| request(method: :put, path: "/v1/messaging_providers/#{enc(channel)}/fallbacks/order", query: q, body: body) }
+        G.page(M::MessagingFallbackProvider, {}, envelope: M::GetMessagingProvidersFallbacksResponseList) { |q| request(method: :put, path: "/v1/messaging_providers/#{enc(channel)}/fallbacks/order", query: q, body: body, idempotency_key: idempotency_key) }
       end
 
       # Change a fallback provider. An omitted secret keeps the stored one.
       # `PUT /v1/messaging_providers/{channel}/fallbacks/{id}` (scope: messaging:write)
       # @return [Atlas::Models::MessagingFallbackProvider]
-      def set_fallback(channel, id, transport: UNSET, from_address: UNSET, config: UNSET, position: UNSET, status: UNSET)
+      def set_fallback(channel, id, transport: UNSET, from_address: UNSET, config: UNSET, position: UNSET, status: UNSET, idempotency_key: nil)
         body = G.compact("transport" => transport, "from_address" => from_address, "config" => config, "position" => position, "status" => status)
-        G.wrap(M::MessagingFallbackProvider, request(method: :put, path: "/v1/messaging_providers/#{enc(channel)}/fallbacks/#{enc(id)}", body: body))
+        G.wrap(M::MessagingFallbackProvider, request(method: :put, path: "/v1/messaging_providers/#{enc(channel)}/fallbacks/#{enc(id)}", body: body, idempotency_key: idempotency_key))
       end
 
       # Remove a fallback provider, and any country route that pointed at it.
       # `DELETE /v1/messaging_providers/{channel}/fallbacks/{id}` (scope: messaging:write)
       # @return [Atlas::Models::MessagingFallbackProvider2]
-      def delete_fallback(channel, id)
-        G.wrap(M::MessagingFallbackProvider2, request(method: :delete, path: "/v1/messaging_providers/#{enc(channel)}/fallbacks/#{enc(id)}"))
+      def delete_fallback(channel, id, idempotency_key: nil)
+        G.wrap(M::MessagingFallbackProvider2, request(method: :delete, path: "/v1/messaging_providers/#{enc(channel)}/fallbacks/#{enc(id)}", idempotency_key: idempotency_key))
       end
     end
 
@@ -3472,16 +3688,16 @@ module Atlas
       # Change a running campaign: name, required factors, deadline (null removes it), nag interval or enforcement. The target is fixed; end the campaign and start another to change who it reaches.
       # `PATCH /v1/mfa_campaigns/{id}` (scope: mfa_campaigns:write)
       # @return [Atlas::Models::MfaCampaign]
-      def update_mfa_campaign(id, name: UNSET, required_factors: UNSET, grace_until: UNSET, nag_interval_days: UNSET, enforce: UNSET)
+      def update_mfa_campaign(id, name: UNSET, required_factors: UNSET, grace_until: UNSET, nag_interval_days: UNSET, enforce: UNSET, idempotency_key: nil)
         body = G.compact("name" => name, "required_factors" => required_factors, "grace_until" => grace_until, "nag_interval_days" => nag_interval_days, "enforce" => enforce)
-        G.wrap(M::MfaCampaign, request(method: :patch, path: "/v1/mfa_campaigns/#{enc(id)}", body: body))
+        G.wrap(M::MfaCampaign, request(method: :patch, path: "/v1/mfa_campaigns/#{enc(id)}", body: body, idempotency_key: idempotency_key))
       end
 
       # End a campaign now. The nag and the enforcement stop at once; the campaign and its numbers stay readable.
       # `DELETE /v1/mfa_campaigns/{id}` (scope: mfa_campaigns:write)
       # @return [Atlas::Models::MfaCampaign]
-      def delete_mfa_campaign(id)
-        G.wrap(M::MfaCampaign, request(method: :delete, path: "/v1/mfa_campaigns/#{enc(id)}"))
+      def delete_mfa_campaign(id, idempotency_key: nil)
+        G.wrap(M::MfaCampaign, request(method: :delete, path: "/v1/mfa_campaigns/#{enc(id)}", idempotency_key: idempotency_key))
       end
 
       # List the users a campaign has touched (nagged, exempted or given their own required factors), newest first. `limit` up to 500.
@@ -3502,9 +3718,9 @@ module Atlas
       # Set one user's own required factors and/or an exemption until a date. Send null to clear either. The user's own factors replace the campaign's for them.
       # `PUT /v1/mfa_campaigns/{id}/users/{user_id}` (scope: mfa_campaigns:write)
       # @return [Atlas::Models::MfaCampaignUser]
-      def set_user(id, user_id, required_factors: UNSET, exempt_until: UNSET)
+      def set_user(id, user_id, required_factors: UNSET, exempt_until: UNSET, idempotency_key: nil)
         body = G.compact("required_factors" => required_factors, "exempt_until" => exempt_until)
-        G.wrap(M::MfaCampaignUser, request(method: :put, path: "/v1/mfa_campaigns/#{enc(id)}/users/#{enc(user_id)}", body: body))
+        G.wrap(M::MfaCampaignUser, request(method: :put, path: "/v1/mfa_campaigns/#{enc(id)}/users/#{enc(user_id)}", body: body, idempotency_key: idempotency_key))
       end
     end
 
@@ -3538,12 +3754,20 @@ module Atlas
 
     # /v1/migrations
     module MigrationsOperations
-      # Where the move stands: imported users by credential type (bcrypt, argon2, scrypt, pbkdf2, other, social, none; imported = has an external_id), bridged sessions, imported legacy sessions still live, failed bridge attempts by reason, daily use per source, and `safe_to_delete_old_auth` with the blockers that keep it false (recent use, live sessions, an open dual-run window, an enabled bridge, or `no_enabled_source` when no bridge or verifier was ever enabled or used, so nothing has been proven quiet). `quiet_days` (default 14, max 90) sets how long the old auth must be unused.
+      # Where the move stands: imported users by credential type (bcrypt, argon2, scrypt, pbkdf2, other, social, none; imported = has an external_id), bridged sessions, imported legacy sessions still live, failed bridge attempts by reason, daily use per source, and `safe_to_delete_old_auth` with the blockers that keep it false (recent use, live sessions, an open dual-run window, an enabled bridge, `unmigrated_users` (imported users who never signed in on Atlas and hold no session; counted in `unmigrated_users` with a `unmigrated_user_sample` of ids), or `no_enabled_source` when no bridge or verifier was ever enabled or used, so nothing has been proven quiet). `quiet_days` (default 14, max 90) sets how long the old auth must be unused.
       # `GET /v1/migrations/status` (scope: legacy_auth:read)
       # @return [Atlas::Models::MigrationStatus]
-      def get_status(quiet_days: UNSET)
-        query = G.compact("quiet_days" => quiet_days)
+      def get_status(quiet_days: UNSET, accept_unmigrated: UNSET)
+        query = G.compact("quiet_days" => quiet_days, "accept_unmigrated" => accept_unmigrated)
         G.wrap(M::MigrationStatus, request(method: :get, path: "/v1/migrations/status", query: query))
+      end
+
+      # Bulk-import live legacy sessions (up to 1000 a call) so the bridge can answer from Atlas alone (`mode: session_table`) and close early: the old system no longer has to be reachable for a person to cross over. Each row names the legacy session (`token`, or its SHA-256 hex as `token_hash`), the person (an Atlas `user_id` or your `external_id`) and `expires_at`; `mfa_verified` carries a completed second factor. Rows that cannot be linked to a person or have expired are reported in `errors` (`user_not_found`, `session_expired`, `invalid_row`, `unknown_field`, `already_exchanged`), never guessed. Re-sending a row only refreshes it, so a retry is safe. `dry_run: true` validates and counts without writing.
+      # `POST /v1/migrations/{source}/sessions` (scope: legacy_auth:write)
+      # @return [Atlas::Models::MigrationSessionImport]
+      def create_session(source, sessions:, dry_run: UNSET, idempotency_key: nil)
+        body = G.compact("sessions" => sessions, "dry_run" => dry_run)
+        G.wrap(M::MigrationSessionImport, request(method: :post, path: "/v1/migrations/#{enc(source)}/sessions", body: body, idempotency_key: idempotency_key))
       end
 
       # Dual-run check: is this old `source` token valid? Answers only while the source's `dual_run_until` window is open (403 closed otherwise). Nothing is consumed and no session is created. Every call is counted per day in GET /v1/migrations/status. Returns `valid`, `reason` (invalid | expired | unavailable) and the mapped Atlas `user_id` when the user was imported.
@@ -3553,6 +3777,67 @@ module Atlas
         body = G.compact("token" => token)
         G.wrap(M::MigrationTokenCheck, request(method: :post, path: "/v1/migrations/#{enc(source)}/verify", body: body, idempotency_key: idempotency_key))
       end
+    end
+
+    # /v1/native_apps
+    module NativeAppsOperations
+      # List the registered native apps with their callback URLs.
+      # `GET /v1/native_apps` (scope: native_apps:read)
+      # @return [Page<NativeApp>]
+      def list_native_apps(limit: UNSET, starting_after: UNSET)
+        query = G.compact("limit" => limit, "starting_after" => starting_after)
+        G.page(M::NativeApp, query) { |q| request(method: :get, path: "/v1/native_apps", query: q) }
+      end
+
+      # Register a native app. A development app (platform development, no store identity) needs allowed_users (1 to 100) and expires_at (at most 90 days ahead) and may use exp:// callbacks on production. An ios app needs bundle_id and team_id; an android app needs package_name and sha256_cert_fingerprints; every app needs 1 to 10 callback_urls. The app is added to the Apple App Site Association and Android Digital Asset Links files served on the Frontend API host (https callbacks on that host become Universal / App Links) and to the passkey app origins. 409 when the same app is already registered.
+      # `POST /v1/native_apps` (scope: native_apps:write)
+      # @return [Atlas::Models::NativeApp]
+      def create_native_app(platform: UNSET, bundle_id: UNSET, team_id: UNSET, package_name: UNSET, sha256_cert_fingerprints: UNSET, callback_urls: UNSET, allowed_users: UNSET, expires_at: UNSET, idempotency_key: nil)
+        body = G.compact("platform" => platform, "bundle_id" => bundle_id, "team_id" => team_id, "package_name" => package_name, "sha256_cert_fingerprints" => sha256_cert_fingerprints, "callback_urls" => callback_urls, "allowed_users" => allowed_users, "expires_at" => expires_at)
+        G.wrap(M::NativeApp, request(method: :post, path: "/v1/native_apps", body: body, idempotency_key: idempotency_key))
+      end
+
+      # Read which registered native apps may use the instance publishable key (an empty list = any).
+      # `GET /v1/native_apps/publishable_key` (scope: native_apps:read)
+      # @return [Atlas::Models::NativeAppKeyRestriction]
+      def get_publishable_key()
+        G.wrap(M::NativeAppKeyRestriction, request(method: :get, path: "/v1/native_apps/publishable_key"))
+      end
+
+      # Restrict the publishable key to the listed native apps (an empty list removes the restriction). With a restriction, a native Frontend API request must send `X-Atlas-App-Id` with one of these ids (403 APP_NOT_ALLOWED otherwise); web requests, which carry an Origin header and no app id, are not affected. 400 NATIVE_APP_NOT_REGISTERED for an id that is not registered.
+      # `PUT /v1/native_apps/publishable_key` (scope: native_apps:write)
+      # @return [Atlas::Models::NativeAppKeyRestriction]
+      def set_publishable_key(app_ids:, idempotency_key: nil)
+        body = G.compact("app_ids" => app_ids)
+        G.wrap(M::NativeAppKeyRestriction, request(method: :put, path: "/v1/native_apps/publishable_key", body: body, idempotency_key: idempotency_key))
+      end
+
+      # Fetch one registered native app.
+      # `GET /v1/native_apps/{id}` (scope: native_apps:read)
+      # @return [Atlas::Models::NativeApp]
+      def get_native_app(id)
+        G.wrap(M::NativeApp, request(method: :get, path: "/v1/native_apps/#{enc(id)}"))
+      end
+
+      # Change a native app: only the fields you send change; callback_urls is replaced as a whole. The platform cannot be changed. A development app may have expires_at extended (at most 90 days from now) and allowed_users changed.
+      # `PATCH /v1/native_apps/{id}` (scope: native_apps:write)
+      # @return [Atlas::Models::NativeApp]
+      def update_native_app(id, platform: UNSET, bundle_id: UNSET, team_id: UNSET, package_name: UNSET, sha256_cert_fingerprints: UNSET, callback_urls: UNSET, allowed_users: UNSET, expires_at: UNSET, idempotency_key: nil)
+        body = G.compact("platform" => platform, "bundle_id" => bundle_id, "team_id" => team_id, "package_name" => package_name, "sha256_cert_fingerprints" => sha256_cert_fingerprints, "callback_urls" => callback_urls, "allowed_users" => allowed_users, "expires_at" => expires_at)
+        G.wrap(M::NativeApp, request(method: :patch, path: "/v1/native_apps/#{enc(id)}", body: body, idempotency_key: idempotency_key))
+      end
+
+      # Unregister a native app. Its callbacks stop working at once, and it is removed from the publishable key restriction.
+      # `DELETE /v1/native_apps/{id}` (scope: native_apps:write)
+      # @return [Atlas::Models::NativeApp2]
+      def delete_native_app(id, idempotency_key: nil)
+        G.wrap(M::NativeApp2, request(method: :delete, path: "/v1/native_apps/#{enc(id)}", idempotency_key: idempotency_key))
+      end
+    end
+
+    # Namespace for /v1/native_apps (`client.native_apps`).
+    class NativeAppsApi < Atlas::Resources::Base
+      include NativeAppsOperations
     end
 
     # /v1/oauth_application_types
@@ -3573,12 +3858,28 @@ module Atlas
 
     # /v1/oauth_clients
     module OauthClientsOperations
+      # The users who authorized one OAuth client, one cursor page at a time: user id, granted scopes, when they first authorized it and when it was last used. status is active (default), revoked or all. The path takes the oac_ id or the public client_id. The developer can read the same list at GET /oauth2/register/{client_id}/consents with the client's registration_access_token.
+      # `GET /v1/oauth_clients/{id}/consents` (scope: grants:read)
+      # @return [Page<OauthClientConsent>]
+      def list_consents(id, status: UNSET, limit: UNSET, starting_after: UNSET)
+        query = G.compact("status" => status, "limit" => limit, "starting_after" => starting_after)
+        G.page(M::OauthClientConsent, query, envelope: M::GetOauthClientsConsentsResponseList) { |q| request(method: :get, path: "/v1/oauth_clients/#{enc(id)}/consents", query: q) }
+      end
+
+      # Revoke the consents users gave one OAuth client, and their refresh and access tokens, the same way revoking a single grant does: every active consent, or only the users in user_ids. The app receives grant.revoked per user and the instance gets the usual token revocation events. Audited. Idempotent.
+      # `POST /v1/oauth_clients/{id}/consents/revoke` (scope: grants:write)
+      # @return [Atlas::Models::OauthClientConsentsRevocation]
+      def revoke_consent(id, user_ids: UNSET, idempotency_key: nil)
+        body = G.compact("user_ids" => user_ids)
+        G.wrap(M::OauthClientConsentsRevocation, request(method: :post, path: "/v1/oauth_clients/#{enc(id)}/consents/revoke", body: body, idempotency_key: idempotency_key))
+      end
+
       # Set who may use an application. `open` (default): any organization. `restricted`: only organizations granted access (and, when a grant lists roles, members holding them); a sign-in outside an entitled organization is refused with `access_denied` at the authorize endpoint.
       # `PUT /v1/oauth_clients/{id}/organization_access` (scope: oauth_clients:write)
       # @return [Atlas::Models::OauthApplicationOrgPolicy]
-      def set_organization_access(id, mode:)
+      def set_organization_access(id, mode:, idempotency_key: nil)
         body = G.compact("mode" => mode)
-        G.wrap(M::OauthApplicationOrgPolicy, request(method: :put, path: "/v1/oauth_clients/#{enc(id)}/organization_access", body: body))
+        G.wrap(M::OauthApplicationOrgPolicy, request(method: :put, path: "/v1/oauth_clients/#{enc(id)}/organization_access", body: body, idempotency_key: idempotency_key))
       end
 
       # The organizations that have access to an application, with the application's access mode.
@@ -3608,19 +3909,19 @@ module Atlas
       # Rename or enable / disable a token exchange profile.
       # `PATCH /v1/oauth_clients/{id}/token_exchange_profiles/{profileId}` (scope: oauth_clients:write)
       # @return [nil]
-      def update_token_exchange_profile(id, profile_id, name: UNSET, enabled: UNSET)
+      def update_token_exchange_profile(id, profile_id, name: UNSET, enabled: UNSET, idempotency_key: nil)
         body = G.compact("name" => name, "enabled" => enabled)
-        request(method: :patch, path: "/v1/oauth_clients/#{enc(id)}/token_exchange_profiles/#{enc(profile_id)}", body: body)
+        request(method: :patch, path: "/v1/oauth_clients/#{enc(id)}/token_exchange_profiles/#{enc(profile_id)}", body: body, idempotency_key: idempotency_key)
       end
 
       # Remove a token exchange profile.
       # `DELETE /v1/oauth_clients/{id}/token_exchange_profiles/{profileId}` (scope: oauth_clients:write)
       # @return [nil]
-      def delete_token_exchange_profile(id, profile_id)
-        request(method: :delete, path: "/v1/oauth_clients/#{enc(id)}/token_exchange_profiles/#{enc(profile_id)}")
+      def delete_token_exchange_profile(id, profile_id, idempotency_key: nil)
+        request(method: :delete, path: "/v1/oauth_clients/#{enc(id)}/token_exchange_profiles/#{enc(profile_id)}", idempotency_key: idempotency_key)
       end
 
-      # Per-day usage of one OAuth client for the last `days` days (1 to 90, default 30): token endpoint calls, access tokens issued, distinct active users, errors and rate-limited calls, with totals. The path takes the oac_ id or the public client_id. The developer can read the same report at GET /oauth2/register/{client_id}/usage with the client's registration_access_token.
+      # Per-day usage of one OAuth client for the last `days` days (1 to 90, default 30): token endpoint calls, access tokens issued, distinct active users, errors and rate-limited calls, with totals, a per-day errors_by_code breakdown and the latest error (code, endpoint, time). The path takes the oac_ id or the public client_id. The developer can read the same report at GET /oauth2/register/{client_id}/usage with the client's registration_access_token.
       # `GET /v1/oauth_clients/{id}/usage` (scope: oauth_clients:read)
       # @return [Page<GetOauthClientsUsageResponseItem>]
       def list_usage(id, days: UNSET, limit: UNSET, starting_after: UNSET)
@@ -3638,27 +3939,75 @@ module Atlas
       # Create or update the client's event webhook: a signed, retried endpoint that receives events about users who granted the client access, never the instance's own stream. user.updated carries only what the user's granted scopes allow (email with the email scope, name and picture with profile). enabled_events may also name your own types declared with PUT /v1/instance/app_event_types; those reach the client only for users who granted the type's required scope. The signing secret is returned once, on create (201). Audited.
       # `PUT /v1/oauth_clients/{id}/webhook` (scope: oauth_clients:write)
       # @return [Atlas::Models::OauthClientWebhook]
-      def set_webhook(id, url:, enabled_events: UNSET)
+      def set_webhook(id, url:, enabled_events: UNSET, idempotency_key: nil)
         body = G.compact("url" => url, "enabled_events" => enabled_events)
-        G.wrap(M::OauthClientWebhook, request(method: :put, path: "/v1/oauth_clients/#{enc(id)}/webhook", body: body))
+        G.wrap(M::OauthClientWebhook, request(method: :put, path: "/v1/oauth_clients/#{enc(id)}/webhook", body: body, idempotency_key: idempotency_key))
       end
 
       # Remove the client's event webhook. 204.
       # `DELETE /v1/oauth_clients/{id}/webhook` (scope: oauth_clients:write)
       # @return [nil]
-      def delete_webhook(id)
-        request(method: :delete, path: "/v1/oauth_clients/#{enc(id)}/webhook")
+      def delete_webhook(id, idempotency_key: nil)
+        request(method: :delete, path: "/v1/oauth_clients/#{enc(id)}/webhook", idempotency_key: idempotency_key)
       end
+    end
+
+    # /v1/oauth_consent_requests
+    module OauthConsentRequestsOperations
+      # The signed-in user is not the person who should grant this application access. Returns redirect_to: the application's original authorization request restarted with prompt=login, so the visitor signs in again (as another account) and a fresh consent challenge follows. Needs request_url on the challenge. Audited.
+      # `PUT /v1/oauth_consent_requests/switch_account` (scope: oauth_clients:write)
+      # @return [Atlas::Models::OauthConsentRedirect]
+      def set_switch_account(consent_challenge:, idempotency_key: nil)
+        query = G.compact("consent_challenge" => consent_challenge)
+        G.wrap(M::OauthConsentRedirect, request(method: :put, path: "/v1/oauth_consent_requests/switch_account", query: query, idempotency_key: idempotency_key))
+      end
+    end
+
+    # Namespace for /v1/oauth_consent_requests (`client.oauth_consent_requests`).
+    class OauthConsentRequestsApi < Atlas::Resources::Base
+      include OauthConsentRequestsOperations
+    end
+
+    # /v1/oauth_device_requests
+    module OauthDeviceRequestsOperations
+      # Read a device challenge: the signed-in user, the code they typed, and the application and scopes the device asks for. Your device_url page receives the challenge after the person enters their code.
+      # `GET /v1/oauth_device_requests` (scope: oauth_clients:read)
+      # @return [Atlas::Models::OauthDeviceRequest]
+      def get_oauth_device_requests(device_challenge:)
+        query = G.compact("device_challenge" => device_challenge)
+        G.wrap(M::OauthDeviceRequest, request(method: :get, path: "/v1/oauth_device_requests", query: query))
+      end
+
+      # Approve a device challenge. Following redirect_to (in the same browser) binds the signed-in user to the device code, records the consent and signs the device in. The link is single-use and valid for five minutes. Audited.
+      # `PUT /v1/oauth_device_requests/accept` (scope: oauth_clients:write)
+      # @return [Atlas::Models::OauthDeviceRedirect]
+      def set_accept(device_challenge:, idempotency_key: nil)
+        query = G.compact("device_challenge" => device_challenge)
+        G.wrap(M::OauthDeviceRedirect, request(method: :put, path: "/v1/oauth_device_requests/accept", query: query, idempotency_key: idempotency_key))
+      end
+
+      # Deny a device challenge. Following redirect_to marks the code denied, so the device's next poll gets access_denied. Audited.
+      # `PUT /v1/oauth_device_requests/reject` (scope: oauth_clients:write)
+      # @return [Atlas::Models::OauthDeviceRedirect]
+      def set_reject(device_challenge:, idempotency_key: nil)
+        query = G.compact("device_challenge" => device_challenge)
+        G.wrap(M::OauthDeviceRedirect, request(method: :put, path: "/v1/oauth_device_requests/reject", query: query, idempotency_key: idempotency_key))
+      end
+    end
+
+    # Namespace for /v1/oauth_device_requests (`client.oauth_device_requests`).
+    class OauthDeviceRequestsApi < Atlas::Resources::Base
+      include OauthDeviceRequestsOperations
     end
 
     # /v1/oauth_grants
     module OauthGrantsOperations
       # Carry over what users granted a previous OAuth provider: records their consent and stores refresh-token hashes (bcrypt or sha256, never the tokens). An app holding an old refresh token gets a new access token from the token endpoint once, with a new Atlas refresh token; from then on it rotates as usual. Import the clients first (POST /v1/oauth_clients with client_id). The response lists one result per submitted row (index, status imported|failed, client_id, user_id, refresh_tokens, message) plus totals. Failures are reported per row and never stop the others. With `?dry_run=true` every row is validated exactly as a real import would and the same report comes back at the top level with `dry_run: true`, but nothing is written. `would_return` carries the same report for older callers and is deprecated: read the top-level fields.
       # `POST /v1/oauth_grants/import` (scope: oauth_clients:write)
-      # @return [Atlas::Models::OauthGrantImport]
+      # @return [Page<PostOauthGrantsImportResponseItem>]
       def import(grants:, idempotency_key: nil)
         body = G.compact("grants" => grants)
-        G.wrap(M::OauthGrantImport, request(method: :post, path: "/v1/oauth_grants/import", body: body, idempotency_key: idempotency_key))
+        G.page(M::PostOauthGrantsImportResponseItem, {}, envelope: M::OauthGrantImport) { |q| request(method: :post, path: "/v1/oauth_grants/import", query: q, body: body, idempotency_key: idempotency_key) }
       end
     end
 
@@ -3695,31 +4044,31 @@ module Atlas
       # Change the name, the shared sector or the consent skip. Send only the fields to change. The domain cannot change: create a new publisher. Turning shared_sector off is refused while apps are attached. Audited; emits oauth_publisher.updated.
       # `PATCH /v1/oauth_publishers/{id}` (scope: oauth_clients:write)
       # @return [Atlas::Models::OauthPublisher]
-      def update_oauth_publisher(id, name: UNSET, shared_sector: UNSET, skip_consent: UNSET)
+      def update_oauth_publisher(id, name: UNSET, shared_sector: UNSET, skip_consent: UNSET, idempotency_key: nil)
         body = G.compact("name" => name, "shared_sector" => shared_sector, "skip_consent" => skip_consent)
-        G.wrap(M::OauthPublisher, request(method: :patch, path: "/v1/oauth_publishers/#{enc(id)}", body: body))
+        G.wrap(M::OauthPublisher, request(method: :patch, path: "/v1/oauth_publishers/#{enc(id)}", body: body, idempotency_key: idempotency_key))
       end
 
       # Delete a publisher. Its apps stay as they are (a shared-sector app keeps its sector, so no subject identifier changes). Refused with 409 while apps are attached to a shared-sector publisher. Audited; emits oauth_publisher.updated.
       # `DELETE /v1/oauth_publishers/{id}` (scope: oauth_clients:write)
       # @return [Atlas::Models::OauthPublisher2]
-      def delete_oauth_publisher(id)
-        G.wrap(M::OauthPublisher2, request(method: :delete, path: "/v1/oauth_publishers/#{enc(id)}"))
+      def delete_oauth_publisher(id, idempotency_key: nil)
+        G.wrap(M::OauthPublisher2, request(method: :delete, path: "/v1/oauth_publishers/#{enc(id)}", idempotency_key: idempotency_key))
       end
 
       # Attach an app (its public client_id) to a verified publisher. The app's homepage_url must be an https URL on the publisher's domain, and an app belongs to one publisher. With a shared sector the app must be pairwise and takes the publisher's sector; if it already has another sector, send allow_subject_change: true to confirm that users' subject identifiers in it change. Attaching an app already attached returns the publisher unchanged.
       # `PUT /v1/oauth_publishers/{id}/clients/{client_id}` (scope: oauth_clients:write)
       # @return [Atlas::Models::OauthPublisher]
-      def set_client(id, client_id, allow_subject_change: UNSET)
+      def set_client(id, client_id, allow_subject_change: UNSET, idempotency_key: nil)
         body = G.compact("allow_subject_change" => allow_subject_change)
-        G.wrap(M::OauthPublisher, request(method: :put, path: "/v1/oauth_publishers/#{enc(id)}/clients/#{enc(client_id)}", body: body))
+        G.wrap(M::OauthPublisher, request(method: :put, path: "/v1/oauth_publishers/#{enc(id)}/clients/#{enc(client_id)}", body: body, idempotency_key: idempotency_key))
       end
 
       # Detach an app from a publisher. The consent screen stops naming the publisher for it and its repeat consent is no longer shared; a shared sector it already took stays.
       # `DELETE /v1/oauth_publishers/{id}/clients/{client_id}` (scope: oauth_clients:write)
       # @return [Atlas::Models::OauthPublisher]
-      def delete_client(id, client_id)
-        G.wrap(M::OauthPublisher, request(method: :delete, path: "/v1/oauth_publishers/#{enc(id)}/clients/#{enc(client_id)}"))
+      def delete_client(id, client_id, idempotency_key: nil)
+        G.wrap(M::OauthPublisher, request(method: :delete, path: "/v1/oauth_publishers/#{enc(id)}/clients/#{enc(client_id)}", idempotency_key: idempotency_key))
       end
 
       # Look up the DNS TXT record and mark the publisher verified when it is there. A record that is gone un-verifies the publisher; a DNS lookup that fails for another reason changes nothing. record_found tells what this check saw. Audited as oauth_publisher.verified when the status changes.
@@ -3784,9 +4133,9 @@ module Atlas
       # Replace the stored assertions for a model version.
       # `PUT /v1/openfga/stores/{store}/assertions/{model}` (scope: fga:write)
       # @return [Hash]
-      def set_assertion(store, model, assertions: UNSET)
+      def set_assertion(store, model, assertions: UNSET, idempotency_key: nil)
         body = G.compact("assertions" => assertions)
-        request(method: :put, path: "/v1/openfga/stores/#{enc(store)}/assertions/#{enc(model)}", body: body)
+        request(method: :put, path: "/v1/openfga/stores/#{enc(store)}/assertions/#{enc(model)}", body: body, idempotency_key: idempotency_key)
       end
     end
 
@@ -3818,16 +4167,16 @@ module Atlas
       # Change a role set. Members already holding a role the set no longer lists keep it; only new assignments are checked.
       # `PATCH /v1/org_role_sets/{id}` (scope: organizations:write)
       # @return [Atlas::Models::OrgRoleSet]
-      def update_org_role_set(id, key: UNSET, name: UNSET, description: UNSET, role_keys: UNSET, default_role_key: UNSET)
+      def update_org_role_set(id, key: UNSET, name: UNSET, description: UNSET, role_keys: UNSET, default_role_key: UNSET, idempotency_key: nil)
         body = G.compact("key" => key, "name" => name, "description" => description, "role_keys" => role_keys, "default_role_key" => default_role_key)
-        G.wrap(M::OrgRoleSet, request(method: :patch, path: "/v1/org_role_sets/#{enc(id)}", body: body))
+        G.wrap(M::OrgRoleSet, request(method: :patch, path: "/v1/org_role_sets/#{enc(id)}", body: body, idempotency_key: idempotency_key))
       end
 
       # Delete a role set. 409 while an organization still uses it.
       # `DELETE /v1/org_role_sets/{id}` (scope: organizations:write)
       # @return [Atlas::Models::OrgRoleSet2]
-      def delete_org_role_set(id)
-        G.wrap(M::OrgRoleSet2, request(method: :delete, path: "/v1/org_role_sets/#{enc(id)}"))
+      def delete_org_role_set(id, idempotency_key: nil)
+        G.wrap(M::OrgRoleSet2, request(method: :delete, path: "/v1/org_role_sets/#{enc(id)}", idempotency_key: idempotency_key))
       end
     end
 
@@ -3864,16 +4213,16 @@ module Atlas
       # Change a template. Organizations already made from it are not touched.
       # `PATCH /v1/org_templates/{id}` (scope: organizations:write)
       # @return [Atlas::Models::OrgTemplate]
-      def update_org_template(id, key: UNSET, name: UNSET, description: UNSET, roles: UNSET, policy: UNSET, role_set: UNSET, default_role: UNSET, max_allowed_memberships: UNSET, seat_warn_percent: UNSET, public_metadata: UNSET, private_metadata: UNSET)
+      def update_org_template(id, key: UNSET, name: UNSET, description: UNSET, roles: UNSET, policy: UNSET, role_set: UNSET, default_role: UNSET, max_allowed_memberships: UNSET, seat_warn_percent: UNSET, public_metadata: UNSET, private_metadata: UNSET, idempotency_key: nil)
         body = G.compact("key" => key, "name" => name, "description" => description, "roles" => roles, "policy" => policy, "role_set" => role_set, "default_role" => default_role, "max_allowed_memberships" => max_allowed_memberships, "seat_warn_percent" => seat_warn_percent, "public_metadata" => public_metadata, "private_metadata" => private_metadata)
-        G.wrap(M::OrgTemplate, request(method: :patch, path: "/v1/org_templates/#{enc(id)}", body: body))
+        G.wrap(M::OrgTemplate, request(method: :patch, path: "/v1/org_templates/#{enc(id)}", body: body, idempotency_key: idempotency_key))
       end
 
       # Delete a template. Organizations made from it are not touched.
       # `DELETE /v1/org_templates/{id}` (scope: organizations:write)
       # @return [Atlas::Models::OrgTemplate2]
-      def delete_org_template(id)
-        G.wrap(M::OrgTemplate2, request(method: :delete, path: "/v1/org_templates/#{enc(id)}"))
+      def delete_org_template(id, idempotency_key: nil)
+        G.wrap(M::OrgTemplate2, request(method: :delete, path: "/v1/org_templates/#{enc(id)}", idempotency_key: idempotency_key))
       end
 
       # Create an organization from a template. The organization is created the normal way (hooks, slug rules, organization.created), then gets the template's custom roles, policy, role set and default role, seat settings and metadata. `public_metadata` and `private_metadata` merge over the template's. Honours Idempotency-Key.
@@ -3911,8 +4260,8 @@ module Atlas
       # Revoke a connection (or a pending invitation). The partner organization loses access to the application.
       # `DELETE /v1/organization_connections/{id}` (scope: organizations:write)
       # @return [Atlas::Models::OrganizationConnection]
-      def delete_organization_connection(id)
-        G.wrap(M::OrganizationConnection, request(method: :delete, path: "/v1/organization_connections/#{enc(id)}"))
+      def delete_organization_connection(id, idempotency_key: nil)
+        G.wrap(M::OrganizationConnection, request(method: :delete, path: "/v1/organization_connections/#{enc(id)}", idempotency_key: idempotency_key))
       end
 
       # Accept an invitation with its token: the partner organization gains access to the application. The token works once.
@@ -3929,6 +4278,22 @@ module Atlas
       include OrganizationConnectionsOperations
     end
 
+    # /v1/organization_invitations
+    module OrganizationInvitationsOperations
+      # Search organization invitations across every organization of the instance, newest first: by invited `email` (exact, case-insensitive), `status` or `organization_id`. Each row carries the organization name and slug. Secret key only (it is a lookup by address). Pages with `limit` and `starting_after`.
+      # `GET /v1/organization_invitations` (scope: organizations:read)
+      # @return [Page<Hash>]
+      def list_organization_invitations(email: UNSET, status: UNSET, organization_id: UNSET, limit: UNSET, starting_after: UNSET)
+        query = G.compact("email" => email, "status" => status, "organization_id" => organization_id, "limit" => limit, "starting_after" => starting_after)
+        G.page(nil, query) { |q| request(method: :get, path: "/v1/organization_invitations", query: q) }
+      end
+    end
+
+    # Namespace for /v1/organization_invitations (`client.organization_invitations`).
+    class OrganizationInvitationsApi < Atlas::Resources::Base
+      include OrganizationInvitationsOperations
+    end
+
     # /v1/organizations
     module OrganizationsOperations
       # Retrieve one of the organization's application webhook endpoints, with its delivery health (failing_since, disabled_at, auto_disable rule).
@@ -3941,16 +4306,16 @@ module Atlas
       # Update the url, subscribed app event types, description or active flag. Setting active: true on an auto-disabled endpoint re-enables it; replay then re-sends what it missed.
       # `PATCH /v1/organizations/{id}/app_webhook_endpoints/{endpointId}` (scope: webhooks:write)
       # @return [Atlas::Models::WebhookEndpoint]
-      def update_app_webhook_endpoint(id, endpoint_id, url: UNSET, enabled_events: UNSET, description: UNSET, active: UNSET)
+      def update_app_webhook_endpoint(id, endpoint_id, url: UNSET, enabled_events: UNSET, description: UNSET, active: UNSET, idempotency_key: nil)
         body = G.compact("url" => url, "enabled_events" => enabled_events, "description" => description, "active" => active)
-        G.wrap(M::WebhookEndpoint, request(method: :patch, path: "/v1/organizations/#{enc(id)}/app_webhook_endpoints/#{enc(endpoint_id)}", body: body))
+        G.wrap(M::WebhookEndpoint, request(method: :patch, path: "/v1/organizations/#{enc(id)}/app_webhook_endpoints/#{enc(endpoint_id)}", body: body, idempotency_key: idempotency_key))
       end
 
       # Delete an application webhook endpoint and its delivery log. An id from another organization is a 404.
       # `DELETE /v1/organizations/{id}/app_webhook_endpoints/{endpointId}` (scope: webhooks:write)
       # @return [Atlas::Models::WebhookEndpoint2]
-      def delete_app_webhook_endpoint(id, endpoint_id)
-        G.wrap(M::WebhookEndpoint2, request(method: :delete, path: "/v1/organizations/#{enc(id)}/app_webhook_endpoints/#{enc(endpoint_id)}"))
+      def delete_app_webhook_endpoint(id, endpoint_id, idempotency_key: nil)
+        G.wrap(M::WebhookEndpoint2, request(method: :delete, path: "/v1/organizations/#{enc(id)}/app_webhook_endpoints/#{enc(endpoint_id)}", idempotency_key: idempotency_key))
       end
 
       # The endpoint's delivery log: payload, response and retry state for each attempt, filterable by status, app event type and time.
@@ -4010,16 +4375,16 @@ module Atlas
       # Give an organization access to an application (by client id or id), optionally limited to some organization roles. Idempotent; send `enabled: false` to pause access without removing it. Only matters while the application is `restricted`.
       # `PUT /v1/organizations/{id}/applications/{clientId}` (scope: organizations:write)
       # @return [Atlas::Models::OrganizationApplication]
-      def set_application(id, client_id, roles: UNSET, enabled: UNSET)
+      def set_application(id, client_id, roles: UNSET, enabled: UNSET, idempotency_key: nil)
         body = G.compact("roles" => roles, "enabled" => enabled)
-        G.wrap(M::OrganizationApplication, request(method: :put, path: "/v1/organizations/#{enc(id)}/applications/#{enc(client_id)}", body: body))
+        G.wrap(M::OrganizationApplication, request(method: :put, path: "/v1/organizations/#{enc(id)}/applications/#{enc(client_id)}", body: body, idempotency_key: idempotency_key))
       end
 
       # Take an organization's access to an application away.
       # `DELETE /v1/organizations/{id}/applications/{clientId}` (scope: organizations:write)
       # @return [Atlas::Models::OrganizationApplication2]
-      def delete_application(id, client_id)
-        G.wrap(M::OrganizationApplication2, request(method: :delete, path: "/v1/organizations/#{enc(id)}/applications/#{enc(client_id)}"))
+      def delete_application(id, client_id, idempotency_key: nil)
+        G.wrap(M::OrganizationApplication2, request(method: :delete, path: "/v1/organizations/#{enc(id)}/applications/#{enc(client_id)}", idempotency_key: idempotency_key))
       end
 
       # The organization's audit trail: actions on the organization or naming it. A page, newest first, or with `format=jsonl` the whole trail as newline-delimited JSON for download (capped at 100000 rows, then a truncated marker). Filter with `action` (exact, or a prefix ending in "."), `from` and `to` (ISO dates).
@@ -4086,9 +4451,9 @@ module Atlas
       # Create or update a membership. Body: `role` (required), `role_source` (optional, as on PATCH), and the seat's own `public_metadata`, `private_metadata`, `permissions` (extra permission keys that join org_permissions in the session token) and `allowed_sign_in_methods` (a session signed in another way mints without this organization's claims). 201 when it adds the member, 200 when it changes the role. When a directory (SCIM, SSO or LDAP) manages the existing role and `role_source` does not name that same source, nothing changes and the answer is 200 with `unchanged: true` and the current `role_source`. Emits organizationMembership.created or organizationMembership.updated. Accepts Idempotency-Key.
       # `PUT /v1/organizations/{id}/memberships/{userId}` (scope: organizations:write)
       # @return [Atlas::Models::OrganizationMembership2]
-      def set_membership(id, user_id, role:, role_source: UNSET, public_metadata: UNSET, private_metadata: UNSET, permissions: UNSET, allowed_sign_in_methods: UNSET, expires_at: UNSET)
+      def set_membership(id, user_id, role:, role_source: UNSET, public_metadata: UNSET, private_metadata: UNSET, permissions: UNSET, allowed_sign_in_methods: UNSET, expires_at: UNSET, idempotency_key: nil)
         body = G.compact("role" => role, "role_source" => role_source, "public_metadata" => public_metadata, "private_metadata" => private_metadata, "permissions" => permissions, "allowed_sign_in_methods" => allowed_sign_in_methods, "expires_at" => expires_at)
-        G.wrap(M::OrganizationMembership2, request(method: :put, path: "/v1/organizations/#{enc(id)}/memberships/#{enc(user_id)}", body: body))
+        G.wrap(M::OrganizationMembership2, request(method: :put, path: "/v1/organizations/#{enc(id)}/memberships/#{enc(user_id)}", body: body, idempotency_key: idempotency_key))
       end
 
       # Does this session meet THIS organization's MFA policy? The same check the token mint runs for the active organization, answered for any organization (Atlas id or external id), so an app that acts in a per-request organization need not make it the active one. A non-member answers `member: false, ok: false`. 404 for an unknown organization or a session of another instance.
@@ -4109,9 +4474,9 @@ module Atlas
       # Point an organization at a role set and/or give it its own default role (null clears either). Adding a member, accepting an invitation or changing a role to one outside the set is refused with 422 ROLE_NOT_IN_ROLE_SET; org:admin and the organization's own custom roles are always allowed, and directory syncs report what the directory says. Existing members are not changed.
       # `PUT /v1/organizations/{id}/role_policy` (scope: organizations:write)
       # @return [Atlas::Models::OrganizationRolePolicy]
-      def set_role_policy(id, role_set: UNSET, default_role: UNSET)
+      def set_role_policy(id, role_set: UNSET, default_role: UNSET, idempotency_key: nil)
         body = G.compact("role_set" => role_set, "default_role" => default_role)
-        G.wrap(M::OrganizationRolePolicy, request(method: :put, path: "/v1/organizations/#{enc(id)}/role_policy", body: body))
+        G.wrap(M::OrganizationRolePolicy, request(method: :put, path: "/v1/organizations/#{enc(id)}/role_policy", body: body, idempotency_key: idempotency_key))
       end
 
       # The requests the organization's directory sent to the SCIM endpoint, newest first, kept 30 days: method, path, resource, the status Atlas answered, why a failed one failed, the source IP and the duration. Never the request body. Includes requests refused by a token's IP allow-list. Filter with status (ok or error), token_id, resource and since; page with limit and starting_after.
@@ -4132,9 +4497,9 @@ module Atlas
       # Set the seat limit (max_allowed_memberships; null = unlimited) and the warning level. Lowering the limit below the members already seated removes nobody; new seats are refused. Emits organization.seats_low when used seats reach warn_percent of the limit and organization.seat_limit_reached when the limit is reached or someone is turned away, each once per crossing.
       # `PUT /v1/organizations/{id}/seats` (scope: organizations:write)
       # @return [Atlas::Models::OrganizationSeats]
-      def set_seats(id, limit: UNSET, warn_percent: UNSET)
+      def set_seats(id, limit: UNSET, warn_percent: UNSET, idempotency_key: nil)
         body = G.compact("limit" => limit, "warn_percent" => warn_percent)
-        G.wrap(M::OrganizationSeats, request(method: :put, path: "/v1/organizations/#{enc(id)}/seats", body: body))
+        G.wrap(M::OrganizationSeats, request(method: :put, path: "/v1/organizations/#{enc(id)}/seats", body: body, idempotency_key: idempotency_key))
       end
 
       # Redeliver one past delivery as a fresh attempt (same event id). 409 when the event has passed its 90-day retention; a delivery of another endpoint is a 404.
@@ -4197,14 +4562,560 @@ module Atlas
       # End a campaign now. The prompt stops at once; the campaign and its numbers stay readable.
       # `DELETE /v1/passkey_campaigns/{id}` (scope: passkey_campaigns:write)
       # @return [Atlas::Models::PasskeyCampaign]
-      def delete_passkey_campaign(id)
-        G.wrap(M::PasskeyCampaign, request(method: :delete, path: "/v1/passkey_campaigns/#{enc(id)}"))
+      def delete_passkey_campaign(id, idempotency_key: nil)
+        G.wrap(M::PasskeyCampaign, request(method: :delete, path: "/v1/passkey_campaigns/#{enc(id)}", idempotency_key: idempotency_key))
       end
     end
 
     # Namespace for /v1/passkey_campaigns (`client.passkey_campaigns`).
     class PasskeyCampaignsApi < Atlas::Resources::Base
       include PasskeyCampaignsOperations
+    end
+
+    # /v1/pca
+    module PcaOperations
+      # The action registry of the instance: namespaces with their active version and counts, publisher and reviewer keys.
+      # `GET /v1/pca/action-registry` (scope: pca:read)
+      # @return [Atlas::Models::PcaActionRegistry]
+      def get_action_registry()
+        G.wrap(M::PcaActionRegistry, request(method: :get, path: "/v1/pca/action-registry"))
+      end
+
+      # Search the active actions by text, state and namespace.
+      # `GET /v1/pca/action-registry/actions` (scope: pca:read)
+      # @return [Page<GetPcaActionRegistryActionsResponseItem>]
+      def list_actions(q: UNSET, state: UNSET, ns: UNSET, limit: UNSET, starting_after: UNSET)
+        query = G.compact("q" => q, "state" => state, "ns" => ns, "limit" => limit, "starting_after" => starting_after)
+        G.page(M::GetPcaActionRegistryActionsResponseItem, query) { |q| request(method: :get, path: "/v1/pca/action-registry/actions", query: q) }
+      end
+
+      # One action: policy card, effective profile, business rules and history.
+      # `GET /v1/pca/action-registry/actions/{verb}` (scope: pca:read)
+      # @return [Atlas::Models::PcaAction]
+      def get_action(verb)
+        G.wrap(M::PcaAction, request(method: :get, path: "/v1/pca/action-registry/actions/#{enc(verb)}"))
+      end
+
+      # Open a published action for review: its active definition and business rules become a draft (409 when one already exists), so an action published unconfirmed can be confirmed. Takes no body. Audited.
+      # `POST /v1/pca/action-registry/actions/{verb}/review` (scope: pca:write)
+      # @return [Atlas::Models::PostPcaActionRegistryActionsReviewResponse]
+      def review_action(verb, body, idempotency_key: nil)
+        G.wrap(M::PostPcaActionRegistryActionsReviewResponse, request(method: :post, path: "/v1/pca/action-registry/actions/#{enc(verb)}/review", body: body, idempotency_key: idempotency_key))
+      end
+
+      # The review queue: drafts with their review view, policy card, lint, business rules in plain sentences and the diff against the active version, the riskiest first.
+      # `GET /v1/pca/action-registry/drafts` (scope: pca:read)
+      # @return [Page<PostPcaActionRegistryActionsReviewResponse>]
+      def list_drafts(ns: UNSET, limit: UNSET, starting_after: UNSET)
+        query = G.compact("ns" => ns, "limit" => limit, "starting_after" => starting_after)
+        G.page(M::PostPcaActionRegistryActionsReviewResponse, query) { |q| request(method: :get, path: "/v1/pca/action-registry/drafts", query: q) }
+      end
+
+      # One draft with its review view.
+      # `GET /v1/pca/action-registry/drafts/{verb}` (scope: pca:read)
+      # @return [Atlas::Models::PostPcaActionRegistryActionsReviewResponse]
+      def get_draft(verb)
+        G.wrap(M::PostPcaActionRegistryActionsReviewResponse, request(method: :get, path: "/v1/pca/action-registry/drafts/#{enc(verb)}"))
+      end
+
+      # Edit a draft (title, description, effects, params, reversibility, compensates, traits, business rules). Re-validated; any edit drops a confirmation and a rules review. Audited.
+      # `PATCH /v1/pca/action-registry/drafts/{verb}` (scope: pca:write)
+      # @return [Atlas::Models::PostPcaActionRegistryActionsReviewResponse]
+      def update_draft(verb, title: UNSET, description: UNSET, effects: UNSET, params: UNSET, reversibility: UNSET, compensates: UNSET, traits: UNSET, rules: UNSET, idempotency_key: nil)
+        body = G.compact("title" => title, "description" => description, "effects" => effects, "params" => params, "reversibility" => reversibility, "compensates" => compensates, "traits" => traits, "rules" => rules)
+        G.wrap(M::PostPcaActionRegistryActionsReviewResponse, request(method: :patch, path: "/v1/pca/action-registry/drafts/#{enc(verb)}", body: body, idempotency_key: idempotency_key))
+      end
+
+      # Remove a draft from the review queue. Audited.
+      # `DELETE /v1/pca/action-registry/drafts/{verb}` (scope: pca:write)
+      # @return [Atlas::Models::PcaActionDraft]
+      def delete_draft(verb, idempotency_key: nil)
+        G.wrap(M::PcaActionDraft, request(method: :delete, path: "/v1/pca/action-registry/drafts/#{enc(verb)}", idempotency_key: idempotency_key))
+      end
+
+      # Confirm a draft: the reviewer's signed attestation (and, for widened rules, a signed rules review), with a passkey assertion over a challenge committing to exactly those signatures. The passkey must be an active credential of an active reviewer whose pinned reviewer key signed; a publisher key never confirms. Audited.
+      # `POST /v1/pca/action-registry/drafts/{verb}/confirm` (scope: pca:write)
+      # @return [Atlas::Models::PostPcaActionRegistryActionsReviewResponse]
+      def confirm_draft(verb, attestation:, assertion:, rules_review: UNSET, idempotency_key: nil)
+        body = G.compact("attestation" => attestation, "rules_review" => rules_review, "assertion" => assertion)
+        G.wrap(M::PostPcaActionRegistryActionsReviewResponse, request(method: :post, path: "/v1/pca/action-registry/drafts/#{enc(verb)}/confirm", body: body, idempotency_key: idempotency_key))
+      end
+
+      # Import actions from a source: a URL the server fetches (https, public addresses only, at most 8 MiB; MCP servers are read with initialize + tools/list) or pasted text. Every result is unreviewed or suggested and lands as a draft; with track, the URL is kept as a source. Audited.
+      # `POST /v1/pca/action-registry/imports` (scope: pca:write)
+      # @return [Atlas::Models::PcaActionImport]
+      def create_import(ns:, from:, url: UNSET, source: UNSET, verb: UNSET, track: UNSET, schedule: UNSET, idempotency_key: nil)
+        body = G.compact("ns" => ns, "from" => from, "url" => url, "source" => source, "verb" => verb, "track" => track, "schedule" => schedule)
+        G.wrap(M::PcaActionImport, request(method: :post, path: "/v1/pca/action-registry/imports", body: body, idempotency_key: idempotency_key))
+      end
+
+      # The semantic diff between two stored versions, and whether the move needs a reviewer.
+      # `GET /v1/pca/action-registry/namespaces/{ns}/diff` (scope: pca:read)
+      # @return [Atlas::Models::GetPcaActionRegistryNamespacesDiffResponse]
+      def get_diff(ns, from:, to:)
+        query = G.compact("from" => from, "to" => to)
+        G.wrap(M::GetPcaActionRegistryNamespacesDiffResponse, request(method: :get, path: "/v1/pca/action-registry/namespaces/#{enc(ns)}/diff", query: query))
+      end
+
+      # Activate and pin a stored version (later publishes are staged). Audited.
+      # `PUT /v1/pca/action-registry/namespaces/{ns}/pin` (scope: pca:write)
+      # @return [Atlas::Models::PcaActionHead]
+      def set_pin(ns, version:, idempotency_key: nil)
+        body = G.compact("version" => version)
+        G.wrap(M::PcaActionHead, request(method: :put, path: "/v1/pca/action-registry/namespaces/#{enc(ns)}/pin", body: body, idempotency_key: idempotency_key))
+      end
+
+      # Unpin a namespace (later publishes activate again). Audited.
+      # `DELETE /v1/pca/action-registry/namespaces/{ns}/pin` (scope: pca:write)
+      # @return [Atlas::Models::PcaActionHead]
+      def delete_pin(ns, idempotency_key: nil)
+        G.wrap(M::PcaActionHead, request(method: :delete, path: "/v1/pca/action-registry/namespaces/#{enc(ns)}/pin", idempotency_key: idempotency_key))
+      end
+
+      # The version history of a namespace.
+      # `GET /v1/pca/action-registry/namespaces/{ns}/versions` (scope: pca:read)
+      # @return [Page<GetPcaActionRegistryNamespacesVersionsResponseItem>]
+      def list_versions(ns, limit: UNSET, starting_after: UNSET)
+        query = G.compact("limit" => limit, "starting_after" => starting_after)
+        G.page(M::GetPcaActionRegistryNamespacesVersionsResponseItem, query) { |q| request(method: :get, path: "/v1/pca/action-registry/namespaces/#{enc(ns)}/versions", query: q) }
+      end
+
+      # One stored version: pack, rules, traits, deprecated actions and changes.
+      # `GET /v1/pca/action-registry/namespaces/{ns}/versions/{version}` (scope: pca:read)
+      # @return [Atlas::Models::PcaActionVersion]
+      def get_version(ns, version)
+        G.wrap(M::PcaActionVersion, request(method: :get, path: "/v1/pca/action-registry/namespaces/#{enc(ns)}/versions/#{enc(version)}"))
+      end
+
+      # Publish a signed pack (with business rules and custom traits) as the next version of its namespace. 409 when it widens without a reviewer. Audited.
+      # `POST /v1/pca/action-registry/packs` (scope: pca:write)
+      # @return [Atlas::Models::PcaActionVersion2]
+      def create_pack(pack:, rules: UNSET, traits: UNSET, idempotency_key: nil)
+        body = G.compact("pack" => pack, "rules" => rules, "traits" => traits)
+        G.wrap(M::PcaActionVersion2, request(method: :post, path: "/v1/pca/action-registry/packs", body: body, idempotency_key: idempotency_key))
+      end
+
+      # Publish the drafts of a namespace as its next version: the active actions overlaid with the drafts (removal drafts deprecate their action), the business rules and rules reviews, signed with the instance's publisher key. 409 (reason_code widen_unreviewed) when an action or its rules widen without a reviewer's signature. Audited.
+      # `POST /v1/pca/action-registry/publish` (scope: pca:write)
+      # @return [Atlas::Models::PcaActionVersion2]
+      def publish_action_registry(ns:, version: UNSET, idempotency_key: nil)
+        body = G.compact("ns" => ns, "version" => version)
+        G.wrap(M::PcaActionVersion2, request(method: :post, path: "/v1/pca/action-registry/publish", body: body, idempotency_key: idempotency_key))
+      end
+
+      # Pin a publisher key (kid, Ed25519 public key). Audited.
+      # `POST /v1/pca/action-registry/publisher-keys` (scope: pca:write)
+      # @return [Atlas::Models::PcaActionPublisherKey]
+      def create_publisher_key(kid:, pk:, display_name: UNSET, idempotency_key: nil)
+        body = G.compact("kid" => kid, "pk" => pk, "display_name" => display_name)
+        G.wrap(M::PcaActionPublisherKey, request(method: :post, path: "/v1/pca/action-registry/publisher-keys", body: body, idempotency_key: idempotency_key))
+      end
+
+      # Revoke a publisher key. Audited.
+      # `DELETE /v1/pca/action-registry/publisher-keys/{kid}` (scope: pca:write)
+      # @return [Hash]
+      def delete_publisher_key(kid, idempotency_key: nil)
+        request(method: :delete, path: "/v1/pca/action-registry/publisher-keys/#{enc(kid)}", idempotency_key: idempotency_key)
+      end
+
+      # The reviewers who may confirm action definitions, with their keys and passkeys.
+      # `GET /v1/pca/action-registry/reviewers` (scope: pca:read)
+      # @return [Page<PcaActionReviewer>]
+      def list_reviewers(limit: UNSET, starting_after: UNSET)
+        query = G.compact("limit" => limit, "starting_after" => starting_after)
+        G.page(M::PcaActionReviewer, query) { |q| request(method: :get, path: "/v1/pca/action-registry/reviewers", query: q) }
+      end
+
+      # Create a single-use reviewer enrolment link (24 hours). The reviewer creates a passkey and a reviewer key on the hosted page; the key is pinned with the reviewer role. Audited.
+      # `POST /v1/pca/action-registry/reviewers/enrolments` (scope: pca:write)
+      # @return [Atlas::Models::PcaActionReviewerEnrolment]
+      def create_enrolment(display_name: UNSET, email: UNSET, user_id: UNSET, idempotency_key: nil)
+        body = G.compact("display_name" => display_name, "email" => email, "user_id" => user_id)
+        G.wrap(M::PcaActionReviewerEnrolment, request(method: :post, path: "/v1/pca/action-registry/reviewers/enrolments", body: body, idempotency_key: idempotency_key))
+      end
+
+      # Remove a reviewer: the reviewer key is unpinned (its confirmations stop counting) and every passkey revoked. Audited.
+      # `DELETE /v1/pca/action-registry/reviewers/{id}` (scope: pca:write)
+      # @return [Atlas::Models::PcaActionReviewer]
+      def delete_reviewer(id, idempotency_key: nil)
+        G.wrap(M::PcaActionReviewer, request(method: :delete, path: "/v1/pca/action-registry/reviewers/#{enc(id)}", idempotency_key: idempotency_key))
+      end
+
+      # The tracked import sources, with their schedule and last sync.
+      # `GET /v1/pca/action-registry/sources` (scope: pca:read)
+      # @return [Page<PcaActionSource>]
+      def list_sources(limit: UNSET, starting_after: UNSET)
+        query = G.compact("limit" => limit, "starting_after" => starting_after)
+        G.page(M::PcaActionSource, query) { |q| request(method: :get, path: "/v1/pca/action-registry/sources", query: q) }
+      end
+
+      # Track a source for manual or scheduled (hourly / daily) sync. Audited.
+      # `POST /v1/pca/action-registry/sources` (scope: pca:write)
+      # @return [Atlas::Models::PcaActionSource]
+      def create_source(ns:, from:, url:, verb: UNSET, schedule: UNSET, idempotency_key: nil)
+        body = G.compact("ns" => ns, "from" => from, "url" => url, "verb" => verb, "schedule" => schedule)
+        G.wrap(M::PcaActionSource, request(method: :post, path: "/v1/pca/action-registry/sources", body: body, idempotency_key: idempotency_key))
+      end
+
+      # Change a source: URL, verb (jsonschema) or schedule. Audited.
+      # `PATCH /v1/pca/action-registry/sources/{id}` (scope: pca:write)
+      # @return [Atlas::Models::PcaActionSource]
+      def update_source(id, url: UNSET, verb: UNSET, schedule: UNSET, idempotency_key: nil)
+        body = G.compact("url" => url, "verb" => verb, "schedule" => schedule)
+        G.wrap(M::PcaActionSource, request(method: :patch, path: "/v1/pca/action-registry/sources/#{enc(id)}", body: body, idempotency_key: idempotency_key))
+      end
+
+      # Stop tracking a source (its drafts stay in the queue). Audited.
+      # `DELETE /v1/pca/action-registry/sources/{id}` (scope: pca:write)
+      # @return [Atlas::Models::PcaActionSource2]
+      def delete_source(id, idempotency_key: nil)
+        G.wrap(M::PcaActionSource2, request(method: :delete, path: "/v1/pca/action-registry/sources/#{enc(id)}", idempotency_key: idempotency_key))
+      end
+
+      # Sync a source now: added and changed operations become unreviewed drafts, removed ones removal drafts; unchanged ones are left as they are. Audited.
+      # `POST /v1/pca/action-registry/sources/{id}/sync` (scope: pca:write)
+      # @return [Atlas::Models::PcaActionSync]
+      def sync_source(id, body, idempotency_key: nil)
+        G.wrap(M::PcaActionSync, request(method: :post, path: "/v1/pca/action-registry/sources/#{enc(id)}/sync", body: body, idempotency_key: idempotency_key))
+      end
+
+      # The starter packs (e-commerce, fintech, healthcare, SaaS admin, developer tools).
+      # `GET /v1/pca/action-registry/templates` (scope: pca:read)
+      # @return [Page<GetPcaActionRegistryTemplatesResponseItem>]
+      def list_templates(limit: UNSET, starting_after: UNSET)
+        query = G.compact("limit" => limit, "starting_after" => starting_after)
+        G.page(M::GetPcaActionRegistryTemplatesResponseItem, query) { |q| request(method: :get, path: "/v1/pca/action-registry/templates", query: q) }
+      end
+
+      # Add a starter pack's actions (with their business rules and examples) to a namespace as drafts. Never confirmed. Audited.
+      # `POST /v1/pca/action-registry/templates/{id}/apply` (scope: pca:write)
+      # @return [Page<PostPcaActionRegistryActionsReviewResponse>]
+      def apply_template(id, ns: UNSET, idempotency_key: nil)
+        body = G.compact("ns" => ns)
+        G.page(M::PostPcaActionRegistryActionsReviewResponse, {}) { |q| request(method: :post, path: "/v1/pca/action-registry/templates/#{enc(id)}/apply", query: q, body: body, idempotency_key: idempotency_key) }
+      end
+
+      # Approval channel settings of this instance (secrets are reported as set / not set, never returned).
+      # `GET /v1/pca/approvals/settings` (scope: pca:read)
+      # @return [Atlas::Models::PcaApprovalSettings]
+      def get_settings()
+        G.wrap(M::PcaApprovalSettings, request(method: :get, path: "/v1/pca/approvals/settings"))
+      end
+
+      # Update the approval channels (push, email, sms, slack, webhook), default member channels, the Slack webhook and the CIBA identity provider. Omitted fields are kept; null clears. Audited.
+      # `PUT /v1/pca/approvals/settings` (scope: pca:write)
+      # @return [Atlas::Models::PcaApprovalSettings]
+      def set_settings(channels: UNSET, default_member_channels: UNSET, ciba: UNSET, slack_webhook_url: UNSET, ciba_client_secret: UNSET, idempotency_key: nil)
+        body = G.compact("channels" => channels, "default_member_channels" => default_member_channels, "ciba" => ciba, "slack_webhook_url" => slack_webhook_url, "ciba_client_secret" => ciba_client_secret)
+        G.wrap(M::PcaApprovalSettings, request(method: :put, path: "/v1/pca/approvals/settings", body: body, idempotency_key: idempotency_key))
+      end
+
+      # List passkey approvers with their members, devices and quorum.
+      # `GET /v1/pca/approvers` (scope: pca:read)
+      # @return [Page<PcaApprover>]
+      def list_approvers(limit: UNSET, starting_after: UNSET)
+        query = G.compact("limit" => limit, "starting_after" => starting_after)
+        G.page(M::PcaApprover, query) { |q| request(method: :get, path: "/v1/pca/approvers", query: q) }
+      end
+
+      # Create a single-use passkey enrolment link (24 hours): a new approver bound to a user / org / machine, a delegate of an existing approver, or another device of a member. Adding to an existing approver needs one of its passkeys on the enrolment page. Audited.
+      # `POST /v1/pca/approvers/enrolments` (scope: pca:write)
+      # @return [Atlas::Models::PcaApproverEnrolment]
+      def create_approvers_enrolment(subject_type: UNSET, subject_id: UNSET, approver_id: UNSET, member_id: UNSET, display_name: UNSET, email: UNSET, phone: UNSET, user_id: UNSET, channels: UNSET, idempotency_key: nil)
+        body = G.compact("subject_type" => subject_type, "subject_id" => subject_id, "approver_id" => approver_id, "member_id" => member_id, "display_name" => display_name, "email" => email, "phone" => phone, "user_id" => user_id, "channels" => channels)
+        G.wrap(M::PcaApproverEnrolment, request(method: :post, path: "/v1/pca/approvers/enrolments", body: body, idempotency_key: idempotency_key))
+      end
+
+      # One passkey approver with its members, devices and quorum.
+      # `GET /v1/pca/approvers/{id}` (scope: pca:read)
+      # @return [Atlas::Models::PcaApprover]
+      def get_approver(id)
+        G.wrap(M::PcaApprover, request(method: :get, path: "/v1/pca/approvers/#{enc(id)}"))
+      end
+
+      # Change an approver: quorum, display name, or disable it (a disabled approver cannot approve). Audited.
+      # `PATCH /v1/pca/approvers/{id}` (scope: pca:write)
+      # @return [Atlas::Models::PcaApprover]
+      def update_approver(id, quorum: UNSET, display_name: UNSET, status: UNSET, idempotency_key: nil)
+        body = G.compact("quorum" => quorum, "display_name" => display_name, "status" => status)
+        G.wrap(M::PcaApprover, request(method: :patch, path: "/v1/pca/approvers/#{enc(id)}", body: body, idempotency_key: idempotency_key))
+      end
+
+      # Revoke a passkey: its wrapped principal key copy is deleted and it can no longer approve. Audited.
+      # `DELETE /v1/pca/approvers/{id}/credentials/{credentialId}` (scope: pca:write)
+      # @return [Atlas::Models::PcaApprover]
+      def delete_credential(id, credential_id, idempotency_key: nil)
+        G.wrap(M::PcaApprover, request(method: :delete, path: "/v1/pca/approvers/#{enc(id)}/credentials/#{enc(credential_id)}", idempotency_key: idempotency_key))
+      end
+
+      # Change a member's notification channels, contact details or status. Audited.
+      # `PATCH /v1/pca/approvers/{id}/members/{memberId}` (scope: pca:write)
+      # @return [Atlas::Models::PcaApprover]
+      def update_member(id, member_id, channels: UNSET, email: UNSET, phone: UNSET, display_name: UNSET, status: UNSET, idempotency_key: nil)
+        body = G.compact("channels" => channels, "email" => email, "phone" => phone, "display_name" => display_name, "status" => status)
+        G.wrap(M::PcaApprover, request(method: :patch, path: "/v1/pca/approvers/#{enc(id)}/members/#{enc(member_id)}", body: body, idempotency_key: idempotency_key))
+      end
+
+      # Issue a dead-man liveness beacon. PRINCIPAL path (no Authorization header): submit `beacon`, a v2 beacon signed with the grant principal's own key (scope = a grant_ref they issued, or '*'): the principal halts their agents just by withholding, without trusting the operator. OPERATOR path (`sk_` + `pca:write`): the server signs with the guardian key (`scope`, `validity_ms`). `seq` must strictly increase per (scope, issuer) (409 on replay); validity is hard-capped at one hour. A pure-PQ or hybrid principal beacon is accepted only under the PQ key pinned for the issuer (POST /v1/pca/pq-pins), and only after the issuer check is it charged to the per-source pqVerifyUnitsPerSourcePerMin budget (429 when exhausted) and verified, Ed25519 half first. Beacons gate adjudication only when `auth_config.pca.beacons` is enabled.
+      # `POST /v1/pca/beacons` (scope: pca:write)
+      # @return [Atlas::Models::PcaBeacon]
+      def create_beacon(beacon: UNSET, scope: UNSET, validity_ms: UNSET, idempotency_key: nil)
+        body = G.compact("beacon" => beacon, "scope" => scope, "validity_ms" => validity_ms)
+        G.wrap(M::PcaBeacon, request(method: :post, path: "/v1/pca/beacons", body: body, idempotency_key: idempotency_key))
+      end
+
+      # A bond account's balance (?account=<principal_pub>; also `escrow` and `atlas-treasury`).
+      # `GET /v1/pca/bond-accounts` (scope: pca:read)
+      # @return [Atlas::Models::PcaBondAccount]
+      def get_bond_accounts(account:)
+        query = G.compact("account" => account)
+        G.wrap(M::PcaBondAccount, request(method: :get, path: "/v1/pca/bond-accounts", query: query))
+      end
+
+      # Credit a depositor's bond escrow balance (funds the optimistic fast path). The depositor account is the grant's principal_pub; bonds are sized from server policy exposure and debited atomically at claim open. Audited.
+      # `POST /v1/pca/bond-accounts` (scope: pca:write)
+      # @return [Atlas::Models::PcaBondAccount]
+      def create_bond_account(account:, amount:, idempotency_key: nil)
+        body = G.compact("account" => account, "amount" => amount)
+        G.wrap(M::PcaBondAccount, request(method: :post, path: "/v1/pca/bond-accounts", body: body, idempotency_key: idempotency_key))
+      end
+
+      # Register the grant's CONSTITUTION: a principal-signed set of invariants (never / never_unless / cap / rate / never_after / require_prior / require_approval_over) the agent must never violate whatever its permissions say. Verified against the grant principal's key, immutable once set (a different constitution is 409), and enforced on every action inside the admission transaction with a hash-chained, server-persisted monitor state. Public (the signature is the authority) or `sk_` + pca:write (still principal-signed).
+      # `POST /v1/pca/constitutions` (scope: pca:write)
+      # @return [Atlas::Models::PcaConstitution]
+      def create_constitution(grant_ref:, constitution:, idempotency_key: nil)
+        body = G.compact("grant_ref" => grant_ref, "constitution" => constitution)
+        G.wrap(M::PcaConstitution, request(method: :post, path: "/v1/pca/constitutions", body: body, idempotency_key: idempotency_key))
+      end
+
+      # List registered grants (grant management): filter by principal, agent (holder) and status; keyset pagination.
+      # `GET /v1/pca/grants` (scope: pca:read)
+      # @return [Page<PcaGrant>]
+      def list_grants(principal: UNSET, agent: UNSET, status: UNSET, limit: UNSET, cursor: UNSET, starting_after: UNSET)
+        query = G.compact("principal" => principal, "agent" => agent, "status" => status, "limit" => limit, "cursor" => cursor, "starting_after" => starting_after)
+        G.page(M::PcaGrant, query) { |q| request(method: :get, path: "/v1/pca/grants", query: q) }
+      end
+
+      # Inspect a grant: the signed chain, its content digest, remaining trust budget, revoked-capability count and the current signed revocation epoch.
+      # `GET /v1/pca/grants/{grantRef}` (scope: pca:read)
+      # @return [Atlas::Models::PcaGrant2]
+      def get_grant(grant_ref)
+        G.wrap(M::PcaGrant2, request(method: :get, path: "/v1/pca/grants/#{enc(grant_ref)}"))
+      end
+
+      # Revoke a grant (scope=grant) or every active grant of its principal and agent (scope=agent, operator only). Operator `sk_` + pca:write, or with no Authorization header the principal's signature (principal_sig) over the root revocation message. The signed revocation epoch is bumped in the same transaction.
+      # `DELETE /v1/pca/grants/{grantRef}` (scope: pca:write)
+      # @return [Atlas::Models::PcaGrantRevocation]
+      def delete_grant(grant_ref, scope: UNSET, principal_sig: UNSET, idempotency_key: nil)
+        query = G.compact("scope" => scope)
+        body = G.compact("principal_sig" => principal_sig)
+        G.wrap(M::PcaGrantRevocation, request(method: :delete, path: "/v1/pca/grants/#{enc(grant_ref)}", query: query, body: body, idempotency_key: idempotency_key))
+      end
+
+      # Amend a grant's authority statement. `narrow`, or any change that is provably not wider, is signed by the holder or the principal and revises the grant in place (revision + 1; a signature names the revision, so it cannot be replayed). A change that widens or is incomparable needs the PRINCIPAL's signature, a spent step-up and `new_grant_ref` (a registered active grant of the same principal and agent); it creates that successor's statement (`supersedes`) and kills the old grant. Public (the signature is the authority) or `sk_` + pca:write (still signed).
+      # `POST /v1/pca/grants/{grantRef}/amend` (scope: pca:write)
+      # @return [Atlas::Models::PcaGrantAuthority]
+      def amend_grant(grant_ref, action:, authority:, sig: UNSET, signed_by: UNSET, step_up_ref: UNSET, new_grant_ref: UNSET, idempotency_key: nil)
+        body = G.compact("action" => action, "authority" => authority, "sig" => sig, "signed_by" => signed_by, "step_up_ref" => step_up_ref, "new_grant_ref" => new_grant_ref)
+        G.wrap(M::PcaGrantAuthority, request(method: :post, path: "/v1/pca/grants/#{enc(grant_ref)}/amend", body: body, idempotency_key: idempotency_key))
+      end
+
+      # Enrol a grant into management: the principal signs its initial authority statement at revision 0 (the signature covers {grant, rev: 0, action: 'replace', authority digest} under the grant-amend domain). Once; afterwards use amend. Admission then enforces the statement as an extra tighten-only ceiling. Public (the signature is the authority) or `sk_` + pca:write (still principal-signed).
+      # `PUT /v1/pca/grants/{grantRef}/authority` (scope: pca:write)
+      # @return [Atlas::Models::PcaGrantAuthority2]
+      def set_authority(grant_ref, authority:, sig:, idempotency_key: nil)
+        body = G.compact("authority" => authority, "sig" => sig)
+        G.wrap(M::PcaGrantAuthority2, request(method: :put, path: "/v1/pca/grants/#{enc(grant_ref)}/authority", body: body, idempotency_key: idempotency_key))
+      end
+
+      # A grant's need requests, optionally filtered by status.
+      # `GET /v1/pca/grants/{grantRef}/needs` (scope: pca:read)
+      # @return [Page<Hash>]
+      def list_needs(grant_ref, status: UNSET, limit: UNSET, starting_after: UNSET)
+        query = G.compact("status" => status, "limit" => limit, "starting_after" => starting_after)
+        G.page(nil, query) { |q| request(method: :get, path: "/v1/pca/grants/#{enc(grant_ref)}/needs", query: q) }
+      end
+
+      # File typed needs (incremental authorization). The grant holder signs them at the current revision (need-request domain), or the operator files them. Nothing changes until the principal approves.
+      # `POST /v1/pca/grants/{grantRef}/needs` (scope: pca:write)
+      # @return [Atlas::Models::PcaGrantNeed]
+      def create_need(grant_ref, needs:, sig: UNSET, idempotency_key: nil)
+        body = G.compact("needs" => needs, "sig" => sig)
+        G.wrap(M::PcaGrantNeed, request(method: :post, path: "/v1/pca/grants/#{enc(grant_ref)}/needs", body: body, idempotency_key: idempotency_key))
+      end
+
+      # Issue a single-use step-up challenge for a grant (valid 5 minutes). The principal signs its nonce on its own device; a widening spends one.
+      # `POST /v1/pca/grants/{grantRef}/step-up` (scope: pca:write)
+      # @return [Atlas::Models::PcaGrantStepUp]
+      def step_up_grant(grant_ref, body, idempotency_key: nil)
+        G.wrap(M::PcaGrantStepUp, request(method: :post, path: "/v1/pca/grants/#{enc(grant_ref)}/step-up", body: body, idempotency_key: idempotency_key))
+      end
+
+      # Approve a step-up challenge with the grant principal's signature over {grant, challenge, nonce} (grant-step-up domain). Once.
+      # `POST /v1/pca/grants/{grantRef}/step-up/{challengeId}/approve` (scope: pca:write)
+      # @return [Atlas::Models::PcaGrantStepUp2]
+      def approve_step_up(grant_ref, challenge_id, sig:, idempotency_key: nil)
+        body = G.compact("sig" => sig)
+        G.wrap(M::PcaGrantStepUp2, request(method: :post, path: "/v1/pca/grants/#{enc(grant_ref)}/step-up/#{enc(challenge_id)}/approve", body: body, idempotency_key: idempotency_key))
+      end
+
+      # Rotate the guardian signing key: a new keypair and epoch + 1; the previous public key is retained so STHs, revocation epochs and receipts signed under it still verify. New signatures use the new epoch. Audited.
+      # `POST /v1/pca/guardian/rotate` (scope: pca:write)
+      # @return [Atlas::Models::PcaGuardian]
+      def rotate_guardian(body, idempotency_key: nil)
+        G.wrap(M::PcaGuardian, request(method: :post, path: "/v1/pca/guardian/rotate", body: body, idempotency_key: idempotency_key))
+      end
+
+      # List the runtime observations recorded against a map, oldest first. Paginate with `after` = the previous page `next_cursor`.
+      # `GET /v1/pca/intent/maps/{digest}/observations` (scope: pca:read)
+      # @return [Page<Hash>]
+      def list_observations(digest, limit: UNSET, after: UNSET, starting_after: UNSET)
+        query = G.compact("limit" => limit, "after" => after, "starting_after" => starting_after)
+        G.page(nil, query) { |q| request(method: :get, path: "/v1/pca/intent/maps/#{enc(digest)}/observations", query: q) }
+      end
+
+      # Anchor a site's signed action schema (Intent Layer v2, `pca-action-schema` v1 served at /.well-known/pca-actions.json). The schema is verified against the site's discovery keys (`keys`, the `intent.schema_keys` of its /.well-known/pca-configuration; the suite comes from the key entry), content-addressed (`actionSchemaDigest`) and appended to the instance's intent transparency log (kind `schema`), so a site cannot show different schemas to different users without detection. Audited. 201 anchored, 200 already anchored.
+      # `POST /v1/pca/intent/schemas` (scope: pca:write)
+      # @return [Atlas::Models::PcaIntentSchema]
+      def create_schema(schema:, keys:, idempotency_key: nil)
+        body = G.compact("schema" => schema, "keys" => keys)
+        G.wrap(M::PcaIntentSchema, request(method: :post, path: "/v1/pca/intent/schemas", body: body, idempotency_key: idempotency_key))
+      end
+
+      # Approve a need request. The principal signs the approved needs at the current revision (need-approve domain); the approved list must name the same verbs and resources in order, and an amount may only be lowered, and only on a need marked adjustable. Needs a spent step-up and `new_grant_ref` (the registered successor); the result is a successor grant with the merged authority.
+      # `POST /v1/pca/needs/{needId}/approve` (scope: pca:write)
+      # @return [Atlas::Models::PcaGrantAuthority3]
+      def approve_need(need_id, approved:, sig:, step_up_ref: UNSET, new_grant_ref: UNSET, idempotency_key: nil)
+        body = G.compact("approved" => approved, "sig" => sig, "step_up_ref" => step_up_ref, "new_grant_ref" => new_grant_ref)
+        G.wrap(M::PcaGrantAuthority3, request(method: :post, path: "/v1/pca/needs/#{enc(need_id)}/approve", body: body, idempotency_key: idempotency_key))
+      end
+
+      # Deny a need request: the principal's signature over the empty approval of this need at the current revision, or the operator key.
+      # `POST /v1/pca/needs/{needId}/deny` (scope: pca:write)
+      # @return [Atlas::Models::PcaGrantNeed2]
+      def deny_need(need_id, sig: UNSET, idempotency_key: nil)
+        body = G.compact("sig" => sig)
+        G.wrap(M::PcaGrantNeed2, request(method: :post, path: "/v1/pca/needs/#{enc(need_id)}/deny", body: body, idempotency_key: idempotency_key))
+      end
+
+      # Remove an identity PQ key pin (the rotation step: delete, then the identity registers a new binding at a HIGHER epoch; the delete leaves a tombstone holding the last epoch, so the removed binding and every older one is refused). Pure-PQ and hybrid artifacts from that identity are refused until it is re-pinned. Audited.
+      # `DELETE /v1/pca/pq-pins/{identity}` (scope: pca:write)
+      # @return [Atlas::Models::PcaPqPin]
+      def delete_pq_pin(identity, idempotency_key: nil)
+        G.wrap(M::PcaPqPin, request(method: :delete, path: "/v1/pca/pq-pins/#{enc(identity)}", idempotency_key: idempotency_key))
+      end
+
+      # The instance's enrolled principals (public key, bound subject, status).
+      # `GET /v1/pca/principals` (scope: pca:read)
+      # @return [Page<PcaPrincipal>]
+      def list_principals(limit: UNSET, starting_after: UNSET)
+        query = G.compact("limit" => limit, "starting_after" => starting_after)
+        G.page(M::PcaPrincipal, query) { |q| request(method: :get, path: "/v1/pca/principals", query: q) }
+      end
+
+      # Enrol a principal public key, binding it to an Atlas identity (user, org, or machine) in this instance. A grant whose issuer is an enrolled active principal registers as the `verified` tier; an unenrolled issuer is accepted only as `unverified`. Audited.
+      # `POST /v1/pca/principals` (scope: pca:write)
+      # @return [Atlas::Models::PcaPrincipal2]
+      def create_principal(principal_pub:, subject_type:, subject_id:, idempotency_key: nil)
+        body = G.compact("principal_pub" => principal_pub, "subject_type" => subject_type, "subject_id" => subject_id)
+        G.wrap(M::PcaPrincipal2, request(method: :post, path: "/v1/pca/principals", body: body, idempotency_key: idempotency_key))
+      end
+
+      # Disable an enrolled principal. Its existing verified grants are denied at adjudication and no new verified grant can be registered under it. Audited.
+      # `DELETE /v1/pca/principals/{principalPub}` (scope: pca:write)
+      # @return [Atlas::Models::PcaPrincipal3]
+      def delete_principal(principal_pub, idempotency_key: nil)
+        G.wrap(M::PcaPrincipal3, request(method: :delete, path: "/v1/pca/principals/#{enc(principal_pub)}", idempotency_key: idempotency_key))
+      end
+
+      # Register an undo record with the hosted undo ledger. The record's receipt chain must verify against the instance's undo signer (auth_config.pca.undoSigner); 409 when none is configured. Idempotent on the record id: the same record again returns the stored one, different content under the same id is a 409. Audited.
+      # `POST /v1/pca/undo/records` (scope: pca:write)
+      # @return [Atlas::Models::PcaUndoRecord]
+      def create_record(record:, idempotency_key: nil)
+        body = G.compact("record" => record)
+        G.wrap(M::PcaUndoRecord, request(method: :post, path: "/v1/pca/undo/records", body: body, idempotency_key: idempotency_key))
+      end
+
+      # A stored undo record (without its encoded PCActn) and the veto waiting on it, if any.
+      # `GET /v1/pca/undo/records/{id}` (scope: pca:read)
+      # @return [Atlas::Models::PcaUndoRecord]
+      def get_record(id)
+        G.wrap(M::PcaUndoRecord, request(method: :get, path: "/v1/pca/undo/records/#{enc(id)}"))
+      end
+
+      # Replace an undo record after a transition. Accepted only when the new receipt chain verifies, the stored receipts are a prefix of it, the record identity (id, audience, grant, holder, principal, compensation, window, PCActn) is unchanged and `ver` increases. Moving to vetoed, compensated or compensation_failed settles a pending veto; finalizing while a veto is pending is a 409. Audited.
+      # `PUT /v1/pca/undo/records/{id}` (scope: pca:write)
+      # @return [Atlas::Models::PcaUndoRecord]
+      def set_record(id, record:, idempotency_key: nil)
+        body = G.compact("record" => record)
+        G.wrap(M::PcaUndoRecord, request(method: :put, path: "/v1/pca/undo/records/#{enc(id)}", body: body, idempotency_key: idempotency_key))
+      end
+
+      # Vetoes received by the instance that the resource server has not applied yet, oldest first (?limit 1..200, default 100), each with the principal's token. The resource server re-verifies the token as of the veto time, applies the veto and PUTs the signed record.
+      # `GET /v1/pca/undo/vetoes` (scope: pca:read)
+      # @return [Page<PcaUndoVeto>]
+      def list_vetoes(limit: UNSET, starting_after: UNSET)
+        query = G.compact("limit" => limit, "starting_after" => starting_after)
+        G.page(M::PcaUndoVeto, query) { |q| request(method: :get, path: "/v1/pca/undo/vetoes", query: q) }
+      end
+
+      # Issue a guardian-signed step receipt for a step of a workflow the grant principal committed (K5). The operator reports the outcome and outputs of an executed step; the receipt chains to the earlier receipts and lets a later step be admitted.
+      # `POST /v1/pca/workflow-receipts` (scope: pca:write)
+      # @return [Atlas::Models::PcaWorkflowReceipt]
+      def create_workflow_receipt(grant_ref:, workflow:, step:, outcome:, params_digest:, outputs:, receipts: UNSET, idempotency_key: nil)
+        body = G.compact("grant_ref" => grant_ref, "workflow" => workflow, "step" => step, "outcome" => outcome, "params_digest" => params_digest, "outputs" => outputs, "receipts" => receipts)
+        G.wrap(M::PcaWorkflowReceipt, request(method: :post, path: "/v1/pca/workflow-receipts", body: body, idempotency_key: idempotency_key))
+      end
+    end
+
+    # /v1/permission_aliases
+    module PermissionAliasesOperations
+      # List permission aliases: legacy keys that stand for a canonical permission key.
+      # `GET /v1/permission_aliases` (scope: organizations:read)
+      # @return [Page<PermissionAlias>]
+      def list_permission_aliases(limit: UNSET, starting_after: UNSET)
+        query = G.compact("limit" => limit, "starting_after" => starting_after)
+        G.page(M::PermissionAlias, query) { |q| request(method: :get, path: "/v1/permission_aliases", query: q) }
+      end
+
+      # Create or repoint a permission alias from a body ({ alias, permission_key }); the same write as PUT /v1/permission_aliases/{alias}.
+      # `POST /v1/permission_aliases` (scope: organizations:write)
+      # @return [Atlas::Models::PermissionAlias]
+      def create_permission_aliase(alias_:, permission_key:, idempotency_key: nil)
+        body = G.compact("alias" => alias_, "permission_key" => permission_key)
+        G.wrap(M::PermissionAlias, request(method: :post, path: "/v1/permission_aliases", body: body, idempotency_key: idempotency_key))
+      end
+
+      # Create or repoint an alias. Writes that take permission keys (role grants, seat permissions, invitations, implies) accept the alias and store the canonical key; tokens always carry the canonical key. The alias must not be a permission key, and the target must be an existing permission.
+      # `PUT /v1/permission_aliases/{alias}` (scope: organizations:write)
+      # @return [Atlas::Models::PermissionAlias]
+      def set_permission_aliase(alias_, permission_key:, idempotency_key: nil)
+        body = G.compact("permission_key" => permission_key)
+        G.wrap(M::PermissionAlias, request(method: :put, path: "/v1/permission_aliases/#{enc(alias_)}", body: body, idempotency_key: idempotency_key))
+      end
+
+      # Remove an alias. Writes that still send it are then refused or dropped as an unknown key.
+      # `DELETE /v1/permission_aliases/{alias}` (scope: organizations:write)
+      # @return [Atlas::Models::PermissionAlias2]
+      def delete_permission_aliase(alias_, idempotency_key: nil)
+        G.wrap(M::PermissionAlias2, request(method: :delete, path: "/v1/permission_aliases/#{enc(alias_)}", idempotency_key: idempotency_key))
+      end
+    end
+
+    # Namespace for /v1/permission_aliases (`client.permission_aliases`).
+    class PermissionAliasesApi < Atlas::Resources::Base
+      include PermissionAliasesOperations
+    end
+
+    # /v1/permissions
+    module PermissionsOperations
+      # Rename a custom permission. The key moves in one transaction everywhere Atlas stores it (the permission, seats, invitations, implies, aliases; role grants follow by id) and the old key becomes an alias, so code and imports that still send it keep working. Sessions minted before the rename carry the old key until they refresh. System permissions cannot be renamed. permission.updated is sent with previous_key.
+      # `POST /v1/permissions/{id}/rename` (scope: organizations:write)
+      # @return [Atlas::Models::Permission]
+      def rename(id, key:, idempotency_key: nil)
+        body = G.compact("key" => key)
+        G.wrap(M::Permission, request(method: :post, path: "/v1/permissions/#{enc(id)}/rename", body: body, idempotency_key: idempotency_key))
+      end
     end
 
     # /v1/platform
@@ -4235,8 +5146,16 @@ module Atlas
       # Delete a clone or preview together with its instance and everything in it (users, configuration, keys). Only an instance a clone created, under the same app and owner, can be removed this way. Audited. Emits instance_clone.deleted.
       # `DELETE /v1/platform/apps/{id}/instances/{instanceId}/clones/{cloneId}` (scope: platform:apps:write)
       # @return [Atlas::Models::InstanceClone]
-      def delete_clone(id, instance_id, clone_id)
-        G.wrap(M::InstanceClone, request(method: :delete, path: "/v1/platform/apps/#{enc(id)}/instances/#{enc(instance_id)}/clones/#{enc(clone_id)}"))
+      def delete_clone(id, instance_id, clone_id, idempotency_key: nil)
+        G.wrap(M::InstanceClone, request(method: :delete, path: "/v1/platform/apps/#{enc(id)}/instances/#{enc(instance_id)}/clones/#{enc(clone_id)}", idempotency_key: idempotency_key))
+      end
+
+      # Bring a completed clone or preview up to date in place (same instance, keys and host); same body and rules as POST /v1/instance/staging_copies/{id}/refresh. Needs platform:apps:write.
+      # `POST /v1/platform/apps/{id}/instances/{instanceId}/clones/{cloneId}/refresh` (scope: platform:apps:write)
+      # @return [Atlas::Models::InstanceClone]
+      def refresh_clone(id, instance_id, clone_id, include: UNSET, synthetic_users: UNSET, ttl_hours: UNSET, idempotency_key: nil)
+        body = G.compact("include" => include, "synthetic_users" => synthetic_users, "ttl_hours" => ttl_hours)
+        G.wrap(M::InstanceClone, request(method: :post, path: "/v1/platform/apps/#{enc(id)}/instances/#{enc(instance_id)}/clones/#{enc(clone_id)}/refresh", body: body, idempotency_key: idempotency_key))
       end
 
       # Narrow the secret keys of an app after onboarding: a key holding every scope becomes a runtime key, with no new secret.
@@ -4245,6 +5164,14 @@ module Atlas
       def create_narrow_secret_key(id, preset: UNSET, scopes: UNSET, instance_id: UNSET, idempotency_key: nil)
         body = G.compact("preset" => preset, "scopes" => scopes, "instance_id" => instance_id)
         G.wrap(M::AppSecretKeysNarrowed, request(method: :post, path: "/v1/platform/apps/#{enc(id)}/narrow_secret_keys", body: body, idempotency_key: idempotency_key))
+      end
+
+      # Extend the `provisioning` key of an app created with `secret_key_profile: "web_app"` by another 24 hours.
+      # `POST /v1/platform/apps/{id}/provisioning_key/renew` (scope: platform:secrets:write)
+      # @return [Atlas::Models::AppProvisioningKeyRenewed]
+      def renew_provisioning_key(id, instance_id: UNSET, idempotency_key: nil)
+        body = G.compact("instance_id" => instance_id)
+        G.wrap(M::AppProvisioningKeyRenewed, request(method: :post, path: "/v1/platform/apps/#{enc(id)}/provisioning_key/renew", body: body, idempotency_key: idempotency_key))
       end
 
       # The adoption codes issued for an app and what became of them (never the code itself).
@@ -4266,8 +5193,8 @@ module Atlas
       # Withdraw an adoption code that has not been redeemed.
       # `DELETE /v1/platform/atlas_id_apps/{id}/adoption_codes/{codeId}` (scope: platform:atlas_id_apps:write)
       # @return [Atlas::Models::AtlasIdAppAdoptionCode2]
-      def delete_adoption_code(id, code_id)
-        G.wrap(M::AtlasIdAppAdoptionCode2, request(method: :delete, path: "/v1/platform/atlas_id_apps/#{enc(id)}/adoption_codes/#{enc(code_id)}"))
+      def delete_adoption_code(id, code_id, idempotency_key: nil)
+        G.wrap(M::AtlasIdAppAdoptionCode2, request(method: :delete, path: "/v1/platform/atlas_id_apps/#{enc(id)}/adoption_codes/#{enc(code_id)}", idempotency_key: idempotency_key))
       end
     end
 
@@ -4283,9 +5210,9 @@ module Atlas
       # Set a policy's audience. orgs asks only members of the listed organizations (1-200, all must exist) at their next sign-in, and never at sign-up; everyone (the default) clears the list. A user who is in none of the organizations is not asked and is not blocked.
       # `PUT /v1/policies/{id}/audience` (scope: instance:write)
       # @return [Atlas::Models::PolicyAudience]
-      def set_audience(id, audience:, organization_ids: UNSET)
+      def set_audience(id, audience:, organization_ids: UNSET, idempotency_key: nil)
         body = G.compact("audience" => audience, "organization_ids" => organization_ids)
-        G.wrap(M::PolicyAudience, request(method: :put, path: "/v1/policies/#{enc(id)}/audience", body: body))
+        G.wrap(M::PolicyAudience, request(method: :put, path: "/v1/policies/#{enc(id)}/audience", body: body, idempotency_key: idempotency_key))
       end
 
       # A policy version's texts in other languages.
@@ -4299,16 +5226,16 @@ module Atlas
       # Add or replace the text of a version in one language (content_markdown or content_html, sanitised like the version itself). GET /v1/client/policies?locale= then serves it, and an acceptance records the hash of the text that was shown. A published version can gain languages but a language already there cannot change (409); a draft can change freely. 400 for an external policy.
       # `PUT /v1/policies/{id}/versions/{versionId}/translations/{locale}` (scope: instance:write)
       # @return [Atlas::Models::PolicyTranslation]
-      def set_translation(id, version_id, locale, title: UNSET, content_markdown: UNSET, content_html: UNSET)
+      def set_translation(id, version_id, locale, title: UNSET, content_markdown: UNSET, content_html: UNSET, idempotency_key: nil)
         body = G.compact("title" => title, "content_markdown" => content_markdown, "content_html" => content_html)
-        G.wrap(M::PolicyTranslation, request(method: :put, path: "/v1/policies/#{enc(id)}/versions/#{enc(version_id)}/translations/#{enc(locale)}", body: body))
+        G.wrap(M::PolicyTranslation, request(method: :put, path: "/v1/policies/#{enc(id)}/versions/#{enc(version_id)}/translations/#{enc(locale)}", body: body, idempotency_key: idempotency_key))
       end
 
       # Remove a translation from a draft version. A published version's translations stay (409).
       # `DELETE /v1/policies/{id}/versions/{versionId}/translations/{locale}` (scope: instance:write)
       # @return [Atlas::Models::PolicyTranslation2]
-      def delete_translation(id, version_id, locale)
-        G.wrap(M::PolicyTranslation2, request(method: :delete, path: "/v1/policies/#{enc(id)}/versions/#{enc(version_id)}/translations/#{enc(locale)}"))
+      def delete_translation(id, version_id, locale, idempotency_key: nil)
+        G.wrap(M::PolicyTranslation2, request(method: :delete, path: "/v1/policies/#{enc(id)}/versions/#{enc(version_id)}/translations/#{enc(locale)}", idempotency_key: idempotency_key))
       end
     end
 
@@ -4364,16 +5291,16 @@ module Atlas
       # Pin one subject (an API key, user, organization or machine of this instance, or one IP address) to a policy of its kind (policy_id) or to an inline limit (limit with window_seconds, optional burst). An override beats every other rule, including the key's own rate_limit. Replaces any earlier override for the subject; the same content again changes nothing. expires_at ends it on its own. An override pointing at a disabled policy does not apply. Emits rate_limit_policy.updated.
       # `PUT /v1/rate_limit_overrides/{subject_type}/{subject_id}` (scope: rate_limit:write)
       # @return [Atlas::Models::ApiRateLimitOverride]
-      def set_rate_limit_override(subject_type, subject_id, policy_id: UNSET, limit: UNSET, window_seconds: UNSET, burst: UNSET, reason: UNSET, expires_at: UNSET)
+      def set_rate_limit_override(subject_type, subject_id, policy_id: UNSET, limit: UNSET, window_seconds: UNSET, burst: UNSET, reason: UNSET, expires_at: UNSET, idempotency_key: nil)
         body = G.compact("policy_id" => policy_id, "limit" => limit, "window_seconds" => window_seconds, "burst" => burst, "reason" => reason, "expires_at" => expires_at)
-        G.wrap(M::ApiRateLimitOverride, request(method: :put, path: "/v1/rate_limit_overrides/#{enc(subject_type)}/#{enc(subject_id)}", body: body))
+        G.wrap(M::ApiRateLimitOverride, request(method: :put, path: "/v1/rate_limit_overrides/#{enc(subject_type)}/#{enc(subject_id)}", body: body, idempotency_key: idempotency_key))
       end
 
       # Remove the override for one subject. Emits rate_limit_policy.updated.
       # `DELETE /v1/rate_limit_overrides/{subject_type}/{subject_id}` (scope: rate_limit:write)
       # @return [Atlas::Models::ApiRateLimitOverride2]
-      def delete_rate_limit_override(subject_type, subject_id)
-        G.wrap(M::ApiRateLimitOverride2, request(method: :delete, path: "/v1/rate_limit_overrides/#{enc(subject_type)}/#{enc(subject_id)}"))
+      def delete_rate_limit_override(subject_type, subject_id, idempotency_key: nil)
+        G.wrap(M::ApiRateLimitOverride2, request(method: :delete, path: "/v1/rate_limit_overrides/#{enc(subject_type)}/#{enc(subject_id)}", idempotency_key: idempotency_key))
       end
     end
 
@@ -4418,16 +5345,16 @@ module Atlas
       # Change a policy. Send only the fields to change; the version goes up by one. Sending the same values again changes nothing. subject cannot change. Emits rate_limit_policy.updated with the before and after.
       # `PATCH /v1/rate_limit_policies/{id}` (scope: rate_limit:write)
       # @return [Atlas::Models::ApiRateLimitPolicy]
-      def update_rate_limit_policy(id, name: UNSET, subject: UNSET, limit: UNSET, window_seconds: UNSET, burst: UNSET, plan_overrides: UNSET, is_default: UNSET, enabled: UNSET)
+      def update_rate_limit_policy(id, name: UNSET, subject: UNSET, limit: UNSET, window_seconds: UNSET, burst: UNSET, plan_overrides: UNSET, is_default: UNSET, enabled: UNSET, idempotency_key: nil)
         body = G.compact("name" => name, "subject" => subject, "limit" => limit, "window_seconds" => window_seconds, "burst" => burst, "plan_overrides" => plan_overrides, "is_default" => is_default, "enabled" => enabled)
-        G.wrap(M::ApiRateLimitPolicy, request(method: :patch, path: "/v1/rate_limit_policies/#{enc(id)}", body: body))
+        G.wrap(M::ApiRateLimitPolicy, request(method: :patch, path: "/v1/rate_limit_policies/#{enc(id)}", body: body, idempotency_key: idempotency_key))
       end
 
       # Delete a policy. Refused with 409 while per-subject overrides still point at it. Emits rate_limit_policy.updated.
       # `DELETE /v1/rate_limit_policies/{id}` (scope: rate_limit:write)
       # @return [Atlas::Models::ApiRateLimitPolicy2]
-      def delete_rate_limit_policy(id)
-        G.wrap(M::ApiRateLimitPolicy2, request(method: :delete, path: "/v1/rate_limit_policies/#{enc(id)}"))
+      def delete_rate_limit_policy(id, idempotency_key: nil)
+        G.wrap(M::ApiRateLimitPolicy2, request(method: :delete, path: "/v1/rate_limit_policies/#{enc(id)}", idempotency_key: idempotency_key))
       end
     end
 
@@ -4448,9 +5375,9 @@ module Atlas
       # Replace the referral reward terms (a field you leave out returns to its default). At least one of `referrer_amount` and `referee_amount` must be above zero to turn rewards on. Rewards are credits on the billing credit ledger; they are created only for referrals Atlas has attributed and not flagged, once the trigger is met, and are granted after `hold_days`.
       # `PUT /v1/referral_reward_rules` (scope: billing:write)
       # @return [Atlas::Models::ReferralRewardRules]
-      def set_referral_reward_rule(enabled: UNSET, trigger: UNSET, referrer_amount: UNSET, referee_amount: UNSET, currency: UNSET, hold_days: UNSET, max_rewards_per_referrer: UNSET)
+      def set_referral_reward_rule(enabled: UNSET, trigger: UNSET, referrer_amount: UNSET, referee_amount: UNSET, currency: UNSET, hold_days: UNSET, max_rewards_per_referrer: UNSET, idempotency_key: nil)
         body = G.compact("enabled" => enabled, "trigger" => trigger, "referrer_amount" => referrer_amount, "referee_amount" => referee_amount, "currency" => currency, "hold_days" => hold_days, "max_rewards_per_referrer" => max_rewards_per_referrer)
-        G.wrap(M::ReferralRewardRules, request(method: :put, path: "/v1/referral_reward_rules", body: body))
+        G.wrap(M::ReferralRewardRules, request(method: :put, path: "/v1/referral_reward_rules", body: body, idempotency_key: idempotency_key))
       end
     end
 
@@ -4533,9 +5460,9 @@ module Atlas
       # Pin the instance to this stack's region (`pin: true`; there is no unpin, because the data lives there), name its failover region, or set Frontend API origin isolation (`off`, `enforce`, or null for the deployment default). Send only the fields to change. Audited.
       # `PUT /v1/region` (scope: instance:write)
       # @return [Atlas::Models::RegionStatus]
-      def set_region(pin: UNSET, failover_region: UNSET, fapi_isolation: UNSET)
+      def set_region(pin: UNSET, failover_region: UNSET, fapi_isolation: UNSET, idempotency_key: nil)
         body = G.compact("pin" => pin, "failover_region" => failover_region, "fapi_isolation" => fapi_isolation)
-        G.wrap(M::RegionStatus, request(method: :put, path: "/v1/region", body: body))
+        G.wrap(M::RegionStatus, request(method: :put, path: "/v1/region", body: body, idempotency_key: idempotency_key))
       end
 
       # The upstreams a path-mounted Frontend API's reverse proxy lists to fail over to the instance's failover region, with ready nginx and Caddy rules. 422 when the instance has no failover region or the region table has no origin for it.
@@ -4561,6 +5488,30 @@ module Atlas
         query = G.compact("since" => since, "limit" => limit, "after" => after, "starting_after" => starting_after)
         G.page(M::GetResourceServersRevokedTokensResponseItem, query, envelope: M::GetResourceServersRevokedTokensResponseList) { |q| request(method: :get, path: "/v1/resource_servers/#{enc(id)}/revoked_tokens", query: q) }
       end
+    end
+
+    # /v1/revocations
+    module RevocationsOperations
+      # Long-poll the revocation stream: one ordered list of everything that ended a session, a refresh-token family, an API key, a machine, a machine grant or a person's access, each with ids, reason and actor. Resume by cursor: pass the `next_cursor` of the previous answer as `after`. With neither `after` nor `since` it answers empty with a `next_cursor` that points at "now", so a new consumer starts from this moment. `wait` (seconds, up to 30) holds the request open until an event arrives. Order is commit order: the cursor is a sequence number assigned to what has committed, so a consumer that follows it never skips an event, however late it committed. Retention is the event log's (90 days), and webhook endpoints subscribed to the same event types are its second channel. Delivery is at-least-once and in order; keep your handler idempotent.
+      # `GET /v1/revocations` (scope: events:read)
+      # @return [Page<Revocation>]
+      def list_revocations(after: UNSET, since: UNSET, kinds: UNSET, limit: UNSET, wait: UNSET, starting_after: UNSET)
+        query = G.compact("after" => after, "since" => since, "kinds" => kinds, "limit" => limit, "wait" => wait, "starting_after" => starting_after)
+        G.page(M::Revocation, query, envelope: M::GetRevocationsResponseList) { |q| request(method: :get, path: "/v1/revocations", query: q) }
+      end
+
+      # Server-Sent Events stream of the revocation stream (the same events as `GET /v1/revocations`). Each `revocation` event carries the frame as JSON and its `seq` as the SSE `id`; resume with `Last-Event-ID` or `after`. A `ready` event carries the cursor the stream started from, a `: keep-alive` comment arrives every 15 seconds, and a `reconnect` event ends a connection after an hour: reconnect with the last id. At most 20 streams may be open per instance (429 beyond). Same `kinds` and `since` filters. `@atlasauth/backend` `revocationStream` and `createRevocationMirror` consume it with reconnect, backoff and resume.
+      # `GET /v1/revocations/stream` (scope: events:read)
+      # @return [Hash]
+      def get_stream(after: UNSET, since: UNSET, kinds: UNSET)
+        query = G.compact("after" => after, "since" => since, "kinds" => kinds)
+        request(method: :get, path: "/v1/revocations/stream", query: query, raw: true)
+      end
+    end
+
+    # Namespace for /v1/revocations (`client.revocations`).
+    class RevocationsApi < Atlas::Resources::Base
+      include RevocationsOperations
     end
 
     # /v1/risk_based_mfa
@@ -4602,8 +5553,8 @@ module Atlas
       # End a risk signal now. Its points leave the next evaluation; the row stays readable with status `revoked`.
       # `DELETE /v1/risk_signals/{id}` (scope: risk_signals:write)
       # @return [Atlas::Models::RiskSignal]
-      def delete_risk_signal(id)
-        G.wrap(M::RiskSignal, request(method: :delete, path: "/v1/risk_signals/#{enc(id)}"))
+      def delete_risk_signal(id, idempotency_key: nil)
+        G.wrap(M::RiskSignal, request(method: :delete, path: "/v1/risk_signals/#{enc(id)}", idempotency_key: idempotency_key))
       end
     end
 
@@ -4769,8 +5720,8 @@ module Atlas
       # Delete a custom SCIM resource type and every resource of it.
       # `DELETE /v1/scim_resource_types/{id}` (scope: scim:write)
       # @return [nil]
-      def delete_scim_resource_type(id)
-        request(method: :delete, path: "/v1/scim_resource_types/#{enc(id)}")
+      def delete_scim_resource_type(id, idempotency_key: nil)
+        request(method: :delete, path: "/v1/scim_resource_types/#{enc(id)}", idempotency_key: idempotency_key)
       end
     end
 
@@ -4841,6 +5792,14 @@ module Atlas
         G.wrap(M::SessionRevokeJob2, request(method: :get, path: "/v1/sessions/revoke_jobs/#{enc(id)}"))
       end
 
+      # Set (or clear, with organization_id null) the active organization of a session from your backend. The user must hold a seat in it (or in an ancestor with role inheritance on) and meet its second-factor policy, as for their own switch: an organization they are not in is 404, a policy that needs a second factor is 403 STEP_UP_REQUIRED. The next token minted for the session (refresh or getToken) carries that organization claims. An ended session is 409; an unknown id, or one of another instance, is 404. Returns the session with last_active_organization_id.
+      # `PUT /v1/sessions/{id}/active_organization` (scope: sessions:write)
+      # @return [Atlas::Models::Session]
+      def set_active_organization(id, organization_id:, idempotency_key: nil)
+        body = G.compact("organization_id" => organization_id)
+        G.wrap(M::Session, request(method: :put, path: "/v1/sessions/#{enc(id)}/active_organization", body: body, idempotency_key: idempotency_key))
+      end
+
       # Which DPoP key (by thumbprint) a session is bound to, and whether it was attested.
       # `GET /v1/sessions/{id}/binding` (scope: sessions:read)
       # @return [Atlas::Models::SessionBinding]
@@ -4851,8 +5810,8 @@ module Atlas
       # Remove a session's DPoP binding so it can bind a new key (a user who lost their device key). Audited.
       # `DELETE /v1/sessions/{id}/binding` (scope: sessions:write)
       # @return [Atlas::Models::SessionBinding2]
-      def delete_binding(id)
-        G.wrap(M::SessionBinding2, request(method: :delete, path: "/v1/sessions/#{enc(id)}/binding"))
+      def delete_binding(id, idempotency_key: nil)
+        G.wrap(M::SessionBinding2, request(method: :delete, path: "/v1/sessions/#{enc(id)}/binding", idempotency_key: idempotency_key))
       end
 
       # One session's timeline, oldest first: `created`, `step_up`, `organization_changed`, `risk_elevated`, `revoked` (with the reason). Sessions that predate the timeline get `created` and `revoked` from their own row, marked `synthesized`. 404 for a session of another instance.
@@ -4865,20 +5824,83 @@ module Atlas
 
       # The session's advisory risk: `{ score (0-100), level (low|medium|high), reasons[], computed_at }`. Reasons come from signals Atlas already holds: `new_device`, `new_country`, `impossible_travel` (against the user's previous session), `bot_likely` and `breached_password` (at sign-in). The same object is on the session (`risk`) and, when `session.includeRiskClaim` is on, in the session token as the `risk` claim; `risk.elevated` is sent when a session turns high. Advisory only: Atlas never allows or denies anything because of it. Fields are null and `reasons` empty when the session was never assessed, which means unknown, not safe.
       # `GET /v1/sessions/{id}/risk` (scope: sessions:read)
-      # @return [Atlas::Models::SessionRisk]
+      # @return [Atlas::Models::SessionRisk2]
       def get_risk(id)
-        G.wrap(M::SessionRisk, request(method: :get, path: "/v1/sessions/#{enc(id)}/risk"))
+        G.wrap(M::SessionRisk2, request(method: :get, path: "/v1/sessions/#{enc(id)}/risk"))
       end
     end
 
     # /v1/ssf
     module SsfOperations
+      # Add a subject to a stream (8.1.3.2). 200, empty body.
+      # `POST /v1/ssf/add_subject` (scope: pca:write)
+      # @return [Hash]
+      def add_subject_all(stream_id:, subject:, verified: UNSET, idempotency_key: nil)
+        body = G.compact("stream_id" => stream_id, "subject" => subject, "verified" => verified)
+        request(method: :post, path: "/v1/ssf/add_subject", body: body, idempotency_key: idempotency_key)
+      end
+
+      # Read one stream (?stream_id) or all of the receiver's streams (8.1.1.2). Another receiver's stream is 404.
+      # `GET /v1/ssf/configuration` (scope: pca:read)
+      # @return [Hash]
+      def get_configuration(stream_id: UNSET)
+        query = G.compact("stream_id" => stream_id)
+        request(method: :get, path: "/v1/ssf/configuration", query: query)
+      end
+
+      # Create an event stream (OpenID SSF 1.0 8.1.1.1). Receiver-supplied members: events_requested, delivery, description. Poll delivery by default (the transmitter assigns the endpoint); push needs an https endpoint_url. One stream per receiver (a second is 409). The stream belongs to the creating API key.
+      # `POST /v1/ssf/configuration` (scope: pca:write)
+      # @return [Atlas::Models::PostSsfConfigurationResponse]
+      def configuration(iss: UNSET, aud: UNSET, events_supported: UNSET, events_delivered: UNSET, min_verification_interval: UNSET, events_requested: UNSET, delivery: UNSET, description: UNSET, idempotency_key: nil)
+        body = G.compact("iss" => iss, "aud" => aud, "events_supported" => events_supported, "events_delivered" => events_delivered, "min_verification_interval" => min_verification_interval, "events_requested" => events_requested, "delivery" => delivery, "description" => description)
+        G.wrap(M::PostSsfConfigurationResponse, request(method: :post, path: "/v1/ssf/configuration", body: body, idempotency_key: idempotency_key))
+      end
+
+      # Replace a stream (8.1.1.4): a missing receiver-supplied member is deleted.
+      # `PUT /v1/ssf/configuration` (scope: pca:write)
+      # @return [Hash]
+      def set_configuration(stream_id:, iss: UNSET, aud: UNSET, events_supported: UNSET, events_delivered: UNSET, min_verification_interval: UNSET, events_requested: UNSET, delivery: UNSET, description: UNSET, idempotency_key: nil)
+        body = G.compact("iss" => iss, "aud" => aud, "events_supported" => events_supported, "events_delivered" => events_delivered, "min_verification_interval" => min_verification_interval, "stream_id" => stream_id, "events_requested" => events_requested, "delivery" => delivery, "description" => description)
+        request(method: :put, path: "/v1/ssf/configuration", body: body, idempotency_key: idempotency_key)
+      end
+
+      # Update a stream (8.1.1.3): only the members present change; transmitter-supplied members must match; the delivery method cannot change.
+      # `PATCH /v1/ssf/configuration` (scope: pca:write)
+      # @return [Hash]
+      def update_configuration(stream_id:, iss: UNSET, aud: UNSET, events_supported: UNSET, events_delivered: UNSET, min_verification_interval: UNSET, events_requested: UNSET, delivery: UNSET, description: UNSET, idempotency_key: nil)
+        body = G.compact("iss" => iss, "aud" => aud, "events_supported" => events_supported, "events_delivered" => events_delivered, "min_verification_interval" => min_verification_interval, "stream_id" => stream_id, "events_requested" => events_requested, "delivery" => delivery, "description" => description)
+        request(method: :patch, path: "/v1/ssf/configuration", body: body, idempotency_key: idempotency_key)
+      end
+
+      # Delete a stream (?stream_id, 8.1.1.5): 204.
+      # `DELETE /v1/ssf/configuration` (scope: pca:write)
+      # @return [Hash]
+      def delete_configuration(body, stream_id:, idempotency_key: nil)
+        query = G.compact("stream_id" => stream_id)
+        request(method: :delete, path: "/v1/ssf/configuration", query: query, body: body, idempotency_key: idempotency_key)
+      end
+
       # Raise a Shared Signals event for one of your users: the CAEP and RISC events Atlas has no flow for (opt-in, opt-out-initiated, opt-out-cancelled, opt-out-effective, identifier-recycled, recovery-activated ...). It reaches every stream that asked for the event and whose subject rules allow the user. 202.
       # `POST /v1/ssf/events` (scope: ssf:write)
       # @return [nil]
       def create_event(user_id: UNSET, event: UNSET, subject: UNSET, data: UNSET, idempotency_key: nil)
         body = G.compact("user_id" => user_id, "event" => event, "subject" => subject, "data" => data)
         request(method: :post, path: "/v1/ssf/events", body: body, idempotency_key: idempotency_key)
+      end
+
+      # SSF transmitter configuration metadata (issuer, delivery methods, the five management endpoints).
+      # `GET /v1/ssf/metadata` (scope: pca:read)
+      # @return [Atlas::Models::GetSsfMetadataResponse]
+      def get_metadata()
+        G.wrap(M::GetSsfMetadataResponse, request(method: :get, path: "/v1/ssf/metadata"))
+      end
+
+      # Remove a subject from a stream (8.1.3.3). 204; an unknown subject is ignored.
+      # `POST /v1/ssf/remove_subject` (scope: pca:write)
+      # @return [Hash]
+      def remove_subject_all(stream_id:, subject:, idempotency_key: nil)
+        body = G.compact("stream_id" => stream_id, "subject" => subject)
+        request(method: :post, path: "/v1/ssf/remove_subject", body: body, idempotency_key: idempotency_key)
       end
 
       # SSF 1.0 stream status endpoint: the status (enabled, paused, disabled) of the stream named by the `stream_id` query parameter.
@@ -4905,6 +5927,14 @@ module Atlas
         G.page(M::SsfStreamSubject, query, envelope: M::GetSsfStreamsSubjectsResponseList) { |q| request(method: :get, path: "/v1/ssf/streams/#{enc(id)}/subjects", query: q) }
       end
 
+      # Poll a stream (RFC 8936): acknowledge with ack, report invalid SETs with setErrs, receive up to maxEvents unacknowledged SETs.
+      # `POST /v1/ssf/streams/{streamId}/poll` (scope: pca:write)
+      # @return [Atlas::Models::PostSsfStreamsPollResponse]
+      def poll_stream(stream_id, ack: UNSET, set_errs: UNSET, max_events: UNSET, return_immediately: UNSET, idempotency_key: nil)
+        body = G.compact("ack" => ack, "setErrs" => set_errs, "maxEvents" => max_events, "returnImmediately" => return_immediately)
+        G.wrap(M::PostSsfStreamsPollResponse, request(method: :post, path: "/v1/ssf/streams/#{enc(stream_id)}/poll", body: body, idempotency_key: idempotency_key))
+      end
+
       # SSF 1.0 add subject: start (or, on an ALL stream, resume) events for one subject on a stream. Subject formats: iss_sub (this issuer), email, phone_number, opaque, account, did, uri. 200 with an empty body.
       # `POST /v1/ssf/subjects/add` (scope: ssf:write)
       # @return [nil]
@@ -4919,6 +5949,14 @@ module Atlas
       def remove_subject(stream_id: UNSET, subject: UNSET, idempotency_key: nil)
         body = G.compact("stream_id" => stream_id, "subject" => subject)
         request(method: :post, path: "/v1/ssf/subjects/remove", body: body, idempotency_key: idempotency_key)
+      end
+
+      # Request a verification event (8.1.4.2): 204, and a signed SET carrying the optional state is delivered on the stream (pushed, or retained for polling).
+      # `POST /v1/ssf/verification` (scope: pca:write)
+      # @return [Hash]
+      def verification(stream_id:, state: UNSET, idempotency_key: nil)
+        body = G.compact("stream_id" => stream_id, "state" => state)
+        request(method: :post, path: "/v1/ssf/verification", body: body, idempotency_key: idempotency_key)
       end
 
       # SSF 1.0 verification endpoint: queue a verification event carrying `state` for the stream named by `stream_id`. 204.
@@ -4992,16 +6030,16 @@ module Atlas
       # Change a step-up policy. Send only the fields to change. The change applies to the next assertion.
       # `PATCH /v1/step_up/policies/{id}` (scope: step_up:write)
       # @return [Atlas::Models::StepUpPolicy]
-      def update_policy(id, name: UNSET, description: UNSET, enabled: UNSET, max_age_seconds: UNSET, required_acr: UNSET, required_amr: UNSET, required_amr_any: UNSET, phishing_resistant: UNSET, allowed_methods: UNSET, receipt_ttl_seconds: UNSET)
+      def update_policy(id, name: UNSET, description: UNSET, enabled: UNSET, max_age_seconds: UNSET, required_acr: UNSET, required_amr: UNSET, required_amr_any: UNSET, phishing_resistant: UNSET, allowed_methods: UNSET, receipt_ttl_seconds: UNSET, idempotency_key: nil)
         body = G.compact("name" => name, "description" => description, "enabled" => enabled, "max_age_seconds" => max_age_seconds, "required_acr" => required_acr, "required_amr" => required_amr, "required_amr_any" => required_amr_any, "phishing_resistant" => phishing_resistant, "allowed_methods" => allowed_methods, "receipt_ttl_seconds" => receipt_ttl_seconds)
-        G.wrap(M::StepUpPolicy, request(method: :patch, path: "/v1/step_up/policies/#{enc(id)}", body: body))
+        G.wrap(M::StepUpPolicy, request(method: :patch, path: "/v1/step_up/policies/#{enc(id)}", body: body, idempotency_key: idempotency_key))
       end
 
       # Delete a step-up policy. An assertion that names it afterwards answers 404, so a service that still asks fails closed.
       # `DELETE /v1/step_up/policies/{id}` (scope: step_up:write)
       # @return [Atlas::Models::StepUpPolicy2]
-      def delete_policy(id)
-        G.wrap(M::StepUpPolicy2, request(method: :delete, path: "/v1/step_up/policies/#{enc(id)}"))
+      def delete_policy(id, idempotency_key: nil)
+        G.wrap(M::StepUpPolicy2, request(method: :delete, path: "/v1/step_up/policies/#{enc(id)}", idempotency_key: idempotency_key))
       end
     end
 
@@ -5038,8 +6076,8 @@ module Atlas
       # Take an address off the suppression list; messages to it are sent again. Audited.
       # `DELETE /v1/suppressions/{id}` (scope: messaging:write)
       # @return [Atlas::Models::MessageSuppression2]
-      def delete_suppression(id)
-        G.wrap(M::MessageSuppression2, request(method: :delete, path: "/v1/suppressions/#{enc(id)}"))
+      def delete_suppression(id, idempotency_key: nil)
+        G.wrap(M::MessageSuppression2, request(method: :delete, path: "/v1/suppressions/#{enc(id)}", idempotency_key: idempotency_key))
       end
     end
 
@@ -5060,9 +6098,9 @@ module Atlas
       # Configure OTLP/HTTP export of gateway tool calls and relay calls as spans and metrics (atlas.calls, atlas.call.duration) to your collector. The endpoint must be https and public; headers (for example an API token) are sealed and never returned. Delivery is batched and best effort.
       # `PUT /v1/telemetry_export` (scope: instance:write)
       # @return [Atlas::Models::TelemetryExport]
-      def set_telemetry_export(enabled: UNSET, endpoint: UNSET, headers: UNSET, service_name: UNSET, traces: UNSET, metrics: UNSET)
+      def set_telemetry_export(enabled: UNSET, endpoint: UNSET, headers: UNSET, service_name: UNSET, traces: UNSET, metrics: UNSET, idempotency_key: nil)
         body = G.compact("enabled" => enabled, "endpoint" => endpoint, "headers" => headers, "service_name" => service_name, "traces" => traces, "metrics" => metrics)
-        G.wrap(M::TelemetryExport, request(method: :put, path: "/v1/telemetry_export", body: body))
+        G.wrap(M::TelemetryExport, request(method: :put, path: "/v1/telemetry_export", body: body, idempotency_key: idempotency_key))
       end
 
       # Send one test span to the configured collector now. Answers ok or the collector's error; never fails the request.
@@ -5119,6 +6157,22 @@ module Atlas
       # @return [Atlas::Models::BulkUserAction]
       def cancel_bulk_action(id, idempotency_key: nil)
         G.wrap(M::BulkUserAction, request(method: :post, path: "/v1/users/bulk_actions/#{enc(id)}/cancel", idempotency_key: idempotency_key))
+      end
+
+      # Create-or-update the user keyed by your own id (external_id, the path segment, URL-encoded): 201 with the new user when none holds it (the body is that of POST /v1/users, email_address required, external_id from the path), else 200 with the existing user updated (only first_name, last_name, image_url, public_metadata, private_metadata, unsafe_metadata, password and referral_code apply; email fields and the other create-only fields are ignored). Two calls racing for a new external_id create exactly one user. When nobody holds the id but a user already has the address, the answer is 409 IDENTIFIER_EXISTS with meta.user_id; send link_by_verified_email: true to adopt that user instead (200), which works only when the address is verified in Atlas and the user has no external_id yet (a different id is never overwritten). Emits user.created or user.updated.
+      # `PUT /v1/users/by_external_id/{external_id}` (scope: users:write)
+      # @return [Atlas::Models::User]
+      def set_by_external_id(external_id, email_address: UNSET, sandbox: UNSET, password_policy: UNSET, link_by_verified_email: UNSET, password: UNSET, password_hash: UNSET, first_name: UNSET, last_name: UNSET, image_url: UNSET, email_verified: UNSET, public_metadata: UNSET, private_metadata: UNSET, unsafe_metadata: UNSET, referral_code: UNSET, idempotency_key: nil)
+        body = G.compact("email_address" => email_address, "sandbox" => sandbox, "password_policy" => password_policy, "link_by_verified_email" => link_by_verified_email, "password" => password, "password_hash" => password_hash, "first_name" => first_name, "last_name" => last_name, "image_url" => image_url, "email_verified" => email_verified, "public_metadata" => public_metadata, "private_metadata" => private_metadata, "unsafe_metadata" => unsafe_metadata, "referral_code" => referral_code)
+        G.wrap(M::User, request(method: :put, path: "/v1/users/by_external_id/#{enc(external_id)}", body: body, idempotency_key: idempotency_key))
+      end
+
+      # Reconcile missed `user.deleted` webhooks: every user deleted at or after `since`, oldest first, as `id`, `external_id` and `deleted_at`. Nothing else about the person is returned. Page with `starting_after` = the previous `next_cursor`. Rows exist until the personal-data scrub (`compliance.retention.deletedUserGraceDays`, default 30 days), so reconcile at least that often; failed deliveries themselves are listed by `GET /v1/webhook_dlq?event_type=user.deleted`.
+      # `GET /v1/users/deleted` (scope: users:read)
+      # @return [Page<DeletedUser>]
+      def list_deleted(since:, limit: UNSET, starting_after: UNSET)
+        query = G.compact("since" => since, "limit" => limit, "starting_after" => starting_after)
+        G.page(M::DeletedUser, query) { |q| request(method: :get, path: "/v1/users/deleted", query: q) }
       end
 
       # Remember email addresses and E.164 phone numbers of accounts that were deleted before this instance recorded deletions, so deletedUserReturn "block" refuses them. Same keyed, unreadable hash a delete writes. Up to 5000 per call, safe to repeat. The answer counts new, already remembered and invalid entries (with the first invalid positions). Honours Idempotency-Key.
@@ -5195,8 +6249,8 @@ module Atlas
       # Stop trusting a device by its `trusted_device_id`. Approvals it already decided keep their receipts; a request that needs a trusted device refuses it from now on. A trusted-device id that is unknown, another user's or already revoked is a 404. Emits approval_trusted_device.revoked. Needs `approvals:write`.
       # `DELETE /v1/users/{id}/approval_devices/{deviceId}` (scope: approvals:write)
       # @return [Atlas::Models::DeleteUsersApprovalDevicesResponse]
-      def delete_approval_device(id, device_id)
-        G.wrap(M::DeleteUsersApprovalDevicesResponse, request(method: :delete, path: "/v1/users/#{enc(id)}/approval_devices/#{enc(device_id)}"))
+      def delete_approval_device(id, device_id, idempotency_key: nil)
+        G.wrap(M::DeleteUsersApprovalDevicesResponse, request(method: :delete, path: "/v1/users/#{enc(id)}/approval_devices/#{enc(device_id)}", idempotency_key: idempotency_key))
       end
 
       # Withdraw a pending transaction-approval request so the device can no longer answer it. 404 for a request that is not this user's, 409 once it is approved, denied, expired or already cancelled. Emits approval_request.cancelled.
@@ -5217,8 +6271,16 @@ module Atlas
       # Erase the cookie consent records linked to a user. Deleting the user does this too. Audited.
       # `DELETE /v1/users/{id}/cookie_consents` (scope: data_subject_requests:write)
       # @return [Atlas::Models::CookieConsentErasure]
-      def delete_cookie_consent(id)
-        G.wrap(M::CookieConsentErasure, request(method: :delete, path: "/v1/users/#{enc(id)}/cookie_consents"))
+      def delete_cookie_consent(id, idempotency_key: nil)
+        G.wrap(M::CookieConsentErasure, request(method: :delete, path: "/v1/users/#{enc(id)}/cookie_consents", idempotency_key: idempotency_key))
+      end
+
+      # Mint a short-lived delegation token so your server can act as this user for one purpose. The token is limited to a named `audience` and a list of `scopes` (both must be on the instance's `delegationTokens` settings), lives at most 300 seconds (default 120), and carries an `act` claim naming `actor.sub`, so a service can see it is not the user themselves. Refused for banned, deleted and impersonation-protected users, and for an `org_id` the user does not belong to. Every mint is audited on the user's trail as `user.delegation_token_issued` (the token itself is never stored). Rate limited per key and per user. Send an Idempotency-Key to make a retry return the same token.
+      # `POST /v1/users/{id}/delegation_tokens` (scope: delegation_tokens:write)
+      # @return [Atlas::Models::DelegationToken]
+      def create_delegation_token(id, audience:, scopes:, actor:, ttl_seconds: UNSET, org_id: UNSET, reason: UNSET, idempotency_key: nil)
+        body = G.compact("audience" => audience, "scopes" => scopes, "actor" => actor, "ttl_seconds" => ttl_seconds, "org_id" => org_id, "reason" => reason)
+        G.wrap(M::DelegationToken, request(method: :post, path: "/v1/users/#{enc(id)}/delegation_tokens", body: body, idempotency_key: idempotency_key))
       end
 
       # Resume a PAUSED scheduled deletion: a `pre_user_deletion` Action held it until the person re-confirmed, and your backend confirms on their behalf. The deletion keeps its original schedule and reminder plan, no mail is sent (nothing was cancelled), and user.deletion_resumed is emitted; it then runs on its date. 409 when the user has no scheduled deletion or it is not paused.
@@ -5269,9 +6331,9 @@ module Atlas
       # Start a user's onboarding over: deletes their runs and the open steps those journeys asked of them, so the journey asks again at the next sign-in. journey_id limits it to one journey. Audited.
       # `DELETE /v1/users/{id}/journeys` (scope: users:write)
       # @return [Atlas::Models::JourneyReset]
-      def delete_journey(id, journey_id: UNSET)
+      def delete_journey(id, journey_id: UNSET, idempotency_key: nil)
         query = G.compact("journey_id" => journey_id)
-        G.wrap(M::JourneyReset, request(method: :delete, path: "/v1/users/#{enc(id)}/journeys", query: query))
+        G.wrap(M::JourneyReset, request(method: :delete, path: "/v1/users/#{enc(id)}/journeys", query: query, idempotency_key: idempotency_key))
       end
 
       # Whether the user is on legal hold, the active hold, and every hold they ever had.
@@ -5300,8 +6362,8 @@ module Atlas
       # Merge another user INTO this one (the one kept). Emails, phones, social accounts, MFA factors, passkeys, API tokens, devices, organization and group memberships, app roles, consents, billing subscriptions and credits move across (a membership the target already has is left as it is, and the target's role wins); metadata merges key by key with the target winning; blank profile fields are filled. The source user's sessions end and it is deleted, firing `user.deleted` and `user.merged`. Refused when the users are the same, the source is banned and the target is not, or the target is a guest. `dry_run` reports what would move. Needs users:write and users:delete.
       # `POST /v1/users/{id}/merge` (scope: users:write)
       # @return [Hash]
-      def merge(id, source_user_id: UNSET, dry_run: UNSET, idempotency_key: nil)
-        body = G.compact("source_user_id" => source_user_id, "dry_run" => dry_run)
+      def merge(id, source_user_id: UNSET, dry_run: UNSET, external_id: UNSET, idempotency_key: nil)
+        body = G.compact("source_user_id" => source_user_id, "dry_run" => dry_run, "external_id" => external_id)
         request(method: :post, path: "/v1/users/#{enc(id)}/merge", body: body, idempotency_key: idempotency_key)
       end
 
@@ -5327,6 +6389,36 @@ module Atlas
         G.wrap(M::UserContainment, request(method: :post, path: "/v1/users/#{enc(id)}/release", idempotency_key: idempotency_key))
       end
 
+      # The risk signals reported for one user, newest first; `status=active` keeps only live ones. Page with `before`.
+      # `GET /v1/users/{id}/risk_signals` (scope: risk_signals:read)
+      # @return [Page<RiskSignal>]
+      def list_risk_signals(id, status: UNSET, limit: UNSET, before: UNSET, starting_after: UNSET)
+        query = G.compact("status" => status, "limit" => limit, "before" => before, "starting_after" => starting_after)
+        G.page(M::RiskSignal, query) { |q| request(method: :get, path: "/v1/users/#{enc(id)}/risk_signals", query: q) }
+      end
+
+      # Raise one user's sign-in risk for a window. The same signal as POST /v1/risk_signals with the user named by the path. While it is live and risk-based MFA is on, it adds points to every sign-in evaluation of that user (low 10, medium 25, high 50, critical 100; the total is capped at 100), which can turn into a second factor, an enrolment or a block under the instance's risk policy. It never lowers friction. ttl_seconds 60 to 2592000, default 3600; it expires by itself. Honours Idempotency-Key. Emits risk_signal.created.
+      # `POST /v1/users/{id}/risk_signals` (scope: risk_signals:write)
+      # @return [Atlas::Models::RiskSignal]
+      def create_risk_signal(id, signal_type:, severity:, ttl_seconds: UNSET, metadata: UNSET, source: UNSET, idempotency_key: nil)
+        body = G.compact("signal_type" => signal_type, "severity" => severity, "ttl_seconds" => ttl_seconds, "metadata" => metadata, "source" => source)
+        G.wrap(M::RiskSignal, request(method: :post, path: "/v1/users/#{enc(id)}/risk_signals", body: body, idempotency_key: idempotency_key))
+      end
+
+      # End every live risk signal on one user now. Their points leave the next evaluation; the rows stay readable with status `revoked`. Recorded once in the audit log. Safe to repeat: with nothing live, it clears nothing.
+      # `DELETE /v1/users/{id}/risk_signals` (scope: risk_signals:write)
+      # @return [Atlas::Models::RiskSignalsCleared]
+      def delete_risk_signal(id, idempotency_key: nil)
+        G.wrap(M::RiskSignalsCleared, request(method: :delete, path: "/v1/users/#{enc(id)}/risk_signals", idempotency_key: idempotency_key))
+      end
+
+      # One read of how the account is protected: password and when it last changed, sign-in methods the user can use right now, linked providers, verified second factors, recovery codes left, passkeys, remembered browsers and device keys, and the open sessions (count and the newest). Ids and labels only: never a password hash, second-factor secret, recovery code, credential id or key material.
+      # `GET /v1/users/{id}/security_summary` (scope: users:read)
+      # @return [Atlas::Models::SecuritySummary]
+      def get_security_summary(id)
+        G.wrap(M::SecuritySummary, request(method: :get, path: "/v1/users/#{enc(id)}/security_summary"))
+      end
+
       # The user's active temporary access passes (never the codes).
       # `GET /v1/users/{id}/temporary_access` (scope: users:read)
       # @return [Page<TemporaryAccessPass>]
@@ -5346,8 +6438,8 @@ module Atlas
       # Revoke a temporary access pass.
       # `DELETE /v1/users/{id}/temporary_access/{pass_id}` (scope: users:write)
       # @return [Atlas::Models::TemporaryAccessPass3]
-      def delete_temporary_access(id, pass_id)
-        G.wrap(M::TemporaryAccessPass3, request(method: :delete, path: "/v1/users/#{enc(id)}/temporary_access/#{enc(pass_id)}"))
+      def delete_temporary_access(id, pass_id, idempotency_key: nil)
+        G.wrap(M::TemporaryAccessPass3, request(method: :delete, path: "/v1/users/#{enc(id)}/temporary_access/#{enc(pass_id)}", idempotency_key: idempotency_key))
       end
     end
 
@@ -5397,9 +6489,9 @@ module Atlas
       # Set the allow and/or block list (each replaces its list; omit one to keep it). Entries are an https directory URL or host, or { directory, name }. At most 100 per list; a directory cannot be on both.
       # `PUT /v1/web_bot_auth` (scope: machines:write)
       # @return [Atlas::Models::WebBotAuth]
-      def set_web_bot_auth(allow: UNSET, block: UNSET)
+      def set_web_bot_auth(allow: UNSET, block: UNSET, idempotency_key: nil)
         body = G.compact("allow" => allow, "block" => block)
-        G.wrap(M::WebBotAuth, request(method: :put, path: "/v1/web_bot_auth", body: body))
+        G.wrap(M::WebBotAuth, request(method: :put, path: "/v1/web_bot_auth", body: body, idempotency_key: idempotency_key))
       end
 
       # The listed directories, one row each with its list (allow or block).
@@ -5421,8 +6513,8 @@ module Atlas
       # Take a directory off both lists.
       # `DELETE /v1/web_bot_auth/directories/{id}` (scope: machines:write)
       # @return [Atlas::Models::WebBotDirectory]
-      def delete_directory(id)
-        G.wrap(M::WebBotDirectory, request(method: :delete, path: "/v1/web_bot_auth/directories/#{enc(id)}"))
+      def delete_directory(id, idempotency_key: nil)
+        G.wrap(M::WebBotDirectory, request(method: :delete, path: "/v1/web_bot_auth/directories/#{enc(id)}", idempotency_key: idempotency_key))
       end
     end
 
@@ -5431,13 +6523,29 @@ module Atlas
       include WebBotAuthOperations
     end
 
+    # /v1/webhook_dlq
+    module WebhookDlqOperations
+      # The dead-letter queue of the whole instance: deliveries that used every attempt on any endpoint, newest first, each with `endpoint_id`, the payload that was sent, the last response and the error. Narrow it with `event_type` (for example `user.deleted`) to find every failed delivery of one event; acknowledge or requeue per endpoint with the endpoint dlq routes. Cursor: `starting_after` with the `next_cursor` of the previous page.
+      # `GET /v1/webhook_dlq` (scope: webhooks:read)
+      # @return [Page<GetWebhookDlqResponseItem>]
+      def list_webhook_dlq(limit: UNSET, starting_after: UNSET, event_type: UNSET)
+        query = G.compact("limit" => limit, "starting_after" => starting_after, "event_type" => event_type)
+        G.page(M::GetWebhookDlqResponseItem, query, envelope: M::GetWebhookDlqResponseList) { |q| request(method: :get, path: "/v1/webhook_dlq", query: q) }
+      end
+    end
+
+    # Namespace for /v1/webhook_dlq (`client.webhook_dlq`).
+    class WebhookDlqApi < Atlas::Resources::Base
+      include WebhookDlqOperations
+    end
+
     # /v1/webhook_endpoints
     module WebhookEndpointsOperations
       # The dead-letter queue of an endpoint: deliveries that used every attempt, newest first, each with the payload that was sent, the last response and the error. `depth` counts what nobody has acknowledged yet. Pull a page, handle it (or fix the receiver and requeue), then acknowledge, so a consumer that cannot take pushes can work failures off as a queue. Cursor: `starting_after` with the `next_cursor` of the previous page.
       # `GET /v1/webhook_endpoints/{id}/dlq` (scope: webhooks:read)
       # @return [Page<WebhookDelivery>]
-      def list_dlq(id, limit: UNSET, starting_after: UNSET)
-        query = G.compact("limit" => limit, "starting_after" => starting_after)
+      def list_dlq(id, limit: UNSET, starting_after: UNSET, event_type: UNSET)
+        query = G.compact("limit" => limit, "starting_after" => starting_after, "event_type" => event_type)
         G.page(M::WebhookDelivery, query, envelope: M::GetWebhookEndpointsDlqResponseList) { |q| request(method: :get, path: "/v1/webhook_endpoints/#{enc(id)}/dlq", query: q) }
       end
 
@@ -5548,16 +6656,16 @@ module Atlas
       # Set a key in the workflow key-value table.
       # `PUT /v1/workflows/{id}/kv/{key}` (scope: actions:write)
       # @return [Atlas::Models::WorkflowKv]
-      def set_kv(id, key, value:)
+      def set_kv(id, key, value:, idempotency_key: nil)
         body = G.compact("value" => value)
-        G.wrap(M::WorkflowKv, request(method: :put, path: "/v1/workflows/#{enc(id)}/kv/#{enc(key)}", body: body))
+        G.wrap(M::WorkflowKv, request(method: :put, path: "/v1/workflows/#{enc(id)}/kv/#{enc(key)}", body: body, idempotency_key: idempotency_key))
       end
 
       # Delete a key from the workflow key-value table.
       # `DELETE /v1/workflows/{id}/kv/{key}` (scope: actions:write)
       # @return [Atlas::Models::WorkflowKv]
-      def delete_kv(id, key)
-        G.wrap(M::WorkflowKv, request(method: :delete, path: "/v1/workflows/#{enc(id)}/kv/#{enc(key)}"))
+      def delete_kv(id, key, idempotency_key: nil)
+        G.wrap(M::WorkflowKv, request(method: :delete, path: "/v1/workflows/#{enc(id)}/kv/#{enc(key)}", idempotency_key: idempotency_key))
       end
 
       # One run with its per-step log: each step's path, status, attempt, detail and output.
@@ -5618,16 +6726,16 @@ module Atlas
       # Change a WS-Federation connection; sending metadata refreshes the certificates after a provider rollover.
       # `PATCH /v1/wsfed_connections/{id}` (scope: sso_connections:write)
       # @return [Atlas::Models::WsfedConnection]
-      def update_wsfed_connection(id, organization_id: UNSET, status: UNSET, metadata_url: UNSET, metadata_xml: UNSET, issuer: UNSET, passive_endpoint: UNSET, signing_certificates: UNSET, realm: UNSET, allowed_domains: UNSET, attribute_mapping: UNSET, freshness_minutes: UNSET, auth_method: UNSET)
+      def update_wsfed_connection(id, organization_id: UNSET, status: UNSET, metadata_url: UNSET, metadata_xml: UNSET, issuer: UNSET, passive_endpoint: UNSET, signing_certificates: UNSET, realm: UNSET, allowed_domains: UNSET, attribute_mapping: UNSET, freshness_minutes: UNSET, auth_method: UNSET, idempotency_key: nil)
         body = G.compact("organization_id" => organization_id, "status" => status, "metadata_url" => metadata_url, "metadata_xml" => metadata_xml, "issuer" => issuer, "passive_endpoint" => passive_endpoint, "signing_certificates" => signing_certificates, "realm" => realm, "allowed_domains" => allowed_domains, "attribute_mapping" => attribute_mapping, "freshness_minutes" => freshness_minutes, "auth_method" => auth_method)
-        G.wrap(M::WsfedConnection, request(method: :patch, path: "/v1/wsfed_connections/#{enc(id)}", body: body))
+        G.wrap(M::WsfedConnection, request(method: :patch, path: "/v1/wsfed_connections/#{enc(id)}", body: body, idempotency_key: idempotency_key))
       end
 
       # Delete a WS-Federation connection.
       # `DELETE /v1/wsfed_connections/{id}` (scope: sso_connections:write)
       # @return [nil]
-      def delete_wsfed_connection(id)
-        request(method: :delete, path: "/v1/wsfed_connections/#{enc(id)}")
+      def delete_wsfed_connection(id, idempotency_key: nil)
+        request(method: :delete, path: "/v1/wsfed_connections/#{enc(id)}", idempotency_key: idempotency_key)
       end
     end
 
@@ -5640,6 +6748,7 @@ module Atlas
     Atlas::Resources::AccessPolicies.include(AccessPoliciesOperations)
     Atlas::Resources::Actions.include(ActionsOperations)
     Atlas::Resources::Agents.include(AgentsOperations)
+    Atlas::Resources::Analytics.include(AnalyticsOperations)
     Atlas::Resources::ApiKeys.include(ApiKeysOperations)
     Atlas::Resources::AppCatalog.include(AppCatalogOperations)
     Atlas::Resources::AtlasIdGrants.include(AtlasIdAppsOperations)
@@ -5650,11 +6759,13 @@ module Atlas
     Atlas::Resources::DesktopMfa.include(DesktopMfaOperations)
     Atlas::Resources::Devices.include(DevicesOperations)
     Atlas::Resources::Diagnostics.include(DiagnosticsOperations)
+    Atlas::Resources::Domains.include(DomainsOperations)
     Atlas::Resources::Entitlements.include(EntitlementsOperations)
     Atlas::Resources::Fga.include(FgaOperations)
     Atlas::Resources::Iga.include(IgaOperations)
     Atlas::Resources::Instance.include(InstanceOperations)
     Atlas::Resources::Localizations.include(LocalizationsOperations)
+    Atlas::Resources::Machines.include(MachinesOperations)
     Atlas::Resources::Mcp.include(McpOperations)
     Atlas::Resources::McpGateways.include(McpGatewaysOperations)
     Atlas::Resources::Messaging.include(MessagingOperations)
@@ -5662,6 +6773,8 @@ module Atlas
     Atlas::Resources::OAuthClients.include(OauthClientsOperations)
     Atlas::Resources::OpenFga.include(OpenfgaOperations)
     Atlas::Resources::Organizations.include(OrganizationsOperations)
+    Atlas::Resources::Pca.include(PcaOperations)
+    Atlas::Resources::Permissions.include(PermissionsOperations)
     Atlas::Resources::Platform.include(PlatformOperations)
     Atlas::Resources::Policies.include(PoliciesOperations)
     Atlas::Resources::ResourceServers.include(ResourceServersOperations)
@@ -5702,6 +6815,7 @@ module Atlas
       def connection_provider_topics = @connection_provider_topics ||= Atlas::Generated::ConnectionProviderTopicsApi.new(@transport)
       def connection_providers = @connection_providers ||= Atlas::Generated::ConnectionProvidersApi.new(@transport)
       def connection_reconnect_settings = @connection_reconnect_settings ||= Atlas::Generated::ConnectionReconnectSettingsApi.new(@transport)
+      def connection_templates = @connection_templates ||= Atlas::Generated::ConnectionTemplatesApi.new(@transport)
       def containments = @containments ||= Atlas::Generated::ContainmentsApi.new(@transport)
       def cookie_consents = @cookie_consents ||= Atlas::Generated::CookieConsentsApi.new(@transport)
       def dev = @dev ||= Atlas::Generated::DevApi.new(@transport)
@@ -5719,19 +6833,25 @@ module Atlas
       def legal_holds = @legal_holds ||= Atlas::Generated::LegalHoldsApi.new(@transport)
       def machine_trust_policies = @machine_trust_policies ||= Atlas::Generated::MachineTrustPoliciesApi.new(@transport)
       def mcp_registry = @mcp_registry ||= Atlas::Generated::McpRegistryApi.new(@transport)
+      def message_links = @message_links ||= Atlas::Generated::MessageLinksApi.new(@transport)
       def message_receivers = @message_receivers ||= Atlas::Generated::MessageReceiversApi.new(@transport)
       def messages = @messages ||= Atlas::Generated::MessagesApi.new(@transport)
       def messaging_providers = @messaging_providers ||= Atlas::Generated::MessagingProvidersApi.new(@transport)
       def mfa_campaigns = @mfa_campaigns ||= Atlas::Generated::MfaCampaignsApi.new(@transport)
       def mfa_factor_quarantines = @mfa_factor_quarantines ||= Atlas::Generated::MfaFactorQuarantinesApi.new(@transport)
+      def native_apps = @native_apps ||= Atlas::Generated::NativeAppsApi.new(@transport)
       def oauth_application_types = @oauth_application_types ||= Atlas::Generated::OauthApplicationTypesApi.new(@transport)
+      def oauth_consent_requests = @oauth_consent_requests ||= Atlas::Generated::OauthConsentRequestsApi.new(@transport)
+      def oauth_device_requests = @oauth_device_requests ||= Atlas::Generated::OauthDeviceRequestsApi.new(@transport)
       def oauth_grants = @oauth_grants ||= Atlas::Generated::OauthGrantsApi.new(@transport)
       def oauth_publishers = @oauth_publishers ||= Atlas::Generated::OauthPublishersApi.new(@transport)
       def opa = @opa ||= Atlas::Generated::OpaApi.new(@transport)
       def org_role_sets = @org_role_sets ||= Atlas::Generated::OrgRoleSetsApi.new(@transport)
       def org_templates = @org_templates ||= Atlas::Generated::OrgTemplatesApi.new(@transport)
       def organization_connections = @organization_connections ||= Atlas::Generated::OrganizationConnectionsApi.new(@transport)
+      def organization_invitations = @organization_invitations ||= Atlas::Generated::OrganizationInvitationsApi.new(@transport)
       def passkey_campaigns = @passkey_campaigns ||= Atlas::Generated::PasskeyCampaignsApi.new(@transport)
+      def permission_aliases = @permission_aliases ||= Atlas::Generated::PermissionAliasesApi.new(@transport)
       def provisioning = @provisioning ||= Atlas::Generated::ProvisioningApi.new(@transport)
       def provisioning_connectors = @provisioning_connectors ||= Atlas::Generated::ProvisioningConnectorsApi.new(@transport)
       def rate_limit_overrides = @rate_limit_overrides ||= Atlas::Generated::RateLimitOverridesApi.new(@transport)
@@ -5740,6 +6860,7 @@ module Atlas
       def referral_rewards = @referral_rewards ||= Atlas::Generated::ReferralRewardsApi.new(@transport)
       def refresh_tokens = @refresh_tokens ||= Atlas::Generated::RefreshTokensApi.new(@transport)
       def region = @region ||= Atlas::Generated::RegionApi.new(@transport)
+      def revocations = @revocations ||= Atlas::Generated::RevocationsApi.new(@transport)
       def risk_signals = @risk_signals ||= Atlas::Generated::RiskSignalsApi.new(@transport)
       def risky_users = @risky_users ||= Atlas::Generated::RiskyUsersApi.new(@transport)
       def saml_idp = @saml_idp ||= Atlas::Generated::SamlIdpApi.new(@transport)
@@ -5749,6 +6870,7 @@ module Atlas
       def suppressions = @suppressions ||= Atlas::Generated::SuppressionsApi.new(@transport)
       def telemetry_export = @telemetry_export ||= Atlas::Generated::TelemetryExportApi.new(@transport)
       def web_bot_auth = @web_bot_auth ||= Atlas::Generated::WebBotAuthApi.new(@transport)
+      def webhook_dlq = @webhook_dlq ||= Atlas::Generated::WebhookDlqApi.new(@transport)
       def webhook_endpoints = @webhook_endpoints ||= Atlas::Generated::WebhookEndpointsApi.new(@transport)
       def workflow_approvals = @workflow_approvals ||= Atlas::Generated::WorkflowApprovalsApi.new(@transport)
       def workflow_templates = @workflow_templates ||= Atlas::Generated::WorkflowTemplatesApi.new(@transport)
