@@ -3137,11 +3137,13 @@ module Atlas
     end
 
     class AuthConfigExternalJwtIssuersItem < Atlas::Model
+      attribute :account_linking, "accountLinking", :string
       attribute :audience, "audience", :string
       attribute :email_claim, "emailClaim", :string
       attribute :id, "id", :string
       attribute :issuer, "issuer", :string
       attribute :jwks_uri, "jwksUri", :string
+      attribute :organization_id, "organizationId", :string
     end
 
     class AuthConfigIdentityTraits < Atlas::Model
@@ -3394,6 +3396,7 @@ module Atlas
       attribute :device_approval_requires_step_up, "deviceApprovalRequiresStepUp", :boolean
       attribute :dynamic_client_secret_ttl_seconds, "dynamicClientSecretTtlSeconds", :number
       attribute :dynamic_registration, "dynamicRegistration", :boolean
+      attribute :dynamic_registration_limits, "dynamicRegistrationLimits", "AuthConfigOauthProviderDynamicRegistrationLimits"
       attribute :login_url, "loginUrl", :string
       attribute :require_initial_access_token, "requireInitialAccessToken", :boolean
       attribute :require_pkce, "requirePkce", :boolean
@@ -3486,11 +3489,18 @@ module Atlas
       attribute :descriptions, "descriptions", { map: :string }
       attribute :labels, "labels", { map: :string }
       attribute :name, "name", :string
+      attribute :optional, "optional", :boolean
       attribute :owner_exempt, "ownerExempt", :boolean
       attribute :parameters, "parameters", [:string]
       attribute :requires_client_level, "requiresClientLevel", :string
       attribute :requires_verified_client, "requiresVerifiedClient", :boolean
       attribute :sensitive, "sensitive", :boolean
+    end
+
+    class AuthConfigOauthProviderDynamicRegistrationLimits < Atlas::Model
+      attribute :max_clients, "maxClients", :number
+      attribute :prune_unused_after_days, "pruneUnusedAfterDays", :number
+      attribute :registrations_per_hour_per_ip, "registrationsPerHourPerIp", :number
     end
 
     class AuthConfigOauthProviderTokenClaimsItem < Atlas::Model
@@ -3784,6 +3794,7 @@ module Atlas
       attribute :audience, "audience", :any
       attribute :browser_handoff, "browserHandoff", :boolean
       attribute :cookie_domain, "cookieDomain", :string
+      attribute :cookie_isolation, "cookieIsolation", :boolean
       attribute :cross_subdomain_cookies, "crossSubdomainCookies", :boolean
       attribute :csrf_cookie, "csrfCookie", :boolean
       attribute :custom_data, "customData", "AuthConfigSessionCustomData"
@@ -4433,6 +4444,12 @@ module Atlas
       attribute :version, "version", :string
     end
 
+    class BillingCheckoutSync < Atlas::Model
+      attribute :object, "object", :string
+      attribute :status, "status", :string
+      attribute :subscription, "subscription", :hash
+    end
+
     class BillingConnectAccount < Atlas::Model
       attribute :object, "object", :string
       attribute :id, "id", :string
@@ -4572,6 +4589,8 @@ module Atlas
       attribute :active, "active", :boolean
       attribute :pricing_model, "pricing_model", :string
       attribute :trial_days, "trial_days", :integer
+      attribute :grace_days, "grace_days", :integer
+      attribute :past_due_grace_days, "past_due_grace_days", :integer
       attribute :promotion, "promotion", :hash
       attribute :stripe_meter_id, "stripe_meter_id", :string
       attribute :usage_unit, "usage_unit", :string
@@ -4615,6 +4634,7 @@ module Atlas
       attribute :secrets_set, "secrets_set", { map: :boolean }
       attribute :webhook_url, "webhook_url", :string
       attribute :capabilities, "capabilities", :hash
+      attribute :sync, "sync", :hash
       attribute :last_verified_at, "last_verified_at", :integer
       attribute :last_webhook_at, "last_webhook_at", :integer
       attribute :updated_at, "updated_at", :integer
@@ -4671,6 +4691,13 @@ module Atlas
       attribute :plan_id, "plan_id", :string
       attribute :provider, "provider", :string
       attribute :created_at, "created_at", :integer
+    end
+
+    class BillingStripeEvent < Atlas::Model
+      attribute :object, "object", :string
+      attribute :id, "id", :string
+      attribute :type, "type", :string
+      attribute :outcome, "outcome", :string
     end
 
     class BillingTransfer < Atlas::Model
@@ -6070,6 +6097,7 @@ module Atlas
       attribute :culture, "culture", :string
       attribute :declared_cookies, "declared_cookies", ["CookieConsentDeclaredCookiesItem"]
       attribute :frontend_mode, "frontend_mode", "CookieConsentFrontendMode"
+      attribute :cookie_suffix, "cookie_suffix", :string
       attribute :source, "source", :string
       attribute :source_integration, "source_integration", :string
       attribute :host_aliases, "host_aliases", [:string]
@@ -6088,6 +6116,7 @@ module Atlas
       attribute :culture, "culture", :string
       attribute :declared_cookies, "declared_cookies", ["CookieConsentDeclaredCookiesItem"]
       attribute :frontend_mode, "frontend_mode", "CookieConsentFrontendMode"
+      attribute :cookie_suffix, "cookie_suffix", :string
       attribute :source, "source", :string
       attribute :source_integration, "source_integration", :string
       attribute :host_aliases, "host_aliases", [:string]
@@ -7275,6 +7304,7 @@ module Atlas
       attribute :subject, "subject", "EntitlementsSubject"
       attribute :plan, "plan", :string
       attribute :plan_source, "planSource", :string
+      attribute :version, "version", :integer
       attribute :entitlements, "entitlements", ["EntitlementsEntitlementsItem"]
     end
 
@@ -7892,6 +7922,7 @@ module Atlas
       attribute :secrets_set, "secrets_set", { map: :boolean }
       attribute :webhook_url, "webhook_url", :string
       attribute :capabilities, "capabilities", :hash
+      attribute :sync, "sync", :hash
       attribute :last_verified_at, "last_verified_at", :integer
       attribute :last_webhook_at, "last_webhook_at", :integer
       attribute :updated_at, "updated_at", :integer
@@ -8013,11 +8044,20 @@ module Atlas
       attribute :url, "url", :string
       attribute :managed_by, "managed_by", :string
       attribute :destination, "destination", :string
+      attribute :duplicate_delivery_path, "duplicate_delivery_path", "GetInstanceIntegrationsHealthResponseItemDuplicateDeliveryPath"
       attribute :state, "state", :string
       attribute :last_success_at, "last_success_at", :integer
       attribute :last_failure, "last_failure", "GetInstanceIntegrationsHealthResponseItemLastFailure"
       attribute :consecutive_failures, "consecutive_failures", :integer
       attribute :last_minted_at, "last_minted_at", :integer
+    end
+
+    class GetInstanceIntegrationsHealthResponseItemDuplicateDeliveryPath < Atlas::Model
+      attribute :code, "code", :string
+      attribute :kind, "kind", :string
+      attribute :destination, "destination", :string
+      attribute :forwarding_endpoint_id, "forwarding_endpoint_id", :string
+      attribute :webhook_endpoint_ids, "webhook_endpoint_ids", [:string]
     end
 
     class GetInstanceIntegrationsHealthResponseItemLastFailure < Atlas::Model
@@ -8028,10 +8068,18 @@ module Atlas
 
     class GetInstanceIntegrationsHealthResponseList < Atlas::Model
       attribute :object, "object", :string
+      attribute :duplicate_delivery_paths, "duplicate_delivery_paths", ["GetInstanceIntegrationsHealthResponseListDuplicateDeliveryPathsItem"]
       attribute :data, "data", ["GetInstanceIntegrationsHealthResponseItem"]
       attribute :has_more, "has_more", :boolean
       attribute :unhealthy_count, "unhealthy_count", :integer
       attribute :generated_at, "generated_at", :integer
+    end
+
+    class GetInstanceIntegrationsHealthResponseListDuplicateDeliveryPathsItem < Atlas::Model
+      attribute :kind, "kind", :string
+      attribute :destination, "destination", :string
+      attribute :forwarding_endpoint_id, "forwarding_endpoint_id", :string
+      attribute :webhook_endpoint_ids, "webhook_endpoint_ids", [:string]
     end
 
     class GetInstanceIntegrationsResponseItem < Atlas::Model
@@ -8266,6 +8314,7 @@ module Atlas
       attribute :requires_verified_client, "requires_verified_client", :boolean
       attribute :requires_client_level, "requires_client_level", :string
       attribute :owner_exempt, "owner_exempt", :boolean
+      attribute :optional, "optional", :boolean
       attribute :wildcard, "wildcard", :boolean
     end
 
@@ -8293,6 +8342,8 @@ module Atlas
       attribute :allowed_origins, "allowed_origins", [:string]
       attribute :organization_ids, "organization_ids", [:string]
       attribute :rotated_from, "rotated_from", :string
+      attribute :last_app_used_at, "last_app_used_at", :integer
+      attribute :last_used_user_agent, "last_used_user_agent", :string
       attribute :metadata, "metadata", :hash
       attribute :external_ref, "external_ref", :string
       attribute :idempotent_replay, "idempotent_replay", :boolean
@@ -8678,10 +8729,12 @@ module Atlas
     end
 
     class GetResourceServersRevokedTokensResponseItem < Atlas::Model
+      attribute :kind, "kind", :string
       attribute :family_id, "family_id", :string
       attribute :jti, "jti", :string
       attribute :user_id, "user_id", :string
       attribute :client_id, "client_id", :string
+      attribute :oauth_client_id, "oauth_client_id", :string
       attribute :reason, "reason", :string
       attribute :revoked_at, "revoked_at", :integer
     end
@@ -8887,6 +8940,8 @@ module Atlas
       attribute :client_id, "client_id", :string
       attribute :client_name, "client_name", :string
       attribute :scopes, "scopes", [:string]
+      attribute :organization_id, "organization_id", :string
+      attribute :remembered, "remembered", :boolean
       attribute :metadata, "metadata", :hash
       attribute :granted_at, "granted_at", :integer
       attribute :updated_at, "updated_at", :integer
@@ -9183,6 +9238,15 @@ module Atlas
       attribute :verification_id, "verification_id", :string
       attribute :consented_at, "consented_at", :integer
       attribute :created_at, "created_at", :integer
+    end
+
+    class HostedMethodFilter < Atlas::Model
+      attribute :object, "object", :string
+      attribute :methods_, "methods", [:string]
+      attribute :allowed_methods, "allowed_methods", :string
+      attribute :allowed_methods_sig, "allowed_methods_sig", :string
+      attribute :token, "token", :string
+      attribute :query, "query", :string
     end
 
     class HostedPagePreview < Atlas::Model
@@ -10095,6 +10159,7 @@ module Atlas
       attribute :object, "object", :string
       attribute :forwarding, "forwarding", :string
       attribute :event, "event", :string
+      attribute :events, "events", [:string]
       attribute :id, "id", :string
       attribute :active, "active", :boolean
     end
@@ -10103,6 +10168,7 @@ module Atlas
       attribute :object, "object", :string
       attribute :forwarding, "forwarding", :string
       attribute :event, "event", :string
+      attribute :events, "events", [:string]
       attribute :created, "created", :boolean
       attribute :id, "id", :string
       attribute :secret, "secret", :string
@@ -10245,6 +10311,13 @@ module Atlas
       attribute :user_id, "user_id", :string
       attribute :outcome, "outcome", :string
       attribute :warnings, "warnings", ["Job2ResultsItemWarningsItem"]
+      attribute :factors, "factors", ["Job2ResultsItemFactorsItem"]
+    end
+
+    class Job2ResultsItemFactorsItem < Atlas::Model
+      attribute :kind, "kind", :string
+      attribute :will_verify, "will_verify", :boolean
+      attribute :detail, "detail", :string
     end
 
     class Job2ResultsItemWarningsItem < Atlas::Model
@@ -11816,6 +11889,7 @@ module Atlas
       attribute :custom_redirect_uri, "custom_redirect_uri", :string
       attribute :hosted_id_token, "hosted_id_token", "OAuthProviderHostedIdToken"
       attribute :configured, "configured", :boolean
+      attribute :use_shared_dev_credentials, "use_shared_dev_credentials", :boolean
       attribute :client_id, "client_id", :string
       attribute :has_secret, "has_secret", :boolean
       attribute :enabled, "enabled", :boolean
@@ -11870,6 +11944,10 @@ module Atlas
       attribute :client_id, "client_id", :string
       attribute :name, "name", :string
       attribute :logo_url, "logo_url", :string
+      attribute :client_uri, "client_uri", :string
+      attribute :homepage_url, "homepage_url", :string
+      attribute :policy_uri, "policy_uri", :string
+      attribute :tos_uri, "tos_uri", :string
       attribute :redirect_uris, "redirect_uris", [:string]
       attribute :allowed_scopes, "allowed_scopes", [:string]
       attribute :grant_types, "grant_types", [:string]
@@ -11896,6 +11974,8 @@ module Atlas
       attribute :skip_logout_confirmation, "skip_logout_confirmation", :boolean
       attribute :refresh_touches_session, "refresh_touches_session", :boolean
       attribute :require_verified_email, "require_verified_email", :boolean
+      attribute :require_consent, "require_consent", :boolean
+      attribute :consent_per_organization, "consent_per_organization", :boolean
       attribute :owner, "owner", :string
       attribute :status, "status", :string
       attribute :testers, "testers", [:string]
@@ -11931,6 +12011,10 @@ module Atlas
       attribute :client_id, "client_id", :string
       attribute :name, "name", :string
       attribute :logo_url, "logo_url", :string
+      attribute :client_uri, "client_uri", :string
+      attribute :homepage_url, "homepage_url", :string
+      attribute :policy_uri, "policy_uri", :string
+      attribute :tos_uri, "tos_uri", :string
       attribute :redirect_uris, "redirect_uris", [:string]
       attribute :allowed_scopes, "allowed_scopes", [:string]
       attribute :grant_types, "grant_types", [:string]
@@ -11957,6 +12041,8 @@ module Atlas
       attribute :skip_logout_confirmation, "skip_logout_confirmation", :boolean
       attribute :refresh_touches_session, "refresh_touches_session", :boolean
       attribute :require_verified_email, "require_verified_email", :boolean
+      attribute :require_consent, "require_consent", :boolean
+      attribute :consent_per_organization, "consent_per_organization", :boolean
       attribute :owner, "owner", :string
       attribute :status, "status", :string
       attribute :testers, "testers", [:string]
@@ -12143,6 +12229,9 @@ module Atlas
       attribute :enabled_events, "enabled_events", [:string]
       attribute :active, "active", :boolean
       attribute :available_events, "available_events", [:string]
+      attribute :created_at, "created_at", :integer
+      attribute :last_delivery_at, "last_delivery_at", :integer
+      attribute :previous_secret_expires_at, "previous_secret_expires_at", :integer
       attribute :webhook_secret, "webhook_secret", :string
       attribute :note, "note", :string
     end
@@ -12170,6 +12259,7 @@ module Atlas
       attribute :audience, "audience", :string
       attribute :authorization_details, "authorization_details", [:hash]
       attribute :organization_id, "organization_id", :string
+      attribute :optional_scopes, "optional_scopes", [:string]
       attribute :redirect_uri, "redirect_uri", :string
       attribute :request_url, "request_url", :string
       attribute :prompt, "prompt", [:string]
@@ -12607,6 +12697,8 @@ module Atlas
       attribute :user_filter, "user_filter", :string
       attribute :start_tls, "start_tls", :boolean
       attribute :require_consent_screen, "require_consent_screen", :boolean
+      attribute :account_linking, "account_linking", :string
+      attribute :account_linking_effective, "account_linking_effective", :string
       attribute :attributes, "attributes", "OrgLdapConnectionAttributes"
       attribute :group_role_mappings, "group_role_mappings", ["OrgLdapConnectionGroupRoleMappingsItem"]
       attribute :has_bind_password, "has_bind_password", :boolean
@@ -13239,7 +13331,7 @@ module Atlas
       attribute :problems, "problems", ["OriginMoveProblemsItem"]
       attribute :app, "app", :hash
       attribute :moved_webhook_endpoints, "moved_webhook_endpoints", ["OriginMoveMovedWebhookEndpointsItem"]
-      attribute :webhook_tests, "webhook_tests", ["WebhookTestResult2"]
+      attribute :webhook_tests, "webhook_tests", ["WebhookTestResult3"]
       attribute :next_, "next", :string
     end
 
@@ -14039,6 +14131,13 @@ module Atlas
       attribute :grant_ref, "grant_ref", :string
       attribute :receipt, "receipt", :hash
       attribute :receipts, "receipts", [:hash]
+    end
+
+    class PendingOrganizationMembership < Atlas::Model
+      attribute :object, "object", :string
+      attribute :organization_id, "organization_id", :string
+      attribute :user_external_id, "user_external_id", :string
+      attribute :deleted, "deleted", :boolean
     end
 
     class Permission < Atlas::Model
@@ -15469,6 +15568,21 @@ module Atlas
       attribute :client_ip_header, "client_ip_header", :string
       attribute :secret, "secret", :string
       attribute :rotated, "rotated", :boolean
+    end
+
+    class PutOrganizationsMembershipsByExternalIdResponse < Atlas::Model
+      attribute :object, "object", :string
+      attribute :id, "id", :string
+      attribute :organization_id, "organization_id", :string
+      attribute :user_id, "user_id", :string
+      attribute :role, "role", :string
+      attribute :role_source, "role_source", :string
+      attribute :scope, "scope", :any
+      attribute :expires_at, "expires_at", :integer
+      attribute :created_at, "created_at", :integer
+      attribute :status, "status", :string
+      attribute :user_external_id, "user_external_id", :string
+      attribute :unchanged, "unchanged", :boolean
     end
 
     class RadiusClient < Atlas::Model
@@ -17316,6 +17430,8 @@ module Atlas
       attribute :provisioning_mode, "provisioning_mode", :string
       attribute :attribute_mapping, "attribute_mapping", { map: :string }
       attribute :oidc_scopes, "oidc_scopes", [:string]
+      attribute :account_linking, "account_linking", :string
+      attribute :account_linking_effective, "account_linking_effective", :string
       attribute :rerole_on_sign_in, "rerole_on_sign_in", :boolean
       attribute :profile_mapping, "profile_mapping", "CustomOauthProviderProfileMapping"
       attribute :token_endpoint_auth_method, "token_endpoint_auth_method", :string
@@ -18574,22 +18690,30 @@ module Atlas
 
     class WebhookSecret < Atlas::Model
       attribute :object, "object", :string
-      attribute :secret, "secret", :string
+      attribute :webhook_secret, "webhook_secret", :string
+      attribute :overlap_seconds, "overlap_seconds", :integer
+      attribute :previous_secret_expires_at, "previous_secret_expires_at", :integer
+      attribute :note, "note", :string
     end
 
     class WebhookSecret2 < Atlas::Model
+      attribute :object, "object", :string
+      attribute :secret, "secret", :string
+    end
+
+    class WebhookSecret3 < Atlas::Model
       attribute :object, "object", :string
       attribute :secret, "secret", :string
       attribute :overlap_seconds, "overlap_seconds", :integer
       attribute :previous_secret_expires_at, "previous_secret_expires_at", :integer
     end
 
-    class WebhookSecret3 < Atlas::Model
+    class WebhookSecret4 < Atlas::Model
       attribute :object, "object", :string
       attribute :secret, "secret", :string
     end
 
-    class WebhookSecret4 < Atlas::Model
+    class WebhookSecret5 < Atlas::Model
       attribute :object, "object", :string
       attribute :secret, "secret", :string
       attribute :overlap_seconds, "overlap_seconds", :integer
@@ -18598,6 +18722,25 @@ module Atlas
     end
 
     class WebhookTestResult < Atlas::Model
+      attribute :object, "object", :string
+      attribute :ok, "ok", :boolean
+      attribute :delivery_id, "delivery_id", :string
+      attribute :event_id, "event_id", :string
+      attribute :event_type, "event_type", :string
+      attribute :url, "url", :string
+      attribute :status, "status", :string
+      attribute :status_code, "status_code", :integer
+      attribute :http_status, "http_status", :integer
+      attribute :duration_ms, "duration_ms", :integer
+      attribute :latency_ms, "latency_ms", :integer
+      attribute :response_snippet, "response_snippet", :string
+      attribute :error, "error", :string
+      attribute :error_kind, "error_kind", :string
+      attribute :signature_header_sent, "signature_header_sent", :string
+      attribute :will_retry, "will_retry", :boolean
+    end
+
+    class WebhookTestResult2 < Atlas::Model
       attribute :object, "object", :string
       attribute :ok, "ok", :boolean
       attribute :delivery_id, "delivery_id", :string
@@ -18614,7 +18757,7 @@ module Atlas
       attribute :will_retry, "will_retry", :boolean
     end
 
-    class WebhookTestResult2 < Atlas::Model
+    class WebhookTestResult3 < Atlas::Model
       attribute :object, "object", :string
       attribute :ok, "ok", :boolean
       attribute :delivery_id, "delivery_id", :string
@@ -19081,6 +19224,7 @@ module Atlas
       "POST /v1/better_auth_imports/{id}/finalize" => "BetterAuthImport",
       "PUT /v1/better_auth_imports/{id}/parts/{part}" => "BetterAuthImportPart",
       "POST /v1/billing/check" => "BillingFeatureCheck",
+      "POST /v1/billing/checkout/sync" => "BillingCheckoutSync",
       "GET /v1/billing/connect/accounts" => "BillingConnectAccount[]",
       "POST /v1/billing/connect/accounts" => "BillingConnectAccount",
       "GET /v1/billing/connect/accounts/{id}" => "BillingConnectAccount",
@@ -19113,6 +19257,7 @@ module Atlas
       "GET /v1/billing/settings" => "BillingSettings",
       "PUT /v1/billing/settings" => "BillingSettings",
       "POST /v1/billing/store_links" => "BillingStoreLink",
+      "POST /v1/billing/stripe/events" => "BillingStripeEvent",
       "POST /v1/billing/subjects/{type}/{id}/sync_seats" => "BillingSeats",
       "GET /v1/billing/subscriptions" => "Subscription[]",
       "POST /v1/billing/subscriptions/import" => "Subscription",
@@ -19121,6 +19266,7 @@ module Atlas
       "POST /v1/billing/subscriptions/{id}/change" => "Subscription",
       "POST /v1/billing/subscriptions/{id}/extend_trial" => "BillingTrialExtension",
       "POST /v1/billing/subscriptions/{id}/restore" => "Subscription",
+      "POST /v1/billing/subscriptions/{id}/sync" => "Subscription",
       "GET /v1/billing/usage" => "BillingUsageSummary",
       "POST /v1/billing/usage" => "BillingUsage",
       "POST /v1/billing/usage/batch" => "BillingUsageBatch",
@@ -19532,6 +19678,7 @@ module Atlas
       "PATCH /v1/instance/hooks/before_user_create" => "BeforeUserCreateHook",
       "GET /v1/instance/hooks/before_user_create/calls" => "BeforeUserCreateHookCall[]",
       "POST /v1/instance/hooks/before_user_create/test" => "PostInstanceHooksBeforeUserCreateTestResponse",
+      "POST /v1/instance/hosted_method_filters" => "HostedMethodFilter",
       "GET /v1/instance/hosted_pages" => "HostedPagesSettings",
       "PATCH /v1/instance/hosted_pages" => "HostedPagesSettings",
       "GET /v1/instance/impersonation_policy" => "ImpersonationPolicy",
@@ -19904,6 +20051,8 @@ module Atlas
       "GET /v1/oauth_clients/{id}/usage" => "GetOauthClientsUsageResponseItem[]:OauthClientUsage",
       "GET /v1/oauth_clients/{id}/webhook" => "OauthClientWebhook",
       "PUT /v1/oauth_clients/{id}/webhook" => "OauthClientWebhook",
+      "POST /v1/oauth_clients/{id}/webhook/rotate_secret" => "WebhookSecret",
+      "POST /v1/oauth_clients/{id}/webhook/test" => "WebhookTestResult",
       "GET /v1/oauth_consent_requests" => "OauthConsentRequest",
       "PUT /v1/oauth_consent_requests/accept" => "OauthConsentRedirect",
       "PUT /v1/oauth_consent_requests/reject" => "OauthConsentRedirect",
@@ -20000,9 +20149,9 @@ module Atlas
       "PATCH /v1/organizations/{id}/app_webhook_endpoints/{endpointId}" => "WebhookEndpoint",
       "GET /v1/organizations/{id}/app_webhook_endpoints/{endpointId}/deliveries" => "WebhookDelivery[]",
       "POST /v1/organizations/{id}/app_webhook_endpoints/{endpointId}/deliveries/{deliveryId}/redeliver" => "WebhookDelivery2",
-      "POST /v1/organizations/{id}/app_webhook_endpoints/{endpointId}/reveal_secret" => "WebhookSecret",
-      "POST /v1/organizations/{id}/app_webhook_endpoints/{endpointId}/rotate_secret" => "WebhookSecret2",
-      "POST /v1/organizations/{id}/app_webhook_endpoints/{endpointId}/test" => "WebhookTestResult",
+      "POST /v1/organizations/{id}/app_webhook_endpoints/{endpointId}/reveal_secret" => "WebhookSecret2",
+      "POST /v1/organizations/{id}/app_webhook_endpoints/{endpointId}/rotate_secret" => "WebhookSecret3",
+      "POST /v1/organizations/{id}/app_webhook_endpoints/{endpointId}/test" => "WebhookTestResult2",
       "GET /v1/organizations/{id}/applications" => "OrganizationApplication[]",
       "DELETE /v1/organizations/{id}/applications/{clientId}" => "OrganizationApplication2",
       "PUT /v1/organizations/{id}/applications/{clientId}" => "OrganizationApplication",
@@ -20042,6 +20191,8 @@ module Atlas
       "POST /v1/organizations/{id}/membership_imports" => "Job",
       "GET /v1/organizations/{id}/memberships" => "OrganizationMembership4[]",
       "POST /v1/organizations/{id}/memberships" => "OrganizationMembership5",
+      "DELETE /v1/organizations/{id}/memberships/by_external_id/{userExternalId}" => "PendingOrganizationMembership",
+      "PUT /v1/organizations/{id}/memberships/by_external_id/{userExternalId}" => "PutOrganizationsMembershipsByExternalIdResponse",
       "DELETE /v1/organizations/{id}/memberships/{userId}" => "OrganizationMembership7",
       "GET /v1/organizations/{id}/memberships/{userId}" => "OrganizationMembership",
       "PATCH /v1/organizations/{id}/memberships/{userId}" => "OrganizationMembership6",
@@ -20078,9 +20229,9 @@ module Atlas
       "PATCH /v1/organizations/{id}/webhook_endpoints/{endpointId}" => "WebhookEndpoint",
       "GET /v1/organizations/{id}/webhook_endpoints/{endpointId}/deliveries" => "WebhookDelivery[]",
       "POST /v1/organizations/{id}/webhook_endpoints/{endpointId}/deliveries/{deliveryId}/redeliver" => "WebhookDelivery2",
-      "POST /v1/organizations/{id}/webhook_endpoints/{endpointId}/reveal_secret" => "WebhookSecret",
-      "POST /v1/organizations/{id}/webhook_endpoints/{endpointId}/rotate_secret" => "WebhookSecret2",
-      "POST /v1/organizations/{id}/webhook_endpoints/{endpointId}/test" => "WebhookTestResult",
+      "POST /v1/organizations/{id}/webhook_endpoints/{endpointId}/reveal_secret" => "WebhookSecret2",
+      "POST /v1/organizations/{id}/webhook_endpoints/{endpointId}/rotate_secret" => "WebhookSecret3",
+      "POST /v1/organizations/{id}/webhook_endpoints/{endpointId}/test" => "WebhookTestResult2",
       "GET /v1/organizations/{orgId}/end_users" => "OrganizationEndUser[]",
       "POST /v1/organizations/{orgId}/end_users" => "OrganizationEndUser",
       "DELETE /v1/organizations/{orgId}/end_users/{userId}" => "OrganizationEndUser2",
@@ -20692,8 +20843,8 @@ module Atlas
       "POST /v1/webhook_endpoints/{id}/dlq/requeue" => "WebhookDlqRequeue",
       "POST /v1/webhook_endpoints/{id}/redeliver" => "WebhookBulkResult",
       "POST /v1/webhook_endpoints/{id}/replay" => "WebhookBulkResult",
-      "POST /v1/webhook_endpoints/{id}/reveal_secret" => "WebhookSecret3",
-      "POST /v1/webhook_endpoints/{id}/rotate_secret" => "WebhookSecret4",
+      "POST /v1/webhook_endpoints/{id}/reveal_secret" => "WebhookSecret4",
+      "POST /v1/webhook_endpoints/{id}/rotate_secret" => "WebhookSecret5",
       "POST /v1/webhook_endpoints/{id}/test" => "PostInstanceIntegrationsTestResponse",
       "GET /v1/whoami" => "Whoami",
       "GET /v1/workflow_approvals" => "WorkflowApproval[]",

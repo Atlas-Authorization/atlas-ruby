@@ -786,6 +786,14 @@ module Atlas
 
     # /v1/billing
     module BillingOperations
+      # Read a Stripe Checkout Session back with your own key and record the purchase, for an instance that syncs without a Stripe webhook. The session's reference must name this instance; any other session is a 404. Idempotent. `status` is `synced`, or `pending` when Stripe has not completed the session yet.
+      # `POST /v1/billing/checkout/sync` (scope: billing:write)
+      # @return [Atlas::Models::BillingCheckoutSync]
+      def sync_checkout(session_id:, idempotency_key: nil)
+        body = G.compact("session_id" => session_id)
+        G.wrap(M::BillingCheckoutSync, request(method: :post, path: "/v1/billing/checkout/sync", body: body, idempotency_key: idempotency_key))
+      end
+
       # List the connected accounts, newest first.
       # `GET /v1/billing/connect/accounts` (scope: billing:read)
       # @return [Page<BillingConnectAccount>]
@@ -940,12 +948,27 @@ module Atlas
         G.wrap(M::BillingStoreLink, request(method: :post, path: "/v1/billing/store_links", body: body, idempotency_key: idempotency_key))
       end
 
+      # Forward a Stripe event from your own webhook endpoint, for an account that cannot add an Atlas endpoint. Post `{ id: "evt_…" }` or the whole event; only the id is read. Atlas fetches the event from Stripe with your own key and processes THAT object, never the posted body, and ignores anything that is not one of this instance's subscriptions. Safe to repeat. `outcome` is `processed` or `ignored`; both are 200.
+      # `POST /v1/billing/stripe/events` (scope: billing:write)
+      # @return [Atlas::Models::BillingStripeEvent]
+      def create_event(id:, idempotency_key: nil)
+        body = G.compact("id" => id)
+        G.wrap(M::BillingStripeEvent, request(method: :post, path: "/v1/billing/stripe/events", body: body, idempotency_key: idempotency_key))
+      end
+
       # Move a trialing subscription's trial end later, on the payment provider (Stripe today; others answer 422 `unsupported`). Send exactly one of `days` (added to the current trial end) or `trial_end` (an absolute time, epoch ms or ISO). A trial can be extended by at most 365 days in total. Only a `trialing` subscription qualifies (409 otherwise). `idempotency_key` is required: a retry returns the first extension. Emits billing_trial.extended.
       # `POST /v1/billing/subscriptions/{id}/extend_trial` (scope: billing:write)
       # @return [Atlas::Models::BillingTrialExtension]
       def extend_trial_subscription(id, idempotency_key_body:, days: UNSET, trial_end: UNSET, reason: UNSET, idempotency_key: nil)
         body = G.compact("days" => days, "trial_end" => trial_end, "reason" => reason, "idempotency_key" => idempotency_key_body)
         G.wrap(M::BillingTrialExtension, request(method: :post, path: "/v1/billing/subscriptions/#{enc(id)}/extend_trial", body: body, idempotency_key: idempotency_key))
+      end
+
+      # Re-read one subscription from Stripe now, with your own key, and apply what Stripe reports (status, plan, period, cancellation). For an instance that syncs without a Stripe webhook, or to refresh one subscription on demand. A subscription on another account, or not Stripe, is refused.
+      # `POST /v1/billing/subscriptions/{id}/sync` (scope: billing:write)
+      # @return [Atlas::Models::Subscription]
+      def sync_subscription(id, idempotency_key: nil)
+        G.wrap(M::Subscription, request(method: :post, path: "/v1/billing/subscriptions/#{enc(id)}/sync", idempotency_key: idempotency_key))
       end
 
       # Report up to 100 usage events in one call. Each event is its own idempotent report with the fields of POST /v1/billing/usage, so a retried batch records only what is missing. The batch is not all-or-nothing: each result says `recorded`, `duplicate` or `failed` (with the error). The response is 200 whenever the batch itself was well formed.
@@ -2884,6 +2907,14 @@ module Atlas
         G.wrap(M::PostInstanceHooksBeforeFirstSessionTestResponse, request(method: :post, path: "/v1/instance/hooks/before_first_session/test", idempotency_key: idempotency_key))
       end
 
+      # Limit a hosted sign-in or sign-up page to some sign-in methods. Send the methods (`password`, `email_code`, `email_link`, `phone_code`, `passkey`, `username` counts as `password`, a family such as `oauth` or `enterprise_sso`, or one provider such as `oauth_google`). The answer carries `allowed_methods` and `allowed_methods_sig`: add both to the page URL (`query` is them ready to append). The page then offers only those methods, and every sign-in or sign-up attempt the page (or a client sending the `token` in `X-Atlas-Allowed-Methods`) starts is bound to the list, and a session is refused with 403 SIGN_IN_METHOD_NOT_ALLOWED for any method outside it, whichever way the attempt completes (passkey, a ticket exchanged by your app, a native code). A list that is missing its signature or was edited is refused with 400. It narrows what the instance and the OAuth client already allow; it never adds a method.
+      # `POST /v1/instance/hosted_method_filters` (scope: instance:read)
+      # @return [Atlas::Models::HostedMethodFilter]
+      def create_hosted_method_filter(methods:, idempotency_key: nil)
+        body = G.compact("methods" => methods)
+        G.wrap(M::HostedMethodFilter, request(method: :post, path: "/v1/instance/hosted_method_filters", body: body, idempotency_key: idempotency_key))
+      end
+
       # The instance's staff impersonation policy: require_reason, reason_codes, max_duration_seconds, require_approval, read_only_default and notify_user.
       # `GET /v1/instance/impersonation_policy` (scope: instance:read)
       # @return [Atlas::Models::ImpersonationPolicy]
@@ -2932,8 +2963,8 @@ module Atlas
       # Forward every sign-up (`user.created`) to Lucida, Hermetica or Seolyticize with your own server key, or to any HTTPS webhook.
       # `PUT /v1/instance/integrations/forwarding/{destination}` (scope: webhooks:write)
       # @return [Atlas::Models::IntegrationForwarding2]
-      def set_forwarding(destination, server_key: UNSET, site_key: UNSET, site_url: UNSET, host: UNSET, conversion_event: UNSET, include_pii: UNSET, url: UNSET, active: UNSET, idempotency_key: nil)
-        body = G.compact("server_key" => server_key, "site_key" => site_key, "site_url" => site_url, "host" => host, "conversion_event" => conversion_event, "include_pii" => include_pii, "url" => url, "active" => active)
+      def set_forwarding(destination, server_key: UNSET, site_key: UNSET, site_url: UNSET, host: UNSET, conversion_event: UNSET, include_pii: UNSET, url: UNSET, endpoint: UNSET, active: UNSET, idempotency_key: nil)
+        body = G.compact("server_key" => server_key, "site_key" => site_key, "site_url" => site_url, "host" => host, "conversion_event" => conversion_event, "include_pii" => include_pii, "url" => url, "endpoint" => endpoint, "active" => active)
         G.wrap(M::IntegrationForwarding2, request(method: :put, path: "/v1/instance/integrations/forwarding/#{enc(destination)}", body: body, idempotency_key: idempotency_key))
       end
 
@@ -3060,7 +3091,7 @@ module Atlas
         G.page(M::GetInstanceScopesResponseItem, query) { |q| request(method: :get, path: "/v1/instance/scopes", query: q) }
       end
 
-      # Replace the scope catalogue. Each scope has a `name`, a `label` and a `description` per locale ({ "en": "…", "es": "…" }), `sensitive`, and `requires_verified_client`. The consent screen shows the label and description in the user's language (falling back to its base language, then `en`). A scope with `requires_verified_client` is refused at /oauth2/authorize with `invalid_scope` unless the app's status is `approved` or that scope is in the client's `approved_scopes` (per-scope review). The owner and testers of a client still in development may request it too. A client still needs the scope in its allowed scopes to request it. `requires_client_level` (`any`, `verified` or `certified`) sets the level a client needs (`requires_verified_client: true` means `verified`; the stricter wins); a `certified` client is an approved one the instance has certified (PATCH /v1/oauth_clients/{id} `certified`). `owner_exempt: true` lets the developer who owns a client request the scope with it on their own account whatever the client's level. A name ending `:*` (`listings:*`) is a wildcard entry: it covers every `listings:<anything>` for gating, consent text and released claims, and a client or grant that holds `listings:*` holds each of them. By default the whole list is checked and nothing is written if any entry is bad (422, one problem per field). `?mode=partial` applies the valid entries and answers 200 with `rejected: [{ index, name, errors }]` (a rejected entry leaves the scope of that name as it was). `?too_long=truncate` cuts over-long labels and descriptions instead of refusing them and lists each cut in `warnings`.
+      # Replace the scope catalogue. Each scope has a `name`, a `label` and a `description` per locale ({ "en": "…", "es": "…" }), `sensitive`, and `requires_verified_client`. The consent screen shows the label and description in the user's language (falling back to its base language, then `en`). A scope with `requires_verified_client` is refused at /oauth2/authorize with `invalid_scope` unless the app's status is `approved` or that scope is in the client's `approved_scopes` (per-scope review). The owner and testers of a client still in development may request it too. A client still needs the scope in its allowed scopes to request it. `requires_client_level` (`any`, `verified` or `certified`) sets the level a client needs (`requires_verified_client: true` means `verified`; the stricter wins); a `certified` client is an approved one the instance has certified (PATCH /v1/oauth_clients/{id} `certified`). `optional: true` lets the user untick the scope on the consent screen (the token then carries only the scopes they kept). `owner_exempt: true` lets the developer who owns a client request the scope with it on their own account whatever the client's level. A name ending `:*` (`listings:*`) is a wildcard entry: it covers every `listings:<anything>` for gating, consent text and released claims, and a client or grant that holds `listings:*` holds each of them. By default the whole list is checked and nothing is written if any entry is bad (422, one problem per field). `?mode=partial` applies the valid entries and answers 200 with `rejected: [{ index, name, errors }]` (a rejected entry leaves the scope of that name as it was). `?too_long=truncate` cuts over-long labels and descriptions instead of refusing them and lists each cut in `warnings`.
       # `PUT /v1/instance/scopes` (scope: instance:write)
       # @return [nil]
       def set_scopes(scopes:, mode: UNSET, too_long: UNSET, idempotency_key: nil)
@@ -3936,7 +3967,7 @@ module Atlas
         G.wrap(M::OauthClientWebhook, request(method: :get, path: "/v1/oauth_clients/#{enc(id)}/webhook"))
       end
 
-      # Create or update the client's event webhook: a signed, retried endpoint that receives events about users who granted the client access, never the instance's own stream. user.updated carries only what the user's granted scopes allow (email with the email scope, name and picture with profile). enabled_events may also name your own types declared with PUT /v1/instance/app_event_types; those reach the client only for users who granted the type's required scope. The signing secret is returned once, on create (201). Audited.
+      # Create or update the client's event webhook: a signed, retried endpoint that receives events about users who granted the client access, never the instance's own stream. user.updated carries only what the user's granted scopes allow (email with the email scope, name and picture with profile). enabled_events may also name your own types declared with PUT /v1/instance/app_event_types; those reach the client only for users who granted the type's required scope. The signing secret is returned once, on create (201). Every delivery carries a top-level `creator` ({ id }, the user as this client sees them: exactly the `sub` of the tokens issued to it, pairwise or external_id included; null when the event has no acting user). Audited.
       # `PUT /v1/oauth_clients/{id}/webhook` (scope: oauth_clients:write)
       # @return [Atlas::Models::OauthClientWebhook]
       def set_webhook(id, url:, enabled_events: UNSET, idempotency_key: nil)
@@ -3949,6 +3980,22 @@ module Atlas
       # @return [nil]
       def delete_webhook(id, idempotency_key: nil)
         request(method: :delete, path: "/v1/oauth_clients/#{enc(id)}/webhook", idempotency_key: idempotency_key)
+      end
+
+      # Rotate the client webhook's signing secret. The new secret is returned exactly once. The previous secret keeps signing for `overlap_seconds` (default 86400 = 24 hours, 0 to 604800 = 7 days; 0 stops it now): during the overlap every delivery's signature header carries one entry per secret, the new one first, so a receiver holding either secret verifies it. `previous_secret_expires_at` says when the old one stops (epoch ms), or null. 404 when the client has no webhook. An operator token needs a recent MFA. Audited.
+      # `POST /v1/oauth_clients/{id}/webhook/rotate_secret` (scope: oauth_clients:write)
+      # @return [Atlas::Models::WebhookSecret]
+      def rotate_secret_webhook(id, overlap_seconds: UNSET, idempotency_key: nil)
+        body = G.compact("overlap_seconds" => overlap_seconds)
+        G.wrap(M::WebhookSecret, request(method: :post, path: "/v1/oauth_clients/#{enc(id)}/webhook/rotate_secret", body: body, idempotency_key: idempotency_key))
+      end
+
+      # Send ONE signed `webhook.test` delivery to this client's webhook URL (and to nobody else), in the same envelope as a real delivery, and return the attempt: the HTTP status your endpoint answered with, how long it took and the error, if any. With `user_id` (the Atlas user id, or the `sub` this client receives) the delivery's `creator` is that user (404 for an unknown user; no grant is needed); otherwise `creator` is null. Not retried. Audited.
+      # `POST /v1/oauth_clients/{id}/webhook/test` (scope: oauth_clients:write)
+      # @return [Atlas::Models::WebhookTestResult]
+      def test_webhook(id, user_id: UNSET, idempotency_key: nil)
+        body = G.compact("user_id" => user_id)
+        G.wrap(M::WebhookTestResult, request(method: :post, path: "/v1/oauth_clients/#{enc(id)}/webhook/test", body: body, idempotency_key: idempotency_key))
       end
     end
 
@@ -4344,24 +4391,24 @@ module Atlas
 
       # Show the current whsec_ signing secret again. Audited.
       # `POST /v1/organizations/{id}/app_webhook_endpoints/{endpointId}/reveal_secret` (scope: webhooks:reveal)
-      # @return [Atlas::Models::WebhookSecret]
+      # @return [Atlas::Models::WebhookSecret2]
       def reveal_secret_app_webhook_endpoint(id, endpoint_id, idempotency_key: nil)
-        G.wrap(M::WebhookSecret, request(method: :post, path: "/v1/organizations/#{enc(id)}/app_webhook_endpoints/#{enc(endpoint_id)}/reveal_secret", idempotency_key: idempotency_key))
+        G.wrap(M::WebhookSecret2, request(method: :post, path: "/v1/organizations/#{enc(id)}/app_webhook_endpoints/#{enc(endpoint_id)}/reveal_secret", idempotency_key: idempotency_key))
       end
 
       # Rotate the whsec_ signing secret. The previous secret keeps signing alongside the new one (a second v1 entry in webhook-signature) for 24 hours.
       # `POST /v1/organizations/{id}/app_webhook_endpoints/{endpointId}/rotate_secret` (scope: webhooks:write)
-      # @return [Atlas::Models::WebhookSecret2]
+      # @return [Atlas::Models::WebhookSecret3]
       def rotate_secret_app_webhook_endpoint(id, endpoint_id, idempotency_key: nil)
-        G.wrap(M::WebhookSecret2, request(method: :post, path: "/v1/organizations/#{enc(id)}/app_webhook_endpoints/#{enc(endpoint_id)}/rotate_secret", idempotency_key: idempotency_key))
+        G.wrap(M::WebhookSecret3, request(method: :post, path: "/v1/organizations/#{enc(id)}/app_webhook_endpoints/#{enc(endpoint_id)}/rotate_secret", idempotency_key: idempotency_key))
       end
 
       # Send a signed webhook.test event to this endpoint only. With ?wait=10s the attempt is made now and its result returned; otherwise it is queued (201).
       # `POST /v1/organizations/{id}/app_webhook_endpoints/{endpointId}/test` (scope: webhooks:write)
-      # @return [Atlas::Models::WebhookTestResult]
+      # @return [Atlas::Models::WebhookTestResult2]
       def test_app_webhook_endpoint(id, endpoint_id, wait: UNSET, idempotency_key: nil)
         query = G.compact("wait" => wait)
-        G.wrap(M::WebhookTestResult, request(method: :post, path: "/v1/organizations/#{enc(id)}/app_webhook_endpoints/#{enc(endpoint_id)}/test", query: query, idempotency_key: idempotency_key))
+        G.wrap(M::WebhookTestResult2, request(method: :post, path: "/v1/organizations/#{enc(id)}/app_webhook_endpoints/#{enc(endpoint_id)}/test", query: query, idempotency_key: idempotency_key))
       end
 
       # The OAuth applications an organization has been given access to.
@@ -4439,6 +4486,21 @@ module Atlas
       def create_membership_import(id, memberships: UNSET, csv: UNSET, on_existing: UNSET, invite_missing: UNSET, default_role: UNSET, idempotency_key: nil)
         body = G.compact("memberships" => memberships, "csv" => csv, "on_existing" => on_existing, "invite_missing" => invite_missing, "default_role" => default_role)
         G.wrap(M::Job, request(method: :post, path: "/v1/organizations/#{enc(id)}/membership_imports", body: body, idempotency_key: idempotency_key))
+      end
+
+      # Seat a person by the id your own system gives them (`external_id`), before they have signed in. Same body as PUT .../memberships/{userId}. When a user with that external_id exists this is that create-or-update (201 when it adds the member, 200 when it changes it, `status: "active"`). When none exists the seat waits: 202 with `status: "pending"`, and it is attached (with `organizationMembership.created`) when a user with that external_id is created, imported or given the id. `user.created` then carries the user's `organization_memberships`. `{id}` is the organization's Atlas id or its own external_id. Repeating the call replaces the waiting seat.
+      # `PUT /v1/organizations/{id}/memberships/by_external_id/{userExternalId}` (scope: organizations:write)
+      # @return [Atlas::Models::PutOrganizationsMembershipsByExternalIdResponse]
+      def set_by_external_id(id, user_external_id, role:, role_source: UNSET, public_metadata: UNSET, private_metadata: UNSET, permissions: UNSET, allowed_sign_in_methods: UNSET, expires_at: UNSET, idempotency_key: nil)
+        body = G.compact("role" => role, "role_source" => role_source, "public_metadata" => public_metadata, "private_metadata" => private_metadata, "permissions" => permissions, "allowed_sign_in_methods" => allowed_sign_in_methods, "expires_at" => expires_at)
+        G.wrap(M::PutOrganizationsMembershipsByExternalIdResponse, request(method: :put, path: "/v1/organizations/#{enc(id)}/memberships/by_external_id/#{enc(user_external_id)}", body: body, idempotency_key: idempotency_key))
+      end
+
+      # Cancel a seat that is still waiting for its person. 404 when none is waiting (a seat that was already attached is removed by the user id).
+      # `DELETE /v1/organizations/{id}/memberships/by_external_id/{userExternalId}` (scope: organizations:write)
+      # @return [Atlas::Models::PendingOrganizationMembership]
+      def delete_by_external_id(id, user_external_id, idempotency_key: nil)
+        G.wrap(M::PendingOrganizationMembership, request(method: :delete, path: "/v1/organizations/#{enc(id)}/memberships/by_external_id/#{enc(user_external_id)}", idempotency_key: idempotency_key))
       end
 
       # Read one membership: role, `role_source`, scope, in the same shape as a list item. 404 when the user is not a member.
@@ -4520,17 +4582,17 @@ module Atlas
 
       # Show the current whsec_ signing secret of one of the organization's endpoints again. Audited.
       # `POST /v1/organizations/{id}/webhook_endpoints/{endpointId}/reveal_secret` (scope: webhooks:reveal)
-      # @return [Atlas::Models::WebhookSecret]
+      # @return [Atlas::Models::WebhookSecret2]
       def reveal_secret_webhook_endpoint(id, endpoint_id, idempotency_key: nil)
-        G.wrap(M::WebhookSecret, request(method: :post, path: "/v1/organizations/#{enc(id)}/webhook_endpoints/#{enc(endpoint_id)}/reveal_secret", idempotency_key: idempotency_key))
+        G.wrap(M::WebhookSecret2, request(method: :post, path: "/v1/organizations/#{enc(id)}/webhook_endpoints/#{enc(endpoint_id)}/reveal_secret", idempotency_key: idempotency_key))
       end
 
       # Send a signed webhook.test event to this endpoint only. With ?wait=10s the attempt is made now and its result returned; otherwise it is queued (201).
       # `POST /v1/organizations/{id}/webhook_endpoints/{endpointId}/test` (scope: webhooks:write)
-      # @return [Atlas::Models::WebhookTestResult]
+      # @return [Atlas::Models::WebhookTestResult2]
       def test_webhook_endpoint(id, endpoint_id, wait: UNSET, idempotency_key: nil)
         query = G.compact("wait" => wait)
-        G.wrap(M::WebhookTestResult, request(method: :post, path: "/v1/organizations/#{enc(id)}/webhook_endpoints/#{enc(endpoint_id)}/test", query: query, idempotency_key: idempotency_key))
+        G.wrap(M::WebhookTestResult2, request(method: :post, path: "/v1/organizations/#{enc(id)}/webhook_endpoints/#{enc(endpoint_id)}/test", query: query, idempotency_key: idempotency_key))
       end
     end
 
@@ -5481,7 +5543,7 @@ module Atlas
 
     # /v1/resource_servers
     module ResourceServersOperations
-      # The OAuth tokens revoked for this API, oldest first, for a resource server that polls this list instead of asking Atlas per request (`createAccessTokenVerifier({ revocation: true })`). Each item is a refresh-token family that ended (`family_id`, the `fid` claim of every access token minted from it: a refresh token was reused, the client called /oauth2/revoke, or an admin, the user or a logout ended the grant) or one access token revoked on its own (`jti`). Reject a token whose `fid` or `jti` is listed. Rows are kept for 48 hours (`retention_seconds`), longer than any access token can live. Page with `after` (the `next_cursor` of the previous page); `server_time` is when the answer was computed: poll again with `since` a little before it. The `oauth_tokens.revoked` webhook carries the same facts for a push.
+      # The OAuth tokens revoked for this API, oldest first, for a resource server that polls this list instead of asking Atlas per request (`createAccessTokenVerifier({ revocation: true })`). Each item is a refresh-token family that ended (`family_id`, the `fid` claim of every access token minted from it: a refresh token was reused, the client called /oauth2/revoke, or an admin, the user or a logout ended the grant) or one access token revoked on its own (`jti`), or a whole client (`kind: "client"`: its `client_id`, with `revoked_at` the cut-off: reject any token whose `azp` is that client and whose `iat` is at or before it). Reject a token whose `fid` or `jti` is listed. Rows are kept for 48 hours (`retention_seconds`), longer than any access token can live. Page with `after` (the `next_cursor` of the previous page); `server_time` is when the answer was computed: poll again with `since` a little before it. The `oauth_tokens.revoked` webhook carries the same facts for a push.
       # `GET /v1/resource_servers/{id}/revoked_tokens` (scope: resource_servers:read)
       # @return [Page<GetResourceServersRevokedTokensResponseItem>]
       def list_revoked_tokens(id, since: UNSET, limit: UNSET, after: UNSET, starting_after: UNSET)

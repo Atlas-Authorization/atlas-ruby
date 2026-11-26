@@ -354,6 +354,10 @@ class GeneratedCatalogTest < Minitest::Test
     call("DELETE", "/v1/authz_pdps/p1") { |c| c.authz_pdps.delete_authz_pdp("p1") }
   end
 
+  def test_post_v1_billing_checkout_sync
+    call("POST", "/v1/billing/checkout/sync") { |c| c.billing.sync_checkout(session_id: "x") }
+  end
+
   def test_get_v1_billing_connect_accounts
     call("GET", "/v1/billing/connect/accounts") { |c| c.billing.list_accounts() }
   end
@@ -434,8 +438,16 @@ class GeneratedCatalogTest < Minitest::Test
     call("POST", "/v1/billing/store_links") { |c| c.billing.create_store_link(subject_type: "user", subject_id: "x", plan_id: "x") }
   end
 
+  def test_post_v1_billing_stripe_events
+    call("POST", "/v1/billing/stripe/events") { |c| c.billing.create_event(id: "x") }
+  end
+
   def test_post_v1_billing_subscriptions_id_extend_trial
     call("POST", "/v1/billing/subscriptions/p1/extend_trial") { |c| c.billing.extend_trial_subscription("p1", idempotency_key_body: "x") }
+  end
+
+  def test_post_v1_billing_subscriptions_id_sync
+    call("POST", "/v1/billing/subscriptions/p1/sync") { |c| c.billing.sync_subscription("p1") }
   end
 
   def test_post_v1_billing_usage_batch
@@ -1330,6 +1342,10 @@ class GeneratedCatalogTest < Minitest::Test
     call("POST", "/v1/instance/hooks/before_first_session/test") { |c| c.instance.test_before_first_session() }
   end
 
+  def test_post_v1_instance_hosted_method_filters
+    call("POST", "/v1/instance/hosted_method_filters") { |c| c.instance.create_hosted_method_filter(methods: []) }
+  end
+
   def test_get_v1_instance_impersonation_policy
     call("GET", "/v1/instance/impersonation_policy") { |c| c.instance.get_impersonation_policy() }
   end
@@ -1830,6 +1846,14 @@ class GeneratedCatalogTest < Minitest::Test
     call("DELETE", "/v1/oauth_clients/p1/webhook") { |c| c.oauth_clients.delete_webhook("p1") }
   end
 
+  def test_post_v1_oauth_clients_id_webhook_rotate_secret
+    call("POST", "/v1/oauth_clients/p1/webhook/rotate_secret") { |c| c.oauth_clients.rotate_secret_webhook("p1") }
+  end
+
+  def test_post_v1_oauth_clients_id_webhook_test
+    call("POST", "/v1/oauth_clients/p1/webhook/test") { |c| c.oauth_clients.test_webhook("p1") }
+  end
+
   def test_put_v1_oauth_consent_requests_switch_account
     call("PUT", "/v1/oauth_consent_requests/switch_account") { |c| c.oauth_consent_requests.set_switch_account(consent_challenge: "x") }
   end
@@ -2044,6 +2068,14 @@ class GeneratedCatalogTest < Minitest::Test
 
   def test_post_v1_organizations_id_membership_imports
     call("POST", "/v1/organizations/p1/membership_imports") { |c| c.organizations.create_membership_import("p1") }
+  end
+
+  def test_put_v1_organizations_id_memberships_by_external_id_userexternalid
+    call("PUT", "/v1/organizations/p1/memberships/by_external_id/p2") { |c| c.organizations.set_by_external_id("p1", "p2", role: "x") }
+  end
+
+  def test_delete_v1_organizations_id_memberships_by_external_id_userexternalid
+    call("DELETE", "/v1/organizations/p1/memberships/by_external_id/p2") { |c| c.organizations.delete_by_external_id("p1", "p2") }
   end
 
   def test_get_v1_organizations_id_memberships_userid

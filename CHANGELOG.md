@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.26.0 — 2026-11-26
+
+### Added
+
+- Regenerated from the current Backend API. New: OAuth client webhook secret rotation with an overlap window (`rotate_secret`), a test delivery, and webhook removal; end-user Stripe billing without a webhook (sync status and reconcile); every other operation added since the last release.
+- No shipped method, parameter list or type changed or was removed.
+
 ## 0.25.1 — 2026-11-23
 
 ### Fixed
